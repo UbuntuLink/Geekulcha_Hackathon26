@@ -1,0 +1,65 @@
+	# Plumbing
+	geyser is lekker leeking water evrywhere in teh ceiling
+	my tap wont stop drippin ay bin going on for weeks
+	toilet is blocked shem cant flush nothing
+	pipe burst outside my house water gushing everywhere eish
+
+	# Electrical
+	plug points not working in my kitchen sparks when i put things in
+	loadshedding messed up my dbboard i think tripping non stop
+	lights keep flickring in the lounge its scary now
+	my geyser element is dead i think no hot water and its not leaking  # tricky - electrical vs plumbing overlap
+
+	# Cleaning
+	need someone to come clean my flat its a mess after the party
+	carpets stink need deep clean asap
+	office needs a once off clean before clients come thru
+
+	# Gardening
+	grass is super wyld need it cut also hedges is mad long
+	my garden is a jungle sum1 help
+	need someone to trim the trees before they hit the powerlines
+
+	# Mechanic
+	car making a weird noise when i brake scary sound
+	my bakkie wont start this morning battery i think
+	gearbox is slipping on my corolla need to check it out
+
+	# Tutoring
+	my son needs help with matric maths hes failing badly
+	need tutor for my daughter shes struggling with afrikaans
+	looking 4 someone good at physics to help me pass
+
+	# Beauty
+	need my hair done for a wedding this weekend
+	looking for someone who does nails gel ones
+	need makeup done for matric dance
+
+	# Painting
+	walls looking dull need a paint job whole house
+	want to repaint my gate its rusty and ugly now
+
+	# Handyman
+	cupboard door fell off need it fixed
+	need shelves put up in my room got the brackets already
+	my fence is broken sum1 pushed thru it need it fixed
+
+	# Ambiguous / low-confidence tests
+	somethings wrong with my house not sure what  # too vague
+	need help fixing stuff around the house  # could be handyman or multiple
+	my geyser broke  # plumbing or electrical - ambiguous
+	kitchen is a disaster need it sorted  # cleaning or handyman - ambiguous
+
+	# Completely unrelated (tests other)
+	whats the weather like today
+	can u help me pick a name for my dog
+	do you know any good restaurants nearby
+	whats 45 times 12
+	i want to sell my old phone how do i price it
+	can you write me a poem about love
+	who won the soccer last night
+
+	# Mixed language / heavy slang
+	yoh geyser is spana leaking bad man sort it out asap
+	eish my lawn is looking rough need a china to sort it
+	ayoba need someone to fix my plug keeps tripping the db

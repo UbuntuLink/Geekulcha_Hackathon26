@@ -23,4 +23,20 @@ public class ProviderService {
 
     private Integer yearsExperience;
 
+    public Integer getYearsExperience() {
+        return yearsExperience;
+    }
+
+    public ProviderProfile getProviderProfile() {
+        return providerProfile;
+    }
+
+    public Service getService() {
+        return service;
+    }
+
+    public void setYearsExperience(Integer yearsExperience) {
+        this.yearsExperience = yearsExperience;
+    }
+
 }

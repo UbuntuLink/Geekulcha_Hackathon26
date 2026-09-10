@@ -14,11 +14,11 @@ public class ProviderService {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "provider_profile_id")
+    @JoinColumn (name = "provider_profile_id")
     private ProviderProfile providerProfile;
 
     @ManyToOne
-    @JoinColumn(name = "service_id")
+    @JoinColumn (name = "service_id")
     private Service service;
 
     private Integer yearsExperience;

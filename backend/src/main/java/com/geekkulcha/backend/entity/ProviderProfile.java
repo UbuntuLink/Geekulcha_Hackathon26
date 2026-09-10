@@ -14,7 +14,7 @@ public class ProviderProfile {
     private long id;
 
     @OneToOne
-    @JoinColumn(name = "user_id", unique = true)
+    @JoinColumn (name = "user_id", unique = true)
     private User user;
 
     private String bio;

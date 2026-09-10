@@ -28,7 +28,7 @@ public class AuthService {
         String requestedUserPassword = request.getPassword();
 
         Optional<User> user = userRepository.findByEmail(requestedUserEmail);
-        
+
         if(user.isEmpty()) {
             return false;
         }

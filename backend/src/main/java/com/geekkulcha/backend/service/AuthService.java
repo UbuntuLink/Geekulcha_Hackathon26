@@ -1,11 +1,13 @@
 package com.geekkulcha.backend.service;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.geekkulcha.backend.dto.LoginRequest;
+import com.geekkulcha.backend.dto.RegisterRequest;
 import com.geekkulcha.backend.entity.User;
 import com.geekkulcha.backend.repository.UserRepository;
 
@@ -13,27 +15,67 @@ import com.geekkulcha.backend.repository.UserRepository;
 public class AuthService {
     private UserRepository userRepository;
     private PasswordEncoder passwordEncoder;
+    private JwtService jwtService;
 
     public AuthService(
         UserRepository userRepository, 
-        PasswordEncoder passwordEncoder
+        PasswordEncoder passwordEncoder,
+        JwtService jwtService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
     }
 
 
-    public boolean login(LoginRequest request) {
+    public String login(LoginRequest request) {
         String requestedUserEmail = request.getEmail();
         String requestedUserPassword = request.getPassword();
 
         Optional<User> user = userRepository.findByEmail(requestedUserEmail);
 
         if(user.isEmpty()) {
-            return false;
+            return null;
         }
 
         String hashedPassword = user.get().getPasswordHash();
-        return passwordEncoder.matches(requestedUserPassword, hashedPassword);
+        boolean passwordMatches = passwordEncoder.matches(requestedUserPassword, hashedPassword);
+
+        if(!passwordMatches) {
+            return null;
+        }
+
+        return jwtService.generateToken(user.get());
+    }
+
+    public boolean register(RegisterRequest request) {
+        String newUserEmail = request.getEmail();
+        String newUserFirstName = request.getFirstName();
+        String newUserLastName = request.getLastName();
+        String newUserPhoneNumber = request.getPhoneNumber();
+    
+        Optional<User> userEmail = userRepository.findByEmail(newUserEmail);
+        Optional<User> userPhoneNumber = userRepository.findByPhoneNumber(newUserPhoneNumber);
+
+        if(userEmail.isPresent() || userPhoneNumber.isPresent()) {
+            return false;
+        }
+
+        String newUserEncodedPassword = passwordEncoder.encode(request.getPassword());
+        LocalDateTime now = LocalDateTime.now();
+
+        User newUser = new User();
+
+        newUser.setEmail(newUserEmail);
+        newUser.setFirstName(newUserFirstName);
+        newUser.setLastName(newUserLastName);
+        newUser.setPasswordHash(newUserEncodedPassword);
+        newUser.setPhoneNumber(newUserPhoneNumber);
+        newUser.setCreatedAt(now);
+
+        User savedUser = userRepository.save(newUser);
+
+        return true;
+
     }
 }

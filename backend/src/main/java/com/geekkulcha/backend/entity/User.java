@@ -1,6 +1,6 @@
 package com.geekkulcha.backend.entity;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -14,7 +14,7 @@ public class User {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private Long id;
 
     private String firstName;
 
@@ -26,7 +26,11 @@ public class User {
 
     private String phoneNumber;
 
-    private Date createdAt;
+    private LocalDateTime createdAt;
+
+    public Long getId() {
+        return id;
+    }
 
     public String getFirstName() {
         return firstName;
@@ -48,7 +52,7 @@ public class User {
         return phoneNumber;
     }
 
-    public Date getCreatedAt() {
+    public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
@@ -72,7 +76,7 @@ public class User {
         this.phoneNumber = phoneNumber;
     }
 
-    public void setCreatedAt(Date createdAt) {
+    public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
 

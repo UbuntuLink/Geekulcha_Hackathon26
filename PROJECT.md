@@ -2,7 +2,7 @@
 
 **UbuntuLink** is a local services marketplace for South Africa. A customer describes a problem in their own words ("my kitchen sink is leaking"), an AI layer classifies the job and estimates a fair price, and the platform matches them with nearby, rated local service providers (plumbers, electricians, cleaners, etc.) to request quotes and book work.
 
-This document describes the state of the project as of **2026-09-16**, based on the repo contents, the DB design (DrawSQL), the use case diagram, and the Figma UI flow. It exists so anyone (human or AI) picking up the repo can get oriented without re-deriving context.
+This document describes the state of the project as of **2026-09-17**, based on the repo contents, the DB design (DrawSQL), the use case diagram, and the Figma UI flow. It exists so anyone (human or AI) picking up the repo can get oriented without re-deriving context.
 
 **MVP scope note:** this build targets a hackathon-scoped MVP, not the full production vision. Real payments, geolocation, provider vetting, disputes, and messaging are explicitly out of scope for now — see §9 for the full gap list and §10 for what's been decided about the MVP cut.
 
@@ -18,7 +18,7 @@ This document describes the state of the project as of **2026-09-16**, based on 
 | Database | PostgreSQL (hosted on Supabase) | Supabase |
 | ML / AI service | Python, FastAPI + Uvicorn, calling LLMs via OpenRouter (`anthropic/claude-haiku-4.5`) | Render |
 | Frontend | React 18 + Vite + Tailwind + React Router | Vercel |
-| Auth | Google OAuth2 (Sign in with Google) — see §8 | — |
+| Auth | Email/password + JWT (Argon2 hashing) — see §8 | — |
 | Payments | Mock only for MVP — see §10 | — |
 | API docs | springdoc-openapi (Swagger UI) | — |
 | Build | Maven (`mvnw`) / npm / pip | — |
@@ -29,11 +29,12 @@ Repo root: `Geekulcha_Hackathon26/` (GitHub: `leshenn/Geekulcha_Hackathon26`)
 Geekulcha_Hackathon26/
 ├── PROJECT.md
 ├── render.yaml               # Render blueprint: backend + ml-service, see §10
-├── 01_Database_CSV/          # seed data — STALE, written for the old 3-table schema, see §3a
+├── 01_Database/               # seed CSVs matching the DrawSQL schema (unused by any code, see §3a) + ERD png
+├── 02_Diagrams/               # CreatingAccount.drawio, UserCaseDiagram.drawio
 ├── backend/                  # Spring Boot API → Render (Dockerfile included)
 │   └── src/main/java/com/geekkulcha/backend/
 │       ├── BackendApplication.java
-│       ├── config/           # SecurityConfig (Google OAuth2 + CORS)
+│       ├── config/           # SecurityConfig (JWT auth + CORS), DevDataSeeder
 │       ├── controller/       # REST endpoints (thin, delegate to service/)
 │       ├── service/          # business logic
 │       ├── repository/       # Spring Data JPA repositories, one per entity
@@ -59,7 +60,7 @@ Geekulcha_Hackathon26/
     │   ├── pages/
     │   │   ├── customer/       # the 12-screen Figma flow, see §5
     │   │   ├── provider/       # provider-side screens — NOT in Figma yet, see §9a
-    │   │   └── auth/           # Login (Google button), AuthCallback
+    │   │   └── auth/           # Login, Register (email/password, see §8)
     │   ├── components/{common,layout}/
     │   ├── routes/             # AppRoutes.jsx, ProtectedRoute.jsx
     │   ├── api/                # client.js (backend), mlClient.js (ML service), per-domain calls
@@ -74,11 +75,11 @@ Geekulcha_Hackathon26/
 ## 2. Backend (Spring Boot)
 
 - Entry point: `BackendApplication.java` — standard `@SpringBootApplication`.
-- Config: `application.properties` loads `SUPABASE_DB_URL`, `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, `FRONTEND_URL`, and `PORT` (Render injects this) from env vars, with an optional local `.env` fallback. `ddl-auto=update` (Hibernate manages schema) and `show-sql=true`.
+- Config: `application.properties` loads `SUPABASE_DB_URL`, `JWT_SECRET`, `FRONTEND_URL`, and `PORT` (Render injects this) from env vars, with an optional local `.env` fallback. `ddl-auto=update` (Hibernate manages schema) and `show-sql=true`.
 - **JPA entities now cover the full target schema** (§3), replacing the old simplified `Provider`/`Service`/`ProviderService` trio: `User`, `ProviderProfile`, `Service`, `ProviderService`, `ServiceRequest`, `Quote`, `Booking`, `Review`, `Payment` (mock), plus `RequestStatus`/`QuoteStatus`/`BookingStatus`/`PaymentStatus` enums.
 - Layered structure now exists: `controller/` → `service/` → `repository/`, with `dto/request` + `dto/response` for the core flow (services list, service request, quote, booking, review). Not every entity has a controller yet — build the rest following the existing pattern as you need them.
 - `GlobalExceptionHandler` (`exception/`) maps `ResourceNotFoundException` → 404 and validation failures → 400.
-- `SecurityConfig` (`config/`) wires Google OAuth2 login (`spring-boot-starter-oauth2-client`) and CORS for the frontend origin. **All routes are currently `permitAll()`** — see the TODO in that file — tighten this once the frontend is actually consuming the session.
+- `SecurityConfig` (`config/`) wires the Argon2 `PasswordEncoder` + JWT-issuing `JwtEncoder`, and CORS for the frontend origin. **All routes are currently `permitAll()`** — see the TODO in that file — tighten this once a resource-server filter actually validates incoming JWTs (§8).
 - Mock payment: `payment/MockPaymentService.java` + `Payment` entity — always succeeds, no real processor. See §10.
 - **Auth is temporarily disabled** (§8) — `ServiceRequestController`/`QuoteController` no longer use `@AuthenticationPrincipal`; they attribute requests to a fixed demo customer via `UserService.getDemoCustomer()`, and `QuoteController` takes `providerProfileId` directly in the request body instead of deriving a provider from the (currently nonexistent) signed-in session.
 - **`DevDataSeeder`** (`config/`) — a `CommandLineRunner` that seeds the 10 service categories + 3 demo plumbing providers (Thabo Plumbing, Mpho Home Services, FixRight Plumbing — matching the Figma names/prices exactly) plus one sample review, on first run only (skips if `service` already has rows). This is what makes the app clickable with real data locally — see INSTRUCTIONS.md §2b.
@@ -96,11 +97,11 @@ Geekulcha_Hackathon26/
 
 ## 3. Database Design
 
-### 3a. Old vs. new schema — seed CSVs are now stale
-The CSVs in `01_Database_CSV/` (`ubuntulink_providers.csv`, `ubuntulink_services.csv`, `ubuntulink_provider_services.csv`) were written for the old 3-table schema (`Provider` with identity fields baked in). That entity no longer exists — it's been split into `User` + `ProviderProfile` (§3b) so a person can be both a customer and a provider, as the use-case diagram requires. **The CSVs need re-shaping before they'll seed the new schema** (`providers.csv` → split into a `users` seed + a `provider_profile` seed referencing it). Not yet done.
+### 3a. Seed CSVs — present, but not wired to anything
+`01_Database/` (renamed from `01_Database_CSV/`, merged in from `Leshen-Login`) has CSVs matching the DrawSQL schema (`ubuntulink_users.csv`, `ubuntulink_provider_profiles.csv`, `ubuntulink_provider_services.csv`, `ubuntulink_services.csv`) plus an ERD image. No code imports these anywhere — local demo data instead comes from `DevDataSeeder` (§2), which seeds directly through JPA on backend startup. Worth reconciling eventually (either wire a CSV import, or drop these in favor of the seeder being the one source of truth).
 
 ### 3b. Current schema (implemented in `entity/`)
-- **User** — id, googleSub, email, firstName, lastName, createdAt (no password — see §8). Provider "business name" is just `firstName + lastName` (e.g. `firstName="Thabo"`, `lastName="Plumbing"` → "Thabo Plumbing") — no separate business-name field.
+- **User** — id, email, passwordHash, firstName, lastName, phoneNumber, createdAt (see §8). Provider "business name" is just `firstName + lastName` (e.g. `firstName="Thabo"`, `lastName="Plumbing"` → "Thabo Plumbing") — no separate business-name field.
 - **ProviderProfile** — id, user (1:1), bio, location, serviceRadiusKm, rating, **reviewCount** (denormalized — manually set, not derived from actual `Review` rows), **availableToday** (boolean flag, not a real calendar — both added to match the Figma cards without building §9a/§9e properly, see those sections)
 - **Service** — id, name, description
 - **ProviderService** — id, providerProfile, service, **minPrice, maxPrice** (a flat range, not the DrawSQL design's separate task-size-keyed price table — good enough to match the Figma price-range display)
@@ -112,7 +113,7 @@ The CSVs in `01_Database_CSV/` (`ubuntulink_providers.csv`, `ubuntulink_services
 
 Key relationships: a `User` can be both a customer (creates `ServiceRequest`s) and, via `ProviderProfile`, a provider. Providers quote on requests (`Quote`), quotes become `Booking`s, bookings get a mock `Payment` and a `Review`.
 
-**Still missing from the original DrawSQL target** (dropped or deferred for MVP scope, see §9): `service_task_size` / task-size-based pricing tiers, `provider_service_price` min/max ranges, `actual_job_price` (a real recorded price separate from the quote amount — currently the quote amount doubles as the job price). Add these back if the MVP demo needs them.
+**Present but unused** (merged in from `Leshen-Login`): `ServiceTaskSize`, `ProviderServicePrice`, `ActualJobPrice` entities exist in `entity/` matching the original DrawSQL design (task-size-keyed pricing tiers, a job price recorded separately from the quote amount) — but nothing creates, queries, or seeds them. `ProviderService.minPrice/maxPrice` is what actually backs the flat price-range shown in the app today (§5); these three are available if the team decides to build real task-size-based pricing later.
 
 ## 4. Use Cases (from the use case diagram)
 
@@ -168,26 +169,22 @@ Now a real FastAPI service (`python/app/`), not just CLI scripts:
 The 12 customer screens + core backend flow are now real and wired end to end (§5). What's left:
 
 - **Frontend**: the 12 customer screens are built; the 6 provider-side pages (§9a) are still empty stubs — no Figma for them.
-- **Backend**: no matching/search beyond "who offers this service" (blocked on §9b — no geodata); no real provider-responds-to-quote flow (the MVP shortcut auto-accepts, §5); authz is wide open (`permitAll()` everywhere — auth is off, see §8).
-- **Google OAuth2**: fully wired but disabled (§8) — needs real `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` and the config changes listed in §8/INSTRUCTIONS.md §5 to turn back on.
-- **Seed data**: `01_Database_CSV/` still doesn't match the schema (§3a) — no longer matters much locally since `DevDataSeeder` (§2) now seeds usable demo data directly through JPA on first run, but the CSVs themselves are still stale/unused.
+- **Backend**: no matching/search beyond "who offers this service" (blocked on §9b — no geodata); no real provider-responds-to-quote flow (the MVP shortcut auto-accepts, §5); authz is wide open (`permitAll()` everywhere — the JWT from login isn't validated on any endpoint yet, see §8).
+- **Auth**: login/register work and issue real JWTs, but nothing checks them — see §8 for exactly what's left to enforce it.
+- **Seed data**: `01_Database/` (renamed from the stale `01_Database_CSV/`, merged in from `Leshen-Login`) matches the DrawSQL schema but nothing imports these CSVs anywhere — `DevDataSeeder` (§2) seeds its own demo data directly through JPA instead, independent of these files.
 - **Deploy**: `render.yaml` + `vercel.json` exist and are documented (INSTRUCTIONS.md §3) but haven't actually been deployed yet — this is untested against real Render/Vercel infrastructure.
 
 ## 8. Auth Decision
 
-**Status: temporarily disabled (2026-09-16)** so the app is runnable/clickable without Google credentials while other parts get built. To re-enable:
-- Backend: uncomment the `spring.security.oauth2.client.registration.google.*` lines in `application.properties`, restore `.oauth2Login(...)` in `SecurityConfig.java`, and set real `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` in `backend/.env`. (Note: even a *blank* client-id crashes Spring Security's OAuth2 autoconfig at startup — the properties have to be fully absent, not just empty, which is why they're commented out rather than defaulted.)
-- Frontend: re-wrap the customer/provider routes in `frontend/src/routes/AppRoutes.jsx` with `<ProtectedRoute>` (component still exists at `routes/ProtectedRoute.jsx`, just unused right now), and restore the `getCurrentUser()` fetch in `AuthContext.jsx`.
-- Remove `frontend/src/components/dev/DevNav.jsx` and its use in `App.jsx` once real in-app navigation (buttons/links inside each screen) replaces it — it's a temporary click-through menu.
+**Status (2026-09-17): email/password + JWT, merged in from the `Leshen-Login` branch.** This replaced an earlier Google OAuth2 scaffold — the team decided against Google auth in favor of a self-hosted login. If you're looking for Google OAuth2 code, it's gone; this section describes what's here now.
 
-**Auth is planned to be Google OAuth (Sign in with Google), not username/password**, once re-enabled. Already scaffolded:
-
-- `User` entity has no `password_hash` — just `googleSub` (Google's stable subject id, unique) + `email`/`firstName`/`lastName` sourced from the Google profile on first login (`UserService.findOrCreate`).
-- `pom.xml` has `spring-boot-starter-oauth2-client`; `application.properties` reads `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` (get these from https://console.cloud.google.com/apis/credentials — not yet obtained).
-- `config/SecurityConfig.java` wires `.oauth2Login()` + CORS for the frontend origin. Login entrypoint: `GET /oauth2/authorization/google` (frontend's `Login.jsx` links here).
-- `/api/auth/me` (`AuthController`) returns the current user + whether they're a provider (`ProviderProfile` existence, not a role flag — matches the use-case diagram's "provider is also a user").
-- Frontend: `AuthContext.jsx` calls `/api/auth/me` on load; `AuthCallback.jsx` is where Spring Security should redirect after a successful Google login — **that redirect target still needs to be configured** to point at the deployed frontend once it has a URL.
-- **Still undecided:** session-cookie (current default — `withCredentials: true` is already set on the frontend's axios client) vs JWT. Session cookies are simpler for a hackathon and is what's wired up now; revisit only if cross-domain cookie issues show up between the Vercel and Render domains.
+- `User` entity: `email` (unique), `passwordHash` (Argon2, via `PasswordEncoder`), `firstName`, `lastName`, `phoneNumber`, `createdAt`. No `googleSub`.
+- **`POST /auth/register`** (`AuthController` → `AuthService.register`) — takes `email`/`firstName`/`lastName`/`password`/`phoneNumber`/`isProvider`, rejects if the email or phone number is already taken, hashes the password with Argon2, saves the user. **Note:** `isProvider` is accepted but not acted on yet — registering doesn't create a `ProviderProfile` row, so there's currently no self-serve way to become a provider through this endpoint.
+- **`POST /auth/login`** (`AuthService.login`) — verifies the password against the stored hash, returns a raw JWT string (not JSON) signed with HMAC-SHA256 via `JwtService`/`NimbusJwtEncoder`. The JWT only carries a `sub` claim (the user's id) — no email/name/roles in it.
+- Needs a `JWT_SECRET` env var (32+ characters — Argon2 doesn't need one, but the HMAC signer does) — see INSTRUCTIONS.md.
+- **Nothing validates the JWT on incoming requests yet.** `spring-boot-starter-oauth2-resource-server` is a dependency (added for `NimbusJwtEncoder`) but no `JwtDecoder`/resource-server filter is configured, and `SecurityConfig`'s filter chain is still `.anyRequest().permitAll()`. Business endpoints (`ServiceRequestController`, `QuoteController`, etc.) still run everything as a fixed demo user via `UserService.getDemoCustomer()` — logging in doesn't currently change what the app does.
+- Frontend: `Login.jsx` + new `Register.jsx` call the two endpoints directly (`api/auth.js`). The returned JWT + the email typed at login are stashed in `localStorage` and attached as a `Bearer` token on every backend request via an axios interceptor (`api/client.js`) — forward-wired, but inert until the backend actually checks it.
+- **What's left to make this real:** wire a `JwtDecoder` + resource-server filter into `SecurityConfig` so the JWT is actually verified; extract the real user from the token's `sub` claim in place of `UserService.getDemoCustomer()`; decide what `/auth/login`'s response should include (right now the frontend has no way to get the user's name/id back — only what it already knows from the login form); make `isProvider` on registration actually create a `ProviderProfile`.
 
 ## 9. Loophole / Gap Analysis (customer side, provider side, AI, infra)
 
@@ -221,7 +218,7 @@ The Figma file (§5) only covers the **customer** journey, which is now fully bu
 ### 9g. Data-modeling gaps — mostly addressed
 - ~~`Provider` entity conflated identity + profile~~ — fixed: split into `User` + `ProviderProfile` (§3b). **Seed CSVs still don't match** (§3a) — no longer blocking though, since `DevDataSeeder` seeds through JPA directly.
 - ~~No DTOs~~ — request/response DTOs now exist for the core flow (`dto/request`, `dto/response`) plus the new matching/profile DTOs (§2); entities are still returned directly from some controllers (e.g. `ServiceRequestController`, `BookingController`) rather than mapped to DTOs — works fine in practice since all the relevant `@ManyToOne`/`@OneToOne` associations default to EAGER fetch, but is still a shortcut worth cleaning up post-MVP.
-- **Still open:** no Bean Validation annotations on entities (only on the new request DTOs); no unique constraints beyond `User.googleSub`/`email` and `Service.name`.
+- **Still open:** no Bean Validation annotations on entities (only on the new request DTOs); no unique constraints beyond `User.email` and `Service.name`.
 
 ### 9h. Infra / process — partially addressed
 - ~~No Docker~~ — `backend/Dockerfile` now exists (multi-stage Maven build → JRE runtime) for Render deployment.
@@ -234,7 +231,7 @@ Decisions made to keep this shippable as a hackathon MVP:
 
 - **Frontend → Vercel.** `frontend/vercel.json` sets the build command (`npm run build`), output dir (`dist`), and a SPA rewrite so React Router's client-side routes don't 404 on refresh. Needs `VITE_API_BASE_URL` (backend Render URL) and `VITE_ML_API_BASE_URL` (ML service Render URL) set as Vercel env vars — see `frontend/.env.example`.
 - **Backend + ML service → Render**, both defined in the root `render.yaml` blueprint:
-  - `ubuntulink-backend` — Docker runtime, builds from `backend/Dockerfile`. Needs `SUPABASE_DB_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `FRONTEND_URL` set in Render's dashboard (marked `sync: false` in the blueprint — secrets aren't committed).
+  - `ubuntulink-backend` — Docker runtime, builds from `backend/Dockerfile`. Needs `SUPABASE_DB_URL`, `JWT_SECRET`, `FRONTEND_URL` set in Render's dashboard (marked `sync: false` in the blueprint — secrets aren't committed).
   - `ubuntulink-ml-service` — Python runtime, `uvicorn app.main:app`. Needs `OPEN_ROUTER_API_KEY`, `FRONTEND_URL`.
   - Fixed a real deploy blocker while wiring this up: `application.properties`'s `spring.config.import` for the local `.env` file wasn't marked `optional:`, which would have crashed backend startup on Render (no `.env` file is deployed there — real config comes from Render's env vars instead).
 - **Payments are mocked for the MVP, not real.** `Payment` entity + `MockPaymentService` always returns `MOCK_PAID` — there's no Stripe/PayFast/escrow integration, and none is planned before the hackathon deadline. `POST /api/bookings/{id}/payment/mock-charge` is the only payment endpoint. Real payment integration is a deliberate post-MVP cut (§9c).

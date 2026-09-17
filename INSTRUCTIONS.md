@@ -2,7 +2,7 @@
 
 Everything you need to get UbuntuLink running locally and deployed, including every API key/account you have to go create. Companion to [PROJECT.md](PROJECT.md), which covers *what's built and what's missing* — this doc is just *how to turn the key*.
 
-Auth is currently **disabled** (see PROJECT.md §8) so none of this requires a Google Cloud account yet — that section is included for when you turn it back on.
+Login/register work (email/password + JWT — see PROJECT.md §8), but the backend doesn't validate that JWT on any business endpoint yet, so everything still runs as a fixed demo user regardless of who's logged in. No third-party auth provider (Google, etc.) is used — see §5 for what's left to actually enforce it.
 
 ---
 
@@ -16,7 +16,7 @@ Get these first — everything below assumes you already have them.
 | 2 | **Supabase project + connection string** | https://supabase.com → New project → Project Settings → Database → Connection string (URI, "Transaction" pooler mode recommended) | The Postgres database the backend writes to |
 | 3 | **Render account** | https://render.com → sign up (GitHub login is easiest) | Hosting the backend + ML service |
 | 4 | **Vercel account** | https://vercel.com → sign up (GitHub login is easiest) | Hosting the frontend |
-| 5 | *(later)* **Google OAuth Client ID/Secret** | https://console.cloud.google.com/apis/credentials | Re-enabling real login — not needed right now, see §5 |
+| 5 | **A JWT secret you generate yourself** | Not a signup — just a random string, 32+ characters (e.g. `openssl rand -base64 48`, or any password generator) | Signing login JWTs (`JWT_SECRET` env var) |
 
 For #2, the connection string Supabase gives you looks like:
 ```
@@ -69,8 +69,9 @@ Check: `curl http://localhost:8000/health` → `{"status":"ok"}`
 Create `backend/.env`:
 ```
 SUPABASE_DB_URL=jdbc:postgresql://postgres.xxxxx:[YOUR-PASSWORD]@aws-0-xxxxx.pooler.supabase.com:6543/postgres
+JWT_SECRET=<a random 32+ character string — see §0>
 ```
-(Google OAuth vars are commented out in `application.properties` right now — leave them out, see §5.)
+`JWT_SECRET` is required — the backend won't start without it (`SecurityConfig` reads it via `@Value("${JWT_SECRET}")` with no default).
 
 Run (from the `backend/` folder):
 ```bash
@@ -100,6 +101,7 @@ Open **http://localhost:5173**.
 
 ### 2d. Try the real flow end to end
 
+0. (Optional) **Register** → create an account, then **Login** — this works end to end and returns a real JWT, but no screen actually requires being logged in yet (see PROJECT.md §8), so you can skip straight to step 1 too.
 1. **Welcome** → Get started
 2. **Onboarding** → enter a name + location (e.g. "Pretoria, Gauteng" — matches the seeded providers), pick Price or Ratings, Continue
 3. **Home** → "Describe your problem" → type something like *"My kitchen sink is leaking and I need someone to fix it today"* → Find the right service (this really calls the ML service to classify it)
@@ -127,7 +129,7 @@ For each, Render will ask you to fill in the env vars marked `sync: false` in th
 | Env var | Value |
 |---|---|
 | `SUPABASE_DB_URL` | Same JDBC string as your local `backend/.env` |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Leave blank for now — auth is disabled (§5) |
+| `JWT_SECRET` | Generate a **different** random 32+ character string for prod — don't reuse your local one |
 | `FRONTEND_URL` | Your Vercel URL once you have it (e.g. `https://ubuntulink.vercel.app`) — can add after first deploy |
 
 **`ubuntulink-ml-service`**
@@ -163,29 +165,25 @@ Render's free web services spin down after inactivity and take ~30-60s to wake o
 
 ## 4. What's simplified for this pass (read before demoing)
 
-- **No real login.** Every request acts as a fixed demo customer (`UserService.getDemoCustomer()`). See §5 to bring Google auth back.
+- **Login exists but isn't enforced.** Register/Login give you a real JWT, but no backend endpoint checks it — every request still acts as a fixed demo customer (`UserService.getDemoCustomer()`). See §5 for what's left to change that.
 - **"Send quote request" auto-accepts.** Real UX would have the provider review and respond to a quote request; that provider-side loop isn't built (no Figma for it — see PROJECT.md §9a). For now, submitting a quote request immediately creates the booking too, so the rest of the flow (confirmation → tracking → review) has something real to run against.
 - **Payments are mocked.** `POST /api/bookings/{id}/payment/mock-charge` always succeeds — no Stripe/PayFast, see PROJECT.md §9c/§10.
 - **No real distance/geolocation.** "Matching Providers" shows everyone who offers the matched service, not who's nearby — see PROJECT.md §9b.
-- **Demo data lives in `DevDataSeeder.java`**, not the `01_Database_CSV/` files (those are stale against the current schema — see PROJECT.md §3a).
+- **Demo data lives in `DevDataSeeder.java`**, not the `01_Database/` CSVs (those aren't imported by anything — see PROJECT.md §3a).
 
 ---
 
-## 5. Re-enabling Google Auth (when you're ready)
+## 5. Actually enforcing the JWT (when you're ready)
 
-1. Google Cloud Console → APIs & Services → Credentials → **Create OAuth client ID** → Web application.
-   - Authorized redirect URI: `http://localhost:8080/login/oauth2/code/google` (add your Render backend's equivalent URL too once deployed: `https://ubuntulink-backend.onrender.com/login/oauth2/code/google`).
-2. Copy the Client ID and Client secret into `backend/.env` (and into Render's env vars):
-   ```
-   GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
-   GOOGLE_CLIENT_SECRET=xxxx
-   ```
-3. In `backend/src/main/resources/application.properties`, uncomment the three `spring.security.oauth2.client.registration.google.*` lines.
-4. In `backend/src/main/java/com/geekkulcha/backend/config/SecurityConfig.java`, add `.oauth2Login(oauth2 -> {})` back into the filter chain, and tighten `.anyRequest().permitAll()` to `.authenticated()` for the routes that should require login.
+Login/register already work and return a real signed JWT (PROJECT.md §8) — this is what's left to make the backend actually check it instead of running everything as a demo user:
+
+1. In `backend/src/main/java/com/geekkulcha/backend/config/SecurityConfig.java`, add a `JwtDecoder` bean (`NimbusJwtDecoder.withSecretKey(...)`, same `JWT_SECRET` you already have) and wire `.oauth2ResourceServer(oauth2 -> oauth2.jwt(...))` into the filter chain (the `spring-boot-starter-oauth2-resource-server` dependency needed for this is already in `pom.xml`).
+2. Tighten `.anyRequest().permitAll()` to `.authenticated()` for the routes that should require login (probably everything except `/auth/**`).
+3. In each controller currently calling `userService.getDemoCustomer()` (`ServiceRequestController`, `QuoteController`), swap it for reading the user id out of the authenticated JWT's `sub` claim (e.g. `@AuthenticationPrincipal Jwt jwt` → `jwt.getSubject()` → look up the `User` by id) instead.
+4. Decide what `/auth/login` should actually return — right now it's a bare JWT string with no user info. Consider returning `{token, userId, firstName, ...}` so the frontend doesn't have to guess.
 5. In `frontend/src/routes/AppRoutes.jsx`, re-wrap the customer/provider routes in `<ProtectedRoute>` (still there, just unused).
-6. In `frontend/src/context/AuthContext.jsx`, restore the `getCurrentUser()` fetch on mount.
-7. Remove `frontend/src/components/dev/DevNav.jsx` and its use in `App.jsx`.
-8. Replace the demo-user fallbacks in `ServiceRequestController`/`QuoteController` with the real `@AuthenticationPrincipal OidcUser`.
+6. Remove `frontend/src/components/dev/DevNav.jsx` and its use in `App.jsx` once real in-app navigation replaces it.
+7. If `POST /auth/register`'s `isProvider: true` should actually create a `ProviderProfile`, add that to `AuthService.register()`.
 
 ---
 
@@ -194,7 +192,8 @@ Render's free web services spin down after inactivity and take ~30-60s to wake o
 | Symptom | Likely cause |
 |---|---|
 | Backend won't start: `Could not resolve placeholder 'SUPABASE_DB_URL'` | `backend/.env` missing or not found — must be at `backend/.env`, and you can run Maven from either the repo root or `backend/` (both are checked) |
-| Backend won't start: something about `clientId cannot be empty` | You uncommented the Google OAuth properties without setting real `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` — either set them or re-comment those lines |
+| Backend won't start: `Could not resolve placeholder 'JWT_SECRET'` | `backend/.env` is missing `JWT_SECRET` — see §2b, any random 32+ character string works locally |
+| `POST /auth/login` returns 401 for a user you just registered | Double-check the email/password match exactly — Argon2 hashing is case-sensitive and there's no "forgot password" flow yet |
 | Frontend screens load but show "Couldn't reach the ML service or backend" | One of the three `npm run dev` / `uvicorn` / `./mvnw spring-boot:run` processes isn't running, or the `.env`/`.env.local` files have the wrong ports |
 | `GET /api/services` returns `[]` | `DevDataSeeder` only seeds when the `service` table is empty — if you manually deleted rows without dropping the whole table, it won't re-seed. Truncate the table or just let `ddl-auto=update` recreate it |
 | CORS errors in the browser console | `FRONTEND_URL` env var on the backend/ML service doesn't match the URL you're actually loading the frontend from |

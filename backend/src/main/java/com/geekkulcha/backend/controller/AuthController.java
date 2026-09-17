@@ -1,43 +1,53 @@
 package com.geekkulcha.backend.controller;
 
-import com.geekkulcha.backend.dto.response.UserResponse;
-import com.geekkulcha.backend.entity.User;
-import com.geekkulcha.backend.service.UserService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.core.oidc.user.OidcUser;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.geekkulcha.backend.dto.LoginRequest;
+import com.geekkulcha.backend.dto.RegisterRequest;
+import com.geekkulcha.backend.service.AuthService;
+
 /**
- * Google sign-in itself is handled by Spring Security at GET /oauth2/authorization/google
- * (redirects to Google, then back here once GOOGLE_CLIENT_ID/SECRET are set — see §8).
- * This controller just exposes "who am I" for the frontend to call after the redirect.
- *
- * Google login is currently disabled (see SecurityConfig), so principal is always null here —
- * this returns 401 rather than NPE-ing until auth is wired back in.
+ * Email/password + JWT auth (from the Leshen-Login branch — see PROJECT.md §8). Login returns a
+ * raw JWT string; nothing on the backend validates that token on subsequent requests yet (see
+ * SecurityConfig), so business endpoints still run as a fixed demo user for now.
  */
 @RestController
-@RequestMapping("/api/auth")
-@RequiredArgsConstructor
+@RequestMapping("/auth")
 public class AuthController {
 
-    private final UserService userService;
+    private final AuthService authService;
 
-    @GetMapping("/me")
-    public ResponseEntity<UserResponse> me(@AuthenticationPrincipal OidcUser principal) {
-        if (principal == null) {
-            return ResponseEntity.status(401).build();
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<String> login(@RequestBody LoginRequest request) {
+        String token = authService.login(request);
+
+        if (token != null) {
+            return ResponseEntity.ok(token);
         }
-        User user = userService.findOrCreate(
-                principal.getSubject(),
-                principal.getEmail(),
-                principal.getGivenName(),
-                principal.getFamilyName()
-        );
-        return ResponseEntity.ok(new UserResponse(user.getId(), user.getEmail(), user.getFirstName(),
-                user.getLastName(), userService.isProvider(user.getId())));
+
+        return ResponseEntity
+               .status(401)
+               .body("Invalid email or password");
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<String> register(@RequestBody RegisterRequest request) {
+        boolean registered = authService.register(request);
+
+        if (registered) {
+            return ResponseEntity.ok("Registered Successfully");
+        }
+
+        return ResponseEntity
+               .status(401)
+               .body("Email / Phone Number already exists. Please log in");
     }
 }

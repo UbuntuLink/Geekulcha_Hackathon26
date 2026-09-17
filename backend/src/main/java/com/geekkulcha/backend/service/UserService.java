@@ -12,28 +12,23 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class UserService {
 
-    // Auth is disabled for now (PROJECT.md §8) — every request acts as this fixed demo
-    // customer instead of a real signed-in user. Remove once Google login is back.
-    private static final String DEMO_CUSTOMER_GOOGLE_SUB = "demo-customer";
+    // Auth (email/password + JWT, see AuthService/JwtService) isn't enforced on business
+    // endpoints yet — see SecurityConfig — so every request acts as this fixed demo customer
+    // instead of the real signed-in user. Swap for the JWT's subject claim once that's wired up.
+    private static final String DEMO_CUSTOMER_EMAIL = "demo.customer@ubuntulink.local";
 
     private final UserRepository userRepository;
     private final ProviderProfileRepository providerProfileRepository;
 
-    /** Looks up the local {@link User} by Google subject id, creating one on first login. */
-    public User findOrCreate(String googleSub, String email, String firstName, String lastName) {
-        return userRepository.findByGoogleSub(googleSub).orElseGet(() -> {
+    public User getDemoCustomer() {
+        return userRepository.findByEmail(DEMO_CUSTOMER_EMAIL).orElseGet(() -> {
             User user = new User();
-            user.setGoogleSub(googleSub);
-            user.setEmail(email);
-            user.setFirstName(firstName);
-            user.setLastName(lastName);
+            user.setEmail(DEMO_CUSTOMER_EMAIL);
+            user.setFirstName("Demo");
+            user.setLastName("Customer");
             user.setCreatedAt(Instant.now());
             return userRepository.save(user);
         });
-    }
-
-    public User getDemoCustomer() {
-        return findOrCreate(DEMO_CUSTOMER_GOOGLE_SUB, "demo.customer@ubuntulink.local", "Demo", "Customer");
     }
 
     public boolean isProvider(long userId) {

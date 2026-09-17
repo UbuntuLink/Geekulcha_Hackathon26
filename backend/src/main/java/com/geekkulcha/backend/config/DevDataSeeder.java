@@ -79,7 +79,6 @@ public class DevDataSeeder implements CommandLineRunner {
     private ProviderProfile seedProvider(String firstName, String lastName, String bio, String location,
                                           double rating, int reviewCount) {
         User user = new User();
-        user.setGoogleSub("demo-provider-" + firstName.toLowerCase());
         user.setEmail(firstName.toLowerCase() + "@ubuntulink.local");
         user.setFirstName(firstName);
         user.setLastName(lastName);
@@ -111,7 +110,6 @@ public class DevDataSeeder implements CommandLineRunner {
     // manually-seeded number (see ProviderProfile.reviewCount) rather than derived from this.
     private void seedThaboReview(ProviderProfile thabo, Service plumbing) {
         User naledi = new User();
-        naledi.setGoogleSub("demo-reviewer-naledi");
         naledi.setEmail("naledi@ubuntulink.local");
         naledi.setFirstName("Naledi");
         naledi.setCreatedAt(Instant.now());

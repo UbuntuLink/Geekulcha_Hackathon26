@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 const LINKS = [
   { section: "Auth", items: [
     ["/login", "Login"],
-    ["/auth/callback", "Auth Callback"],
+    ["/register", "Register"],
   ]},
   { section: "Customer journey", items: [
     ["/", "1. Welcome"],

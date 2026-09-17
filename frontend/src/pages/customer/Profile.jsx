@@ -17,7 +17,7 @@ export default function Profile() {
         <p className="font-medium capitalize text-gray-900">{priority || "Not set"}</p>
       </Card>
       <p className="mt-4 text-xs text-gray-400">
-        Google sign-in is temporarily disabled — see PROJECT.md §8. This is local-only for now.
+        Login exists (Register/Sign in) but isn't enforced on this screen yet — see PROJECT.md §8.
       </p>
       <BottomNav />
     </div>

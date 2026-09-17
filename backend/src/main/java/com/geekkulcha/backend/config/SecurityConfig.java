@@ -1,31 +1,61 @@
 package com.geekkulcha.backend.config;
 
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.List;
-
 /**
- * Google OAuth2 login (see PROJECT.md §8) — TEMPORARILY DISABLED so the app can boot and be
- * tested without GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET set up. Re-add `.oauth2Login(...)` below
- * (and restore the requirement in application.properties) when auth comes back.
- * FRONTEND_URL is still used for CORS.
+ * Email/password + JWT auth (from the Leshen-Login branch — see PROJECT.md §8). PasswordEncoder
+ * (Argon2) + JwtEncoder issue tokens via POST /auth/login and /auth/register
+ * (AuthController/AuthService/JwtService). Needs a JWT_SECRET env var (32+ chars — see
+ * INSTRUCTIONS.md).
+ *
+ * Incoming requests aren't actually validated against the JWT yet — no resource-server filter
+ * decodes/verifies it on protected routes, so every route is still permitAll() below. Business
+ * endpoints (ServiceRequestController etc.) still act as a fixed demo user rather than the real
+ * signed-in caller until that's wired up.
  */
 @Configuration
 public class SecurityConfig {
+
+    @Value("${JWT_SECRET}")
+    private String jwtSecret;
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8();
+    }
+
+    @Bean
+    public JwtEncoder jwtEncoder() {
+        SecretKey secretKey = new SecretKeySpec(jwtSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        return NimbusJwtEncoder.withSecretKey(secretKey).build();
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, CorsConfigurationSource corsConfigurationSource) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.disable())
+                .formLogin(form -> form.disable())
+                .httpBasic(basic -> basic.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll() // TODO: tighten to .authenticated() once auth is back, see PROJECT.md §8
+                        .anyRequest().permitAll() // TODO: enforce JWT once a resource-server filter validates it, see PROJECT.md §8
                 );
 
         return http.build();

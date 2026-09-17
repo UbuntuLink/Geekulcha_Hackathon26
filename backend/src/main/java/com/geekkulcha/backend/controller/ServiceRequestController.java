@@ -21,8 +21,8 @@ public class ServiceRequestController {
 
     @PostMapping
     public ServiceRequest create(@Valid @RequestBody ServiceRequestCreateRequest request) {
-        // Auth is disabled for now (PROJECT.md §8) — attribute every request to a fixed demo
-        // customer. Swap for the real @AuthenticationPrincipal OidcUser once Google login is back.
+        // The JWT isn't validated on this endpoint yet (PROJECT.md §8) — attribute every
+        // request to a fixed demo customer until a resource-server filter extracts the real user.
         var customer = userService.getDemoCustomer();
         return serviceRequestService.create(customer, request);
     }

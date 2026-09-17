@@ -8,7 +8,8 @@ import lombok.Setter;
 import java.time.Instant;
 
 /**
- * A person with an account. Identity comes from Google Sign-In (no local passwords).
+ * A person with an account. Identity is email/password (Argon2-hashed) + JWT — see
+ * AuthController/AuthService/JwtService and PROJECT.md §8.
  * A user is a "provider" iff a {@link ProviderProfile} row exists for them.
  */
 @Entity
@@ -23,14 +24,15 @@ public class User {
     private long id;
 
     @Column(nullable = false, unique = true)
-    private String googleSub;
-
-    @Column(nullable = false, unique = true)
     private String email;
+
+    private String passwordHash;
 
     private String firstName;
 
     private String lastName;
+
+    private String phoneNumber;
 
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();

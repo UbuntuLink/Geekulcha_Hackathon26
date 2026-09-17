@@ -2,7 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "../context/AuthContext.jsx";
 
 import Login from "../pages/auth/Login.jsx";
-import AuthCallback from "../pages/auth/AuthCallback.jsx";
+import Register from "../pages/auth/Register.jsx";
 
 import Welcome from "../pages/customer/Welcome.jsx";
 import CustomerOnboarding from "../pages/customer/CustomerOnboarding.jsx";
@@ -29,8 +29,9 @@ import ProviderProfileEdit from "../pages/provider/ProviderProfileEdit.jsx";
 import NotFound from "../pages/NotFound.jsx";
 
 // NOTE: auth gating is OFF for now (every route below was wrapped in <ProtectedRoute> —
-// removed so all screens are clickable without a Google login or a running backend).
-// AuthProvider is still here so useAuth()/AuthContext keep working once auth comes back.
+// removed so all screens are clickable without logging in or a running backend, and because
+// the backend doesn't validate the JWT on business endpoints yet either — see PROJECT.md §8).
+// AuthProvider is still here so useAuth()/AuthContext keep working once auth is enforced.
 // See PROJECT.md §8 — re-add <ProtectedRoute> around the customer/provider routes when ready.
 export default function AppRoutes() {
   return (
@@ -38,7 +39,7 @@ export default function AppRoutes() {
       <Routes>
         <Route path="/" element={<Welcome />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/register" element={<Register />} />
         <Route path="/onboarding" element={<CustomerOnboarding />} />
 
         {/* Customer journey — Figma screens 3-12, PROJECT.md §5 */}

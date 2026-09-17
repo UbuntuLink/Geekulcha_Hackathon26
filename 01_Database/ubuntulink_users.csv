@@ -1,0 +1,21 @@
+﻿first_name,last_name,email,password_hash,phone_number,created_at
+Sipho,Dlamini,sipho.dlamini@example.com,"$argon2id$v=19$m=16384,t=2,p=1$TLiQT0m57idvwJ5J6IqZsw$MC53JjI5J//8x/4O8HqgqD6j1q4VC8RzhbKLxEy9maA",0821000001,2026-09-07 21:30:00
+Thabo,Mkhize,thabo.mkhize@example.com,"$argon2id$v=19$m=16384,t=2,p=1$xahzgVSNOf3jyaGtvLO1RA$ZyJ5MS4IiFTtFf6FbGrdOlXo9rgCAkbXHpoUlcEsYDU",0821000002,2026-09-07 21:30:00
+Ayesha,Khan,ayesha.khan@example.com,"$argon2id$v=19$m=16384,t=2,p=1$mKIAFgXC+YNv0Pt9Fuia4Q$7+kflXU1216e23Z3Bt8iKuf5bOIC3yTYudjwqc8V+yo",0821000003,2026-09-07 21:30:00
+Lungelo,Zulu,lungelo.zulu@example.com,"$argon2id$v=19$m=16384,t=2,p=1$sX6F1r9rL6O8tR9BaqeFzA$W1UCulCLv6muidgKSiKKVo1O1kelh8WTdNkaAdhYKPY",0821000004,2026-09-07 21:30:00
+Naledi,Molefe,naledi.molefe@example.com,"$argon2id$v=19$m=16384,t=2,p=1$d+ubgakRcmpkE+C8+GWJZA$kQWQ+YLxvYP1JtAfkUzUiCLxyresdJObOk7pjHZetog",0821000005,2026-09-07 21:30:00
+Kagiso,Mokoena,kagiso.mokoena@example.com,"$argon2id$v=19$m=16384,t=2,p=1$A3CsWQ7Fao8Z2LFFHKhggQ$k1ba2lfQbdGmUdiGbRYqawfpCnN87rzfUyCqoI9004o",0821000006,2026-09-07 21:30:00
+Zanele,Khumalo,zanele.khumalo@example.com,"$argon2id$v=19$m=16384,t=2,p=1$pKNIKCxJkLhtpoLH7zuFTQ$SI63PqAn65jN3kmSkGqDmECQy/+r/wmxL2lfLbpEdc8",0821000007,2026-09-07 21:30:00
+Imraan,Patel,imraan.patel@example.com,"$argon2id$v=19$m=16384,t=2,p=1$Cy9SemSafVXke/2uw02wrQ$+xdqlUfEjsAWGsAaH3wu+7nTLW1RqYkijP7Q2/+gM04",0821000008,2026-09-07 21:30:00
+Nokuthula,Cele,nokuthula.cele@example.com,"$argon2id$v=19$m=16384,t=2,p=1$u5ppjpNaZSwYsNqCHzvk/g$ZoAFsbSpm4/JCL8tl4F1BAO19hAR9OxUi0fNeNYX+5I",0821000009,2026-09-07 21:30:00
+Mandla,Ndlovu,mandla.ndlovu@example.com,"$argon2id$v=19$m=16384,t=2,p=1$OFoAFelay1an4XhCx7Uglg$r6PPqFQk4iwa5q2pTrJ8YueIyPLt64OcbxxWPFJ1otQ",0821000010,2026-09-07 21:30:00
+Priya,Naidoo,priya.naidoo@example.com,"$argon2id$v=19$m=16384,t=2,p=1$3kLrQCgYBpRF6WtLJNIweA$duRUN966Dnvpln0ghWn+n4+fdrRXnMsgvtJjEMSurLc",0821000011,2026-09-07 21:30:00
+Sibusiso,Ngcobo,sibusiso.ngcobo@example.com,"$argon2id$v=19$m=16384,t=2,p=1$z7Q43VjsEFjH/lE3sYXeZA$/5qKJmtUv8Rz0zUt2oJs4aRTy0xWMdm0PfULvBZbnnE",0821000012,2026-09-07 21:30:00
+Lerato,Maseko,lerato.maseko@example.com,"$argon2id$v=19$m=16384,t=2,p=1$GIKb11ziTZI6xVYPLSWc2w$SD5EHa2gMRZkBmQBVSdq8Dl6ZNOHNC5iqTSyLCSK4M0",0821000013,2026-09-07 21:30:00
+Yusuf,Ismail,yusuf.ismail@example.com,"$argon2id$v=19$m=16384,t=2,p=1$tcCKvo8qx/K4h42rB3YBSQ$APqOSxgb0zZg48UOcve++OAZOA4o9jdothbgHPB007Y",0821000014,2026-09-07 21:30:00
+Bongani,Sithole,bongani.sithole@example.com,"$argon2id$v=19$m=16384,t=2,p=1$XA5ZiFzRJV9LjUwVlUBqtw$3FpEX5p1LCFUuKYOy19O9xbeN1grHSjgaa1p+c9C1Wc",0821000015,2026-09-07 21:30:00
+Tamara,Pillay,tamara.pillay@example.com,"$argon2id$v=19$m=16384,t=2,p=1$3VoyjjqcgUdxx00YqMIeNw$exS7vC7MIUGAspt8qOuMUzaJebGOjL0IPlMd3GFjNlk",0821000016,2026-09-07 21:30:00
+Sandile,Nxumalo,sandile.nxumalo@example.com,"$argon2id$v=19$m=16384,t=2,p=1$jFSgOXFBmPQraPZDrn4ZHw$Tdt9lj8USZp5RKr9EJoYcD25JBZAxMxFztGaRTwmRpg",0821000017,2026-09-07 21:30:00
+Keegan,Govender,keegan.govender@example.com,"$argon2id$v=19$m=16384,t=2,p=1$geeqO+e2uc0UQvk9vEQODg$/iNP7v8EjV48M+39zW1cXDFcz+A0QhopCOROd/590is",0821000018,2026-09-07 21:30:00
+Nompumelelo,Hadebe,nompumelelo.hadebe@example.com,"$argon2id$v=19$m=16384,t=2,p=1$13H7y7R0uDmn7Dpm+qO5kw$5hQYDOBlRfOusPfT/J6L7aruJ5ojNMBy52oVb9q+x6s",0821000019,2026-09-07 21:30:00
+Ridwaan,Essop,ridwaan.essop@example.com,"$argon2id$v=19$m=16384,t=2,p=1$gmedEF4RzpaUAdvPcC5cbg$a0wZL/LxVz/nj7BID37Ydb2nZmIaIkENeFgo+SNgrFI",0821000020,2026-09-07 21:30:00

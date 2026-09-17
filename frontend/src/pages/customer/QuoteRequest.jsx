@@ -4,6 +4,7 @@ import Screen from "../../components/layout/Screen.jsx";
 import Card from "../../components/common/Card.jsx";
 import Button from "../../components/common/Button.jsx";
 import { Field, TextArea, TextInput } from "../../components/common/Field.jsx";
+import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import { createQuote, acceptQuote, estimatePrice, getServiceRequest } from "../../api/services.js";
 import { formatRange } from "../../lib/format.js";
 
@@ -84,7 +85,7 @@ export default function QuoteRequest() {
         </p>
       )}
 
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+      {error && <div className="mt-4"><ErrorBanner>{error}</ErrorBanner></div>}
 
       <Button onClick={handleSubmit} disabled={submitting} className="mt-6">
         {submitting ? "Sending..." : "Send quote request"}

@@ -36,15 +36,15 @@ const LINKS = [
 ];
 
 export default function DevNav() {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="border-b bg-yellow-50 text-sm">
       <button
-        className="w-full px-3 py-1 text-left font-medium text-yellow-800"
+        className="w-full px-3 py-1 text-left font-medium text-yellow-800 transition-colors hover:bg-yellow-100"
         onClick={() => setOpen((o) => !o)}
       >
-        {open ? "▾" : "▸"} Dev nav — jump to any screen (auth disabled, see PROJECT.md §8)
+        {open ? "▾" : "▸"} Dev nav — jump to any screen (auth isn't enforced, see PROJECT.md §8)
       </button>
       {open && (
         <div className="flex flex-wrap gap-x-4 gap-y-1 px-3 pb-2">

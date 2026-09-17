@@ -3,6 +3,9 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Screen from "../../components/layout/Screen.jsx";
 import Card from "../../components/common/Card.jsx";
 import StarRating from "../../components/common/StarRating.jsx";
+import Loading from "../../components/common/Loading.jsx";
+import ErrorBanner from "../../components/common/ErrorBanner.jsx";
+import EmptyState from "../../components/common/EmptyState.jsx";
 import { getMatchingProviders, getServiceRequest } from "../../api/services.js";
 import { formatRange } from "../../lib/format.js";
 import { getOnboarding } from "../../lib/preferences.js";
@@ -43,18 +46,17 @@ export default function MatchingProviders() {
       title={providers ? `${providers.length} providers found` : "Finding providers..."}
       subtitle="Providers available near you"
     >
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      <ErrorBanner>{error}</ErrorBanner>
+      {providers === null && !error && <Loading label="Finding providers near you..." />}
       {providers?.length === 0 && (
-        <p className="text-sm text-gray-500">
-          No providers offer this service yet — see PROJECT.md for how to seed more demo data.
-        </p>
+        <EmptyState>No providers offer this service yet — see PROJECT.md for how to seed more demo data.</EmptyState>
       )}
 
       <div className="space-y-3">
         {providers?.map((p) => (
           <Card
             key={p.providerProfileId}
-            className="cursor-pointer"
+            className="cursor-pointer transition-shadow hover:shadow-md"
             onClick={() => navigate(`/providers/${p.providerProfileId}`, { state: { serviceRequestId: id } })}
           >
             <div className="flex items-start justify-between">
@@ -77,7 +79,7 @@ export default function MatchingProviders() {
       {providers?.length > 1 && (
         <button
           onClick={() => navigate(`/requests/${id}/compare`, { state: { providers: providers.slice(0, 3) } })}
-          className="mt-4 w-full rounded-lg border border-brand py-2.5 text-sm font-medium text-brand"
+          className="mt-4 w-full rounded-lg border border-brand py-2.5 text-sm font-medium text-brand transition-colors hover:bg-brand/5"
         >
           Compare providers
         </button>

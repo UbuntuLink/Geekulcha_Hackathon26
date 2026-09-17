@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import Screen from "../../components/layout/Screen.jsx";
 import Button from "../../components/common/Button.jsx";
 import { TextArea } from "../../components/common/Field.jsx";
+import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import { submitReview } from "../../api/services.js";
 
 export default function ReviewProvider() {
@@ -12,14 +13,16 @@ export default function ReviewProvider() {
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async () => {
     setSubmitting(true);
+    setError("");
     try {
       await submitReview(bookingId, { rating, comment });
       setDone(true);
     } catch (err) {
-      alert("Couldn't submit the review — is the backend running?");
+      setError("Couldn't submit the review — is the backend running?");
       console.error(err);
     } finally {
       setSubmitting(false);
@@ -44,7 +47,7 @@ export default function ReviewProvider() {
           <button
             key={star}
             onClick={() => setRating(star)}
-            className={`text-4xl ${star <= rating ? "text-amber-500" : "text-gray-300"}`}
+            className={`text-4xl transition-colors ${star <= rating ? "text-amber-500" : "text-gray-300 hover:text-amber-300"}`}
           >
             ★
           </button>
@@ -55,6 +58,7 @@ export default function ReviewProvider() {
         onChange={(e) => setComment(e.target.value)}
         placeholder="Fast, professional and affordable."
       />
+      {error && <div className="mt-4"><ErrorBanner>{error}</ErrorBanner></div>}
       <Button className="mt-6" onClick={handleSubmit} disabled={submitting}>
         {submitting ? "Submitting..." : "Submit review"}
       </Button>

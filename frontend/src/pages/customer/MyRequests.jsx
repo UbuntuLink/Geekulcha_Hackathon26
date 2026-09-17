@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Screen from "../../components/layout/Screen.jsx";
 import Card from "../../components/common/Card.jsx";
-import BottomNav from "../../components/layout/BottomNav.jsx";
+import EmptyState from "../../components/common/EmptyState.jsx";
 import { getMyServiceRequests } from "../../api/services.js";
 
 export default function MyRequests() {
@@ -13,20 +14,18 @@ export default function MyRequests() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-cream px-4 pb-24 pt-6">
-      <h1 className="mb-4 text-2xl font-bold text-gray-900">Your requests</h1>
-      {requests.length === 0 && <p className="text-sm text-gray-500">No requests yet.</p>}
+    <Screen title="Your requests" showBack={false} withNav>
+      {requests.length === 0 && <EmptyState>No requests yet.</EmptyState>}
       {requests.map((req) => (
         <Card
           key={req.id}
-          className="mb-2 cursor-pointer"
+          className="mb-2 cursor-pointer transition-shadow hover:shadow-md"
           onClick={() => navigate(`/requests/${req.id}/matches`)}
         >
           <p className="font-medium text-gray-900">{req.description}</p>
-          <p className="text-sm text-gray-500 capitalize">{req.status?.toLowerCase().replace("_", " ")}</p>
+          <p className="text-sm capitalize text-gray-500">{req.status?.toLowerCase().replace("_", " ")}</p>
         </Card>
       ))}
-      <BottomNav />
-    </div>
+    </Screen>
   );
 }

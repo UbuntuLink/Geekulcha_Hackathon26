@@ -18,8 +18,11 @@ export default function Welcome() {
       </div>
 
       <div>
-        <button onClick={() => navigate("/onboarding")} className="text-xl font-bold">
-          Get started
+        <button
+          onClick={() => navigate("/onboarding")}
+          className="text-xl font-bold transition-opacity hover:opacity-80"
+        >
+          Get started →
         </button>
         <p className="mt-1 text-sm text-white/70">Find local skills. Compare confidently.</p>
       </div>

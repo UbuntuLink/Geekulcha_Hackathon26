@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import Screen from "../../components/layout/Screen.jsx";
 import Card from "../../components/common/Card.jsx";
 import Button from "../../components/common/Button.jsx";
+import Loading from "../../components/common/Loading.jsx";
+import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import { getBooking } from "../../api/services.js";
 import { formatZAR } from "../../lib/format.js";
 
@@ -10,12 +12,32 @@ export default function BookingConfirmation() {
   const { bookingId } = useParams();
   const navigate = useNavigate();
   const [booking, setBooking] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    getBooking(bookingId).then(setBooking).catch(() => setBooking(null));
+    getBooking(bookingId)
+      .then(setBooking)
+      .catch((err) => {
+        setError("Couldn't load this booking — is the backend running?");
+        console.error(err);
+      });
   }, [bookingId]);
 
-  if (!booking) return <Screen title="Loading booking..." />;
+  if (error) {
+    return (
+      <Screen title="Booking confirmed" showBack={false}>
+        <ErrorBanner>{error}</ErrorBanner>
+      </Screen>
+    );
+  }
+
+  if (!booking) {
+    return (
+      <Screen title="Booking confirmed" showBack={false}>
+        <Loading />
+      </Screen>
+    );
+  }
 
   const providerName = `${booking.quote.providerProfile.user.firstName} ${booking.quote.providerProfile.user.lastName ?? ""}`.trim();
 

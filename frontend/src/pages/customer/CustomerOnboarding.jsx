@@ -37,10 +37,10 @@ export default function CustomerOnboarding() {
               <button
                 key={option}
                 onClick={() => setPriority(option)}
-                className={`flex-1 rounded-lg border py-2.5 text-sm font-medium capitalize ${
+                className={`flex-1 rounded-lg border py-2.5 text-sm font-medium capitalize transition-colors ${
                   priority === option
                     ? "border-brand bg-brand text-white"
-                    : "border-gray-200 bg-white text-gray-700"
+                    : "border-gray-200 bg-white text-gray-700 hover:border-brand/40"
                 }`}
               >
                 {option}

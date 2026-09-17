@@ -1,15 +1,16 @@
 import { useNavigate } from "react-router-dom";
+import BottomNav from "./BottomNav.jsx";
 
-/** Shared page shell: optional back arrow + title, cream background, bottom padding for BottomNav. */
+/** Shared page shell: optional back arrow + title, cream background, bottom nav slot. */
 export default function Screen({ title, subtitle, showBack = true, withNav = false, children }) {
   const navigate = useNavigate();
 
   return (
-    <div className={`min-h-screen bg-cream px-4 pb-8 pt-4 ${withNav ? "pb-24" : ""}`}>
+    <div className={`min-h-screen bg-cream px-4 pt-4 ${withNav ? "pb-24" : "pb-8"}`}>
       {(title || showBack) && (
         <div className="mb-4">
           {showBack && (
-            <button onClick={() => navigate(-1)} className="mb-2 text-sm text-gray-500">
+            <button onClick={() => navigate(-1)} className="mb-2 text-sm text-gray-500 hover:text-gray-700">
               ← Back
             </button>
           )}
@@ -18,6 +19,7 @@ export default function Screen({ title, subtitle, showBack = true, withNav = fal
         </div>
       )}
       {children}
+      {withNav && <BottomNav />}
     </div>
   );
 }

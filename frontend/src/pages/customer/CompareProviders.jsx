@@ -3,6 +3,8 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Screen from "../../components/layout/Screen.jsx";
 import Card from "../../components/common/Card.jsx";
 import Button from "../../components/common/Button.jsx";
+import Loading from "../../components/common/Loading.jsx";
+import EmptyState from "../../components/common/EmptyState.jsx";
 import { getMatchingProviders, getServiceRequest } from "../../api/services.js";
 import { formatRange } from "../../lib/format.js";
 
@@ -25,7 +27,21 @@ export default function CompareProviders() {
     })();
   }, [id, providers]);
 
-  if (!providers) return <Screen title="Compare your options" />;
+  if (!providers) {
+    return (
+      <Screen title="Compare your options">
+        <Loading />
+      </Screen>
+    );
+  }
+
+  if (providers.length === 0) {
+    return (
+      <Screen title="Compare your options">
+        <EmptyState>No providers to compare yet.</EmptyState>
+      </Screen>
+    );
+  }
 
   const best = [...providers].sort((a, b) => b.rating - a.rating)[0];
 

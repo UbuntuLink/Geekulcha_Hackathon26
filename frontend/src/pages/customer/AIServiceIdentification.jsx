@@ -56,7 +56,7 @@ export default function AIServiceIdentification() {
 
       <button
         onClick={() => navigate(`/requests/${id}/matches`, { state: { serviceId } })}
-        className="mt-6 text-sm font-medium text-brand"
+        className="mt-6 text-sm font-medium text-brand hover:underline"
       >
         Skip →
       </button>

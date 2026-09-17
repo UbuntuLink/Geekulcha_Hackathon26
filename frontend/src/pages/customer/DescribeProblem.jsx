@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Screen from "../../components/layout/Screen.jsx";
 import Button from "../../components/common/Button.jsx";
+import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import { classifyMessage, createServiceRequest, listServices } from "../../api/services.js";
 import { getOnboarding } from "../../lib/preferences.js";
 
@@ -56,12 +57,12 @@ export default function DescribeProblem() {
       <button
         type="button"
         onClick={() => alert("Photo upload isn't built yet — see PROJECT.md §9f.")}
-        className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white text-2xl text-gray-400"
+        className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white text-2xl text-gray-400 transition-colors hover:border-brand hover:text-brand"
       >
         +
       </button>
 
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+      {error && <div className="mt-4"><ErrorBanner>{error}</ErrorBanner></div>}
 
       <Button onClick={handleSubmit} disabled={loading || !description.trim()} className="mt-6">
         {loading ? "Finding the right service..." : "Find the right service"}

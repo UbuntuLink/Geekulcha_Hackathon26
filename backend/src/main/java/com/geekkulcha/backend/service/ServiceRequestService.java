@@ -1,0 +1,52 @@
+package com.geekkulcha.backend.service;
+
+import com.geekkulcha.backend.dto.request.ServiceRequestCreateRequest;
+import com.geekkulcha.backend.entity.RequestStatus;
+import com.geekkulcha.backend.entity.ServiceRequest;
+import com.geekkulcha.backend.entity.User;
+import com.geekkulcha.backend.exception.ResourceNotFoundException;
+import com.geekkulcha.backend.repository.ServiceRepository;
+import com.geekkulcha.backend.repository.ServiceRequestRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.time.Instant;
+import java.util.List;
+
+/**
+ * The AI classification call (python/app/routers/classification.py) happens on the frontend
+ * before this is hit — see api/services.js classifyMessage(). This just persists the result.
+ */
+@Service
+@RequiredArgsConstructor
+public class ServiceRequestService {
+
+    private final ServiceRequestRepository serviceRequestRepository;
+    private final ServiceRepository serviceRepository;
+
+    public ServiceRequest create(User customer, ServiceRequestCreateRequest request) {
+        ServiceRequest serviceRequest = new ServiceRequest();
+        serviceRequest.setUser(customer);
+        serviceRequest.setDescription(request.description());
+        serviceRequest.setLocation(request.location());
+        serviceRequest.setPreferredDate(request.preferredDate());
+        serviceRequest.setAiClassificationRaw(request.aiClassificationRaw());
+        serviceRequest.setStatus(RequestStatus.OPEN);
+        serviceRequest.setCreatedAt(Instant.now());
+
+        if (request.serviceId() != null) {
+            serviceRepository.findById(request.serviceId()).ifPresent(serviceRequest::setService);
+        }
+
+        return serviceRequestRepository.save(serviceRequest);
+    }
+
+    public ServiceRequest getById(long id) {
+        return serviceRequestRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Service request " + id + " not found"));
+    }
+
+    public List<ServiceRequest> findByUser(long userId) {
+        return serviceRequestRepository.findByUserId(userId);
+    }
+}

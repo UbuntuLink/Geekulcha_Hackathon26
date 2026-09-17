@@ -34,6 +34,6 @@ Respond ONLY in this exact JSON format:
   "reasoning": "<one sentence>",
   "clarifying_question": "<a short question, or null if confidence is high or medium>",
   "advice": "<a short helpful suggestion if category is other, otherwise null>",
-  "urgency": "<low|medium|high|emergency>"
+  "urgency": "<low|medium|high|emergency>",
   "job_description": "<one clear, professional sentence>"
 }

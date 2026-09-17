@@ -1,22 +1,32 @@
 package com.geekkulcha.backend.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Entity 
+/** A service a given provider offers, and what they charge for it. */
+@Entity
+@Table(name = "provider_service")
+@Getter
+@Setter
+@NoArgsConstructor
 public class ProviderService {
+
     @Id
-    @GeneratedValue(strategy=GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
-    private double price;
+    @ManyToOne(optional = false)
+    private ProviderProfile providerProfile;
 
-    @ManyToOne
-    private Provider provider;
-
-    @ManyToOne
+    @ManyToOne(optional = false)
     private Service service;
+
+    // A flat range rather than the DrawSQL design's separate task-size-keyed price table
+    // (provider_service_price / service_task_size, see PROJECT.md §3b) — good enough to match
+    // the Figma price-range display without building task sizing for the MVP.
+    private double minPrice;
+
+    private double maxPrice;
 }

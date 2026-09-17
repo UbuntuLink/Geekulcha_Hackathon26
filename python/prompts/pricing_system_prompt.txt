@@ -18,6 +18,6 @@ Respond ONLY in this exact JSON format, with no other text:
   "estimated_min_zar": <number>,
   "estimated_max_zar": <number>,
   "based_on": "<'verified reference rate' or 'general estimate, no verified data'>",
-  "reasoning": "<one sentence explaining the range, including any urgency/complexity adjustment applied>"
+  "reasoning": "<one sentence explaining the range, including any urgency/complexity adjustment applied>",
   "price_time": "<how dated the price is, which year are we looking at>"
 }

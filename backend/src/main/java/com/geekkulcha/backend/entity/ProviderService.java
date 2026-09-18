@@ -4,8 +4,14 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
-/** A service a given provider offers, and what they charge for it. */
+/**
+ * A service a given provider offers, and what they charge for it.
+ *
+ * NOTE: this table already has real rows in the shared Supabase DB predating minPrice/maxPrice
+ * — @ColumnDefault lets `ddl-auto=update` add them as NOT NULL anyway (see ProviderProfile).
+ */
 @Entity
 @Table(name = "provider_service")
 @Getter
@@ -26,7 +32,9 @@ public class ProviderService {
     // A flat range rather than the DrawSQL design's separate task-size-keyed price table
     // (provider_service_price / service_task_size, see PROJECT.md §3b) — good enough to match
     // the Figma price-range display without building task sizing for the MVP.
+    @ColumnDefault("0")
     private double minPrice;
 
+    @ColumnDefault("0")
     private double maxPrice;
 }

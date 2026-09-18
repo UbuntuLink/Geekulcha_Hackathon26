@@ -4,9 +4,14 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
 /**
  * The provider-facing extension of a {@link User}. Existing = "this user is a provider".
+ *
+ * NOTE: this table already has real rows in the shared Supabase DB predating some of these
+ * columns — every NOT NULL primitive here needs @ColumnDefault so `ddl-auto=update` can add it
+ * (Postgres refuses to add a NOT NULL column with no default to a table that already has rows).
  */
 @Entity
 @Table(name = "provider_profile")
@@ -28,14 +33,18 @@ public class ProviderProfile {
     // TODO(9b): plain text for MVP; real "nearby" matching needs lat/long, see PROJECT.md §9b
     private String location;
 
+    @ColumnDefault("0")
     private int serviceRadiusKm;
 
+    @ColumnDefault("0")
     private double rating;
 
     // Denormalized MVP stand-ins (avoid a real reviews-join / availability-calendar build, see
     // PROJECT.md §9a/§9e): reviewCount mirrors Review rows for this provider, availableToday is
     // a manually-set flag rather than a real calendar.
+    @ColumnDefault("0")
     private int reviewCount;
 
+    @ColumnDefault("true")
     private boolean availableToday = true;
 }

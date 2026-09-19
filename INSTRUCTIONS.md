@@ -79,9 +79,16 @@ cd backend
 ./mvnw spring-boot:run
 ```
 
-On first run, `DevDataSeeder` automatically inserts demo data into your Supabase database — 10 service categories and 3 plumbing providers (Thabo Plumbing, Mpho Home Services, FixRight Plumbing) matching the Figma designs, so the app is actually clickable with real data instead of empty screens. It only seeds once (skips if `service` already has rows).
+On first run, `DevDataSeeder` automatically inserts demo data into your Supabase database — 10 service categories and 3 plumbing providers (Thabo Plumbing, Mpho Home Services, FixRight Plumbing) matching the Figma designs, so the app is actually clickable with real data instead of empty screens (this part only seeds once, skips if `service` already has rows). It also seeds **two real, login-capable demo accounts** every time it starts (cheap to check, safe to leave on):
 
-Check: `curl http://localhost:8080/api/services` → a JSON array of 10 services.
+| Role | Email | Password |
+|---|---|---|
+| Customer | `customer@ubuntulink.demo` | `Demo1234!` |
+| Provider | `provider@ubuntulink.demo` | `Demo1234!` |
+
+The provider one comes with a filled-in profile and a Plumbing service offering already attached, so it shows up in matching immediately — no manual setup needed.
+
+Check: `curl http://localhost:8080/api/services` → 401 (expected — every route needs a token now except `/auth/**`, see §5).
 
 ### 2c. Frontend (React/Vite)
 
@@ -101,17 +108,14 @@ Open **http://localhost:5173**.
 
 ### 2d. Try the real flow end to end
 
-Auth is fully enforced now (PROJECT.md §8), and the provider-responds-to-a-quote flow is real — so testing the whole loop needs **two accounts in two browser sessions** (e.g. one normal window + one incognito/private window, so both stay logged in at once).
+Auth is fully enforced now (PROJECT.md §8), and the provider-responds-to-a-quote flow is real — so testing the whole loop needs **two accounts in two browser sessions** (e.g. one normal window + one incognito/private window, so both stay logged in at once). The two seeded demo accounts (§2b) mean you don't have to register anything by hand:
 
-**Session A — register a provider:**
-1. **Register** → check "I'm a service provider" → this also creates a `ProviderProfile` for them
-2. **Login** → lands on `/provider/dashboard`, which redirects to **Provider Onboarding** since the profile's still empty
-3. Fill in bio + location, pick a service (e.g. Plumbing) with a price range → Finish setup
-4. You're on the **Provider Dashboard** — leave this session logged in
+**Session A — the seeded provider:**
+1. **Log in** with `provider@ubuntulink.demo` / `Demo1234!` → lands straight on the **Provider Dashboard** (its profile's already filled in, so no onboarding detour) — leave this session logged in
 
-**Session B — register a customer, run the real flow:**
-1. **Register** (leave "I'm a service provider" unchecked) → **Login** → lands on `/home`
-2. **Onboarding** → name + location (match Session A's provider's location/service area loosely), pick Price or Ratings, Continue
+**Session B — the seeded customer, run the real flow:**
+1. **Log in** with `customer@ubuntulink.demo` / `Demo1234!` → lands on `/home`, which redirects to **Onboarding** first since this browser session has no saved prefs yet (local-only, not tied to the account on the backend)
+2. **Onboarding** → name + location (e.g. "Pretoria, Gauteng" — matches the seeded provider), pick Price or Ratings, Continue
 3. **Home** → "Describe your problem" → type something like *"My kitchen sink is leaking and I need someone to fix it today"* → Find the right service (really calls the ML service)
 4. **AI Service Identification** → shows the real classification, auto-advances
 5. **Matching Providers** → should include Session A's provider if the category/service matches

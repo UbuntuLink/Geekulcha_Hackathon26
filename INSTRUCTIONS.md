@@ -182,8 +182,7 @@ Login/register already work and return a real signed JWT (PROJECT.md §8) — th
 3. In each controller currently calling `userService.getDemoCustomer()` (`ServiceRequestController`, `QuoteController`), swap it for reading the user id out of the authenticated JWT's `sub` claim (e.g. `@AuthenticationPrincipal Jwt jwt` → `jwt.getSubject()` → look up the `User` by id) instead.
 4. Decide what `/auth/login` should actually return — right now it's a bare JWT string with no user info. Consider returning `{token, userId, firstName, ...}` so the frontend doesn't have to guess.
 5. In `frontend/src/routes/AppRoutes.jsx`, re-wrap the customer/provider routes in `<ProtectedRoute>` (still there, just unused).
-6. Remove `frontend/src/components/dev/DevNav.jsx` and its use in `App.jsx` once real in-app navigation replaces it.
-7. If `POST /auth/register`'s `isProvider: true` should actually create a `ProviderProfile`, add that to `AuthService.register()`.
+6. If `POST /auth/register`'s `isProvider: true` should actually create a `ProviderProfile`, add that to `AuthService.register()`.
 
 ---
 

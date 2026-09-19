@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function Welcome() {
   const navigate = useNavigate();
@@ -19,12 +19,18 @@ export default function Welcome() {
 
       <div>
         <button
-          onClick={() => navigate("/onboarding")}
-          className="text-xl font-bold transition-opacity hover:opacity-80"
+          onClick={() => navigate("/register")}
+          className="w-full rounded-lg bg-white py-3 text-center text-lg font-bold text-brand transition-opacity hover:opacity-90"
         >
-          Get started →
+          Get started
         </button>
-        <p className="mt-1 text-sm text-white/70">Find local skills. Compare confidently.</p>
+        <p className="mt-3 text-center text-sm text-white/80">
+          Already have an account?{" "}
+          <Link to="/login" className="font-semibold underline">
+            Log in
+          </Link>
+        </p>
+        <p className="mt-3 text-center text-sm text-white/70">Find local skills. Compare confidently.</p>
       </div>
     </div>
   );

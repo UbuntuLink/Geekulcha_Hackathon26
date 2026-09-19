@@ -4,6 +4,7 @@ import ProtectedRoute from "./ProtectedRoute.jsx";
 
 import Login from "../pages/auth/Login.jsx";
 import Register from "../pages/auth/Register.jsx";
+import ForgotPassword from "../pages/auth/ForgotPassword.jsx";
 
 import Welcome from "../pages/customer/Welcome.jsx";
 import CustomerOnboarding from "../pages/customer/CustomerOnboarding.jsx";
@@ -40,6 +41,7 @@ export default function AppRoutes() {
         <Route path="/" element={<Welcome />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/onboarding" element={<CustomerOnboarding />} />
 
         {/* Customer journey — Figma screens 3-12, PROJECT.md §5 */}

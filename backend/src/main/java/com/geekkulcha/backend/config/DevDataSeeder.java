@@ -4,6 +4,7 @@ import com.geekkulcha.backend.entity.*;
 import com.geekkulcha.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -11,9 +12,15 @@ import java.time.temporal.ChronoUnit;
 
 /**
  * Seeds just enough data for the 12-screen customer flow (PROJECT.md §5) to be click-through-
- * testable locally without a real Supabase dataset. Runs once, only if `service` is empty —
- * safe to leave on for local dev; harmless no-op once real data exists. Not wired into the
- * Render deploy env on purpose (real seed data there should come from Supabase directly).
+ * testable locally without a real Supabase dataset, PLUS two real login-capable demo accounts
+ * (see seedDemoLoginAccounts) so you can test without registering by hand every time.
+ *
+ * The catalog/provider data (run()) only seeds once, guarded by `service` being empty — safe to
+ * leave on for local dev; harmless no-op once real data exists. The demo accounts are seeded
+ * independently of that guard (their own "does this email already exist" check) so they get
+ * created even on a DB that already has catalog data from elsewhere — which the shared Supabase
+ * DB did (see PROJECT.md §2). Not wired into the Render deploy env on purpose (real seed data
+ * there should come from Supabase directly).
  */
 @Component
 @RequiredArgsConstructor
@@ -27,6 +34,10 @@ public class DevDataSeeder implements CommandLineRunner {
     private final QuoteRepository quoteRepository;
     private final BookingRepository bookingRepository;
     private final ReviewRepository reviewRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    // Known credentials so you can log in immediately without registering — see INSTRUCTIONS.md.
+    private static final String DEMO_PASSWORD = "Demo1234!";
 
     // Matches the AI classifier's category list, python/prompts/job_classification_prompt.txt
     private static final String[][] SERVICE_CATEGORIES = {
@@ -44,10 +55,17 @@ public class DevDataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (serviceRepository.count() > 0) {
-            return;
+        if (serviceRepository.count() == 0) {
+            seedCatalogAndDemoProviders();
         }
+        // Runs every startup regardless — cheap "does this email exist" checks make it a no-op
+        // after the first run. Deliberately after the block above so the catalog (needed to
+        // attach a service offering to the demo provider) definitely exists by this point,
+        // whether it was just created or already there.
+        seedDemoLoginAccounts();
+    }
 
+    private void seedCatalogAndDemoProviders() {
         var services = new java.util.HashMap<String, Service>();
         for (String[] row : SERVICE_CATEGORIES) {
             Service service = new Service();
@@ -143,5 +161,56 @@ public class DevDataSeeder implements CommandLineRunner {
         review.setComment("Fast, professional and affordable.");
         review.setCreatedAt(Instant.now().minus(2, ChronoUnit.DAYS));
         reviewRepository.save(review);
+    }
+
+    // Real, login-capable accounts (unlike the catalog-filler providers above, which have no
+    // password and can't log in) — so you can test the full flow immediately. See INSTRUCTIONS.md.
+    private void seedDemoLoginAccounts() {
+        if (userRepository.findByEmail("customer@ubuntulink.demo").isEmpty()) {
+            User customer = new User();
+            customer.setEmail("customer@ubuntulink.demo");
+            customer.setPasswordHash(passwordEncoder.encode(DEMO_PASSWORD));
+            customer.setFirstName("Demo");
+            customer.setLastName("Customer");
+            customer.setPhoneNumber("0810000001");
+            customer.setCreatedAt(Instant.now());
+            userRepository.save(customer);
+        }
+
+        if (userRepository.findByEmail("provider@ubuntulink.demo").isEmpty()) {
+            User providerUser = new User();
+            providerUser.setEmail("provider@ubuntulink.demo");
+            providerUser.setPasswordHash(passwordEncoder.encode(DEMO_PASSWORD));
+            providerUser.setFirstName("Demo");
+            providerUser.setLastName("Provider");
+            providerUser.setPhoneNumber("0810000002");
+            providerUser.setCreatedAt(Instant.now());
+            userRepository.save(providerUser);
+
+            ProviderProfile profile = new ProviderProfile();
+            profile.setUser(providerUser);
+            profile.setBio("Demo provider account, seeded for testing — not a real tradesperson.");
+            profile.setLocation("Pretoria, Gauteng");
+            profile.setServiceRadiusKm(20);
+            profile.setRating(5.0);
+            profile.setAvailableToday(true);
+            providerProfileRepository.save(profile);
+
+            // Whatever category comes first alphabetically-ish in SERVICE_CATEGORIES ("Plumbing")
+            // if it exists; falls back to any service so this still works on a schema with a
+            // differently-named catalog.
+            serviceRepository.findAll().stream()
+                    .filter(s -> s.getName().equalsIgnoreCase("Plumbing"))
+                    .findFirst()
+                    .or(() -> serviceRepository.findAll().stream().findFirst())
+                    .ifPresent(service -> {
+                        ProviderService offering = new ProviderService();
+                        offering.setProviderProfile(profile);
+                        offering.setService(service);
+                        offering.setMinPrice(300);
+                        offering.setMaxPrice(600);
+                        providerServiceRepository.save(offering);
+                    });
+        }
     }
 }

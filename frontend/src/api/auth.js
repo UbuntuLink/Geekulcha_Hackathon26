@@ -19,6 +19,14 @@ export function register({ firstName, lastName, email, password, phoneNumber, is
     .then((res) => res.data);
 }
 
+// DEMO ONLY — verifies email + phone number match, nothing stronger (no emailed code/link).
+// See backend ResetPasswordRequest's javadoc before reusing this pattern anywhere real.
+export function resetPassword({ email, phoneNumber, newPassword }) {
+  return apiClient
+    .post("/auth/reset-password", { email, phoneNumber, newPassword }, { responseType: "text" })
+    .then((res) => res.data);
+}
+
 export function logout() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);

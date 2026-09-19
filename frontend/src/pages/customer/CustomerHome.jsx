@@ -24,9 +24,15 @@ export default function CustomerHome() {
   const [services, setServices] = useState([]);
 
   useEffect(() => {
+    // First time here (no onboarding prefs saved yet) — mirrors ProviderDashboard's redirect
+    // to ProviderOnboarding on an empty profile.
+    if (!name) {
+      navigate("/onboarding", { replace: true });
+      return;
+    }
     getMyServiceRequests().then(setRecentRequests).catch(() => setRecentRequests([]));
     listServices().then(setServices).catch(() => setServices([]));
-  }, []);
+  }, [name, navigate]);
 
   return (
     <Screen showBack={false} withNav>

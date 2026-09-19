@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import Button from "../../components/common/Button.jsx";
 import { Field, TextInput } from "../../components/common/Field.jsx";
 import { login, getCurrentUser } from "../../api/auth.js";
@@ -7,6 +7,7 @@ import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { state } = useLocation();
   const { setUser } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,6 +36,12 @@ export default function Login() {
       <h1 className="text-2xl font-bold text-gray-900">UbuntuLink</h1>
       <p className="mt-1 text-gray-500">Local help. Right when you need it.</p>
 
+      {state?.justReset && (
+        <p className="mt-4 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm text-brand">
+          Password updated — sign in with your new password.
+        </p>
+      )}
+
       <form onSubmit={handleSubmit} className="mt-8 space-y-4">
         <Field label="Email">
           <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
@@ -48,9 +55,14 @@ export default function Login() {
         </Button>
       </form>
 
-      <p className="mt-4 text-center text-sm text-gray-500">
-        No account? <Link to="/register" className="font-medium text-brand">Register</Link>
-      </p>
+      <div className="mt-4 flex flex-col items-center gap-2 text-sm text-gray-500">
+        <Link to="/forgot-password" className="font-medium text-brand">
+          Forgot password?
+        </Link>
+        <p>
+          No account? <Link to="/register" className="font-medium text-brand">Register</Link>
+        </p>
+      </div>
     </div>
   );
 }

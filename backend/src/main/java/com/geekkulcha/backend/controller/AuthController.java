@@ -8,12 +8,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.geekkulcha.backend.dto.LoginRequest;
 import com.geekkulcha.backend.dto.RegisterRequest;
+import com.geekkulcha.backend.dto.ResetPasswordRequest;
 import com.geekkulcha.backend.service.AuthService;
 
 /**
  * Email/password + JWT auth (from the Leshen-Login branch — see PROJECT.md §8). Login returns a
- * raw JWT string; nothing on the backend validates that token on subsequent requests yet (see
- * SecurityConfig), so business endpoints still run as a fixed demo user for now.
+ * raw JWT string. Every other route requires it (SecurityConfig) — this controller and
+ * everything under /auth/** is the one part of the API that's intentionally public.
  */
 @RestController
 @RequestMapping("/auth")
@@ -49,5 +50,19 @@ public class AuthController {
         return ResponseEntity
                .status(401)
                .body("Email / Phone Number already exists. Please log in");
+    }
+
+    /** DEMO ONLY — see ResetPasswordRequest's javadoc for why this isn't a real reset flow. */
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest request) {
+        boolean reset = authService.resetPassword(request);
+
+        if (reset) {
+            return ResponseEntity.ok("Password updated. Please log in.");
+        }
+
+        return ResponseEntity
+               .status(401)
+               .body("We couldn't find an account matching that email and phone number.");
     }
 }

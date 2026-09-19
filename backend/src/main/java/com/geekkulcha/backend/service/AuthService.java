@@ -1,6 +1,7 @@
 package com.geekkulcha.backend.service;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import com.geekkulcha.backend.dto.LoginRequest;
 import com.geekkulcha.backend.dto.RegisterRequest;
+import com.geekkulcha.backend.dto.ResetPasswordRequest;
 import com.geekkulcha.backend.entity.ProviderProfile;
 import com.geekkulcha.backend.entity.User;
 import com.geekkulcha.backend.repository.ProviderProfileRepository;
@@ -90,5 +92,19 @@ public class AuthService {
 
         return true;
 
+    }
+
+    // DEMO ONLY — see ResetPasswordRequest's javadoc. Real "forgot password" needs an emailed
+    // token, not just re-asking for two fields the account was already created with.
+    public boolean resetPassword(ResetPasswordRequest request) {
+        Optional<User> user = userRepository.findByEmail(request.getEmail());
+
+        if (user.isEmpty() || !Objects.equals(user.get().getPhoneNumber(), request.getPhoneNumber())) {
+            return false;
+        }
+
+        user.get().setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user.get());
+        return true;
     }
 }

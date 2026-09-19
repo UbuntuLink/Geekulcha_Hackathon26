@@ -2,7 +2,7 @@
 
 Everything you need to get UbuntuLink running locally and deployed, including every API key/account you have to go create. Companion to [PROJECT.md](PROJECT.md), which covers *what's built and what's missing* — this doc is just *how to turn the key*.
 
-Login/register work (email/password + JWT — see PROJECT.md §8), but the backend doesn't validate that JWT on any business endpoint yet, so everything still runs as a fixed demo user regardless of who's logged in. No third-party auth provider (Google, etc.) is used — see §5 for what's left to actually enforce it.
+Login/register work end to end (email/password + JWT — see PROJECT.md §8) and the backend fully enforces it — every route needs a valid token except `/auth/**`. No third-party auth provider (Google, etc.) is used.
 
 ---
 
@@ -101,19 +101,35 @@ Open **http://localhost:5173**.
 
 ### 2d. Try the real flow end to end
 
-0. (Optional) **Register** → create an account, then **Login** — this works end to end and returns a real JWT, but no screen actually requires being logged in yet (see PROJECT.md §8), so you can skip straight to step 1 too.
-1. **Welcome** → Get started
-2. **Onboarding** → enter a name + location (e.g. "Pretoria, Gauteng" — matches the seeded providers), pick Price or Ratings, Continue
-3. **Home** → "Describe your problem" → type something like *"My kitchen sink is leaking and I need someone to fix it today"* → Find the right service (this really calls the ML service to classify it)
-4. **AI Service Identification** → shows the real classification, auto-advances
-5. **Matching Providers** → real providers from your Supabase DB (seeded ones, if you used the sample message above it'll match "Plumbing")
-6. Tap a provider → **Provider Profile** → Request a quote
-7. **Quote Request** → fill in a message → Send quote request (creates a real `Quote` + auto-accepts it into a `Booking` — see the note in §4 below)
-8. **Booking Confirmation** → View booking
-9. **Booking Tracking** → use the "Simulate" button to step through Accepted → On the way → Completed (marking Completed also fires the mock payment)
-10. **Review Provider** → submit a rating — this is a real `Review` row in your database
+Auth is fully enforced now (PROJECT.md §8), and the provider-responds-to-a-quote flow is real — so testing the whole loop needs **two accounts in two browser sessions** (e.g. one normal window + one incognito/private window, so both stay logged in at once).
 
-If a step fails, open the browser console — API errors are logged there, and it's almost always one of the three services not running or a missing env var.
+**Session A — register a provider:**
+1. **Register** → check "I'm a service provider" → this also creates a `ProviderProfile` for them
+2. **Login** → lands on `/provider/dashboard`, which redirects to **Provider Onboarding** since the profile's still empty
+3. Fill in bio + location, pick a service (e.g. Plumbing) with a price range → Finish setup
+4. You're on the **Provider Dashboard** — leave this session logged in
+
+**Session B — register a customer, run the real flow:**
+1. **Register** (leave "I'm a service provider" unchecked) → **Login** → lands on `/home`
+2. **Onboarding** → name + location (match Session A's provider's location/service area loosely), pick Price or Ratings, Continue
+3. **Home** → "Describe your problem" → type something like *"My kitchen sink is leaking and I need someone to fix it today"* → Find the right service (really calls the ML service)
+4. **AI Service Identification** → shows the real classification, auto-advances
+5. **Matching Providers** → should include Session A's provider if the category/service matches
+6. Tap that provider → **Provider Profile** → Request a quote → **Quote Request** → Send quote request → lands on **Quotes Received** (empty for now — nothing's been submitted yet)
+
+**Back to Session A:**
+7. **Requests Feed** → the request from Session B should appear (with an "Asked for you" badge) → tap it → **Request Detail** → enter an amount + message → Send quote
+
+**Back to Session B:**
+8. Refresh **Quotes Received** → the quote appears → **Accept** → **Booking Confirmation** → View booking → **Booking Tracking** (read-only — refresh to see status changes)
+
+**Back to Session A:**
+9. **Provider Bookings** → the booking appears → tap "Mark Accepted", then "On the way", then "Completed" (this also fires the mock payment)
+
+**Back to Session B:**
+10. **Booking Tracking** → Refresh status → should now show Completed → **Leave a review** → submit a rating — a real `Review` row
+
+If a step fails, open the browser console — API errors are logged there, and it's almost always one of the three services not running, a missing env var, or being logged into the wrong session.
 
 ---
 
@@ -165,34 +181,23 @@ Render's free web services spin down after inactivity and take ~30-60s to wake o
 
 ## 4. What's simplified for this pass (read before demoing)
 
-- **Login exists but isn't enforced.** Register/Login give you a real JWT, but no backend endpoint checks it — every request still acts as a fixed demo customer (`UserService.getDemoCustomer()`). See §5 for what's left to change that.
-- **"Send quote request" auto-accepts.** Real UX would have the provider review and respond to a quote request; that provider-side loop isn't built (no Figma for it — see PROJECT.md §9a). For now, submitting a quote request immediately creates the booking too, so the rest of the flow (confirmation → tracking → review) has something real to run against.
 - **Payments are mocked.** `POST /api/bookings/{id}/payment/mock-charge` always succeeds — no Stripe/PayFast, see PROJECT.md §9c/§10.
 - **No real distance/geolocation.** "Matching Providers" shows everyone who offers the matched service, not who's nearby — see PROJECT.md §9b.
-- **Demo data lives in `DevDataSeeder.java`**, not the `01_Database/` CSVs (those aren't imported by anything — see PROJECT.md §3a).
+- **No provider verification, no scheduling calendar, no messaging** — see PROJECT.md §9a for what's still open on the provider side beyond the 6 screens that are built.
+- **`/auth/login` returns a bare JWT**, not a JSON object — the frontend always makes a follow-up `GET /api/users/me` call to get the user's name/id/role. Works fine, just an extra round trip (PROJECT.md §8).
+- **Demo data lives in `DevDataSeeder.java`**, not the `01_Database/` CSVs (those aren't imported by anything — see PROJECT.md §3a). In practice the shared Supabase DB already had its own real provider data before this ever ran, so the seeder has mostly been a no-op there.
 
 ---
 
-## 5. Actually enforcing the JWT (when you're ready)
-
-Login/register already work and return a real signed JWT (PROJECT.md §8) — this is what's left to make the backend actually check it instead of running everything as a demo user:
-
-1. In `backend/src/main/java/com/geekkulcha/backend/config/SecurityConfig.java`, add a `JwtDecoder` bean (`NimbusJwtDecoder.withSecretKey(...)`, same `JWT_SECRET` you already have) and wire `.oauth2ResourceServer(oauth2 -> oauth2.jwt(...))` into the filter chain (the `spring-boot-starter-oauth2-resource-server` dependency needed for this is already in `pom.xml`).
-2. Tighten `.anyRequest().permitAll()` to `.authenticated()` for the routes that should require login (probably everything except `/auth/**`).
-3. In each controller currently calling `userService.getDemoCustomer()` (`ServiceRequestController`, `QuoteController`), swap it for reading the user id out of the authenticated JWT's `sub` claim (e.g. `@AuthenticationPrincipal Jwt jwt` → `jwt.getSubject()` → look up the `User` by id) instead.
-4. Decide what `/auth/login` should actually return — right now it's a bare JWT string with no user info. Consider returning `{token, userId, firstName, ...}` so the frontend doesn't have to guess.
-5. In `frontend/src/routes/AppRoutes.jsx`, re-wrap the customer/provider routes in `<ProtectedRoute>` (still there, just unused).
-6. If `POST /auth/register`'s `isProvider: true` should actually create a `ProviderProfile`, add that to `AuthService.register()`.
-
----
-
-## 6. Troubleshooting
+## 5. Troubleshooting
 
 | Symptom | Likely cause |
 |---|---|
 | Backend won't start: `Could not resolve placeholder 'SUPABASE_DB_URL'` | `backend/.env` missing or not found — must be at `backend/.env`, and you can run Maven from either the repo root or `backend/` (both are checked) |
 | Backend won't start: `Could not resolve placeholder 'JWT_SECRET'` | `backend/.env` is missing `JWT_SECRET` — see §2b, any random 32+ character string works locally |
 | `POST /auth/login` returns 401 for a user you just registered | Double-check the email/password match exactly — Argon2 hashing is case-sensitive and there's no "forgot password" flow yet |
+| Any other endpoint returns 401 | Expected if you're testing with `curl`/Postman directly — every route needs `Authorization: Bearer <token>` from `/auth/login` except `/auth/**` itself (PROJECT.md §8). The frontend handles this automatically once you're logged in. |
+| A request you created isn't showing up in another provider's Requests Feed | The feed only shows `OPEN` requests — once any provider submits a quote it flips to `QUOTED` and disappears from the feed until that quote is accepted or rejected (rejecting reopens it) |
 | Frontend screens load but show "Couldn't reach the ML service or backend" | One of the three `npm run dev` / `uvicorn` / `./mvnw spring-boot:run` processes isn't running, or the `.env`/`.env.local` files have the wrong ports |
 | `GET /api/services` returns `[]` | `DevDataSeeder` only seeds when the `service` table is empty — if you manually deleted rows without dropping the whole table, it won't re-seed. Truncate the table or just let `ddl-auto=update` recreate it |
 | CORS errors in the browser console | `FRONTEND_URL` env var on the backend/ML service doesn't match the URL you're actually loading the frontend from |

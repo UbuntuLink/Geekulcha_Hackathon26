@@ -2,7 +2,7 @@
 
 **UbuntuLink** is a local services marketplace for South Africa. A customer describes a problem in their own words ("my kitchen sink is leaking"), an AI layer classifies the job and estimates a fair price, and the platform matches them with nearby, rated local service providers (plumbers, electricians, cleaners, etc.) to request quotes and book work.
 
-This document describes the state of the project as of **2026-09-17**, based on the repo contents, the DB design (DrawSQL), the use case diagram, and the Figma UI flow. It exists so anyone (human or AI) picking up the repo can get oriented without re-deriving context.
+This document describes the state of the project as of **2026-09-19**, based on the repo contents, the DB design (DrawSQL), the use case diagram, and the Figma UI flow. It exists so anyone (human or AI) picking up the repo can get oriented without re-deriving context.
 
 **MVP scope note:** this build targets a hackathon-scoped MVP, not the full production vision. Real payments, geolocation, provider vetting, disputes, and messaging are explicitly out of scope for now — see §9 for the full gap list and §10 for what's been decided about the MVP cut.
 
@@ -78,22 +78,25 @@ Geekulcha_Hackathon26/
 - Config: `application.properties` loads `SUPABASE_DB_URL`, `JWT_SECRET`, `FRONTEND_URL`, and `PORT` (Render injects this) from env vars, with an optional local `.env` fallback. `ddl-auto=update` (Hibernate manages schema) and `show-sql=true`.
 - **JPA entities now cover the full target schema** (§3), replacing the old simplified `Provider`/`Service`/`ProviderService` trio: `User`, `ProviderProfile`, `Service`, `ProviderService`, `ServiceRequest`, `Quote`, `Booking`, `Review`, `Payment` (mock), plus `RequestStatus`/`QuoteStatus`/`BookingStatus`/`PaymentStatus` enums.
 - Layered structure now exists: `controller/` → `service/` → `repository/`, with `dto/request` + `dto/response` for the core flow (services list, service request, quote, booking, review). Not every entity has a controller yet — build the rest following the existing pattern as you need them.
-- `GlobalExceptionHandler` (`exception/`) maps `ResourceNotFoundException` → 404 and validation failures → 400.
-- `SecurityConfig` (`config/`) wires the Argon2 `PasswordEncoder` + JWT-issuing `JwtEncoder`, and CORS for the frontend origin. **All routes are currently `permitAll()`** — see the TODO in that file — tighten this once a resource-server filter actually validates incoming JWTs (§8).
+- `GlobalExceptionHandler` (`exception/`) maps `ResourceNotFoundException` → 404, `ForbiddenException` → 403 (ownership checks — see below), validation failures → 400.
+- `SecurityConfig` (`config/`) wires the Argon2 `PasswordEncoder`, the JWT-issuing `JwtEncoder`, a matching `JwtDecoder`, and CORS. **Auth is enforced for real now** (§8) — every route requires a valid `Authorization: Bearer <jwt>` except `/auth/**`.
 - Mock payment: `payment/MockPaymentService.java` + `Payment` entity — always succeeds, no real processor. See §10.
-- **Auth is temporarily disabled** (§8) — `ServiceRequestController`/`QuoteController` no longer use `@AuthenticationPrincipal`; they attribute requests to a fixed demo customer via `UserService.getDemoCustomer()`, and `QuoteController` takes `providerProfileId` directly in the request body instead of deriving a provider from the (currently nonexistent) signed-in session.
-- **`DevDataSeeder`** (`config/`) — a `CommandLineRunner` that seeds the 10 service categories + 3 demo plumbing providers (Thabo Plumbing, Mpho Home Services, FixRight Plumbing — matching the Figma names/prices exactly) plus one sample review, on first run only (skips if `service` already has rows). This is what makes the app clickable with real data locally — see INSTRUCTIONS.md §2b.
-- **Endpoints now implemented** (all live, not just scaffolded):
+- **`UserService.getCurrentUser(Jwt jwt)`** reads the `sub` claim (a user id) and loads the real `User` — this is what every controller uses now instead of a fixed demo user. `GET /api/users/me` exposes it to the frontend.
+- **Ownership checks, not just authentication:** accepting a quote, advancing a booking's status, rejecting a quote, and setting a request's preferred provider all verify the caller actually owns the resource (403 otherwise) — see `BookingService`/`QuoteService`/`ServiceRequestService`.
+- **`DevDataSeeder`** (`config/`) — a `CommandLineRunner` that seeds the 10 service categories + 3 demo plumbing providers (Thabo Plumbing, Mpho Home Services, FixRight Plumbing — matching the Figma names/prices exactly) plus one sample review, on first run only (skips if `service` already has rows). Note: the shared Supabase DB already had its own real provider data before this ever ran, so in practice `DevDataSeeder` has been a no-op there — see INSTRUCTIONS.md §2b.
+- **Endpoints now implemented** (all live, all auth-enforced except `/auth/**`):
   - `GET /api/services` — catalog
-  - `POST /api/service-requests`, `GET /api/service-requests/{id}`, `GET /api/service-requests/mine`
-  - `GET /api/services/{serviceId}/providers` — matching providers for a service (`ProviderMatchController`/`ProviderMatchService`), backs Figma screens 6-7
-  - `GET /api/provider-profiles/{id}` — profile + services + real reviews (via a derived query `Review -> Booking -> Quote -> ProviderProfile`), backs Figma screen 8
-  - `POST /api/quotes`, `GET /api/quotes/{id}`
-  - `POST /api/bookings/accept-quote/{quoteId}`, `GET /api/bookings/{id}`, `PATCH /api/bookings/{id}/status`
+  - `POST /api/service-requests`, `GET /api/service-requests/{id}`, `GET /api/service-requests/mine`, `GET /api/service-requests/open` (provider feed), `GET /api/service-requests/{id}/quotes`, `PATCH /api/service-requests/{id}/preferred-provider`
+  - `GET /api/services/{serviceId}/providers` — matching providers for a service (`ProviderMatchController`/`ProviderMatchService`, public browsing), backs Figma screens 6-7
+  - `GET /api/provider-profiles/{id}` — public profile + services + real reviews (via a derived query `Review -> Booking -> Quote -> ProviderProfile`), backs Figma screen 8
+  - `GET/PATCH /api/provider-profiles/me`, `PUT/DELETE /api/provider-profiles/me/services/{id}` — self-service provider profile + a real list of service offerings (`ProviderProfileController`)
+  - `POST /api/quotes` (provider derived from the JWT, not the request body), `GET /api/quotes/{id}`, `PATCH /api/quotes/{id}/reject`
+  - `POST /api/bookings/accept-quote/{quoteId}`, `GET /api/bookings/{id}`, `GET /api/bookings/mine` (provider's own), `PATCH /api/bookings/{id}/status` (provider-only)
   - `POST /api/bookings/{id}/review`
   - `POST /api/bookings/{id}/payment/mock-charge`
+  - `GET /api/users/me`
 - **The frontend calls the ML service directly** (not backend → ML service-to-service) — see §6. `ServiceRequestService.create()` just persists whatever classification JSON the frontend already ran and passes in via `aiClassificationRaw`.
-- **Not done yet:** matching/search logic beyond "who offers this service" (no geo, see §9b); DTOs for entities beyond the core flow (some controllers still return JPA entities directly, see §9g).
+- **Not done yet:** matching/search logic beyond "who offers this service" (no geo, see §9b); DTOs for entities beyond the core flow (some controllers still return JPA entities directly, see §9g — `User.passwordHash` is `@JsonIgnore`'d so this is no longer a security issue, just a style one).
 
 ## 3. Database Design
 
@@ -135,16 +138,17 @@ Figma file: `UbuntuLink: MVP UI`. Screens 1-9 were shared as actual screenshots 
 6. **Matching Providers** (`MatchingProviders.jsx`) — real providers from `GET /api/services/{id}/providers`, client-sorted by the onboarding price/ratings preference
 7. **Compare Providers** (`CompareProviders.jsx`) — comparison table for the top 3 from screen 6 (passed via router state, falls back to refetching)
 8. **Provider Profile** (`ProviderProfileView.jsx`) — real bio/rating/reviews from `GET /api/provider-profiles/{id}` (reviews come from an actual `Review` join, not the denormalized count)
-9. **Quote Request** (`QuoteRequest.jsx`) — calls `POST /price` (ML service) for the "expected range" hint, then `POST /api/quotes` **and immediately** `POST /api/bookings/accept-quote/{id}` — see the auto-accept shortcut note below
+9. **Quote Request** (`QuoteRequest.jsx`) — calls `POST /price` (ML service) for the "expected range" hint, then `PATCH /api/service-requests/{id}/preferred-provider` (flags this provider as preferred, does **not** create a Quote itself anymore — see below) and sends the customer to a new screen
+   - **Quotes Received** (`RequestQuotes.jsx`, `/requests/:id/quotes` — not a numbered Figma screen, but this is where the flow actually goes now) — lists real quotes as providers submit them, with **Accept** (creates the `Booking` for real via `POST /api/bookings/accept-quote/{id}`) and **Decline** (`PATCH /api/quotes/{id}/reject` — reopens the request if it was the last pending quote, so other providers can pick it up)
 10. **Booking Confirmation** (`BookingConfirmation.jsx`) — real booking summary from `GET /api/bookings/{id}`
-11. **Booking Tracking** (`BookingTracking.jsx`) — status stepper driven by `booking.status`; a "Simulate" button steps it through `PATCH /api/bookings/{id}/status` (standing in for a provider actually updating it — no provider-side app exists yet, §9a); reaching `COMPLETED` also fires the mock payment. "Message provider"/"Report an issue" are inert placeholders (§9d).
+11. **Booking Tracking** (`BookingTracking.jsx`) — status stepper driven by `booking.status`, **read-only for the customer** — advancing it is the provider's action now, from `ProviderBookings.jsx` (§9a). A "Refresh status" button re-fetches. "Message provider"/"Report an issue" are still inert placeholders (§9d).
 12. **Review Provider** (`ReviewProvider.jsx`) — star picker + comment → `POST /api/bookings/{id}/review`, a real `Review` row
 
-Two more screens exist for bottom-nav completeness with **no Figma design** (kept intentionally simple): `MyRequests.jsx` (`/requests/mine`) and `Profile.jsx` (`/profile`, reads the onboarding localStorage data).
+Two more screens exist for bottom-nav completeness with **no Figma design** (kept intentionally simple): `MyRequests.jsx` (`/requests/mine`) and `Profile.jsx` (`/profile`, reads the onboarding localStorage data, plus real login state and a sign-out button).
 
-**Known MVP shortcut — read before demoing:** screen 9's "Send quote request" doesn't just request a quote, it also auto-accepts it into a real `Booking` in the same click. The proper flow (provider reviews the request and responds — `RequestsFeed`/`RequestDetail` stubs below) isn't built because there's no Figma for the provider side. This keeps screens 10-12 backed by real data without a second "logged in as provider" session. See INSTRUCTIONS.md §4.
+**The auto-accept shortcut is gone.** Screen 9 used to create a `Quote` and immediately accept it into a `Booking` in one click, with no real provider involved. It now does what the use-case diagram (§4) actually describes: the customer's click just flags interest in one provider, any provider can submit a real `Quote` from their own Requests Feed (§9a), and the customer explicitly accepts or declines it on the new Quotes Received screen. Testing this end to end needs two accounts — see INSTRUCTIONS.md §2d.
 
-**Provider-side screens have no Figma design** — `frontend/src/pages/provider/` has 6 stub pages (Onboarding, Dashboard, RequestsFeed, RequestDetail, Bookings, ProfileEdit) scaffolded from the use-case diagram alone, not from any mockup, and still just headings/TODOs. Design these before building them out. See §9a.
+**Provider-side screens are now real** — see §9a for what's built (6 screens, freely designed to match the customer style since no Figma exists for this side).
 
 ## 6. Python / AI Layer
 
@@ -166,36 +170,46 @@ Now a real FastAPI service (`python/app/`), not just CLI scripts:
 
 ## 7. What's Not Built Yet (gap summary)
 
-The 12 customer screens + core backend flow are now real and wired end to end (§5). What's left:
+The 12 customer screens, the 6 provider screens, real auth enforcement, and the real provider-quote workflow are all built and verified working end to end (§5, §8, §9a). What's left:
 
-- **Frontend**: the 12 customer screens are built; the 6 provider-side pages (§9a) are still empty stubs — no Figma for them.
-- **Backend**: no matching/search beyond "who offers this service" (blocked on §9b — no geodata); no real provider-responds-to-quote flow (the MVP shortcut auto-accepts, §5); authz is wide open (`permitAll()` everywhere — the JWT from login isn't validated on any endpoint yet, see §8).
-- **Auth**: login/register work and issue real JWTs, but nothing checks them — see §8 for exactly what's left to enforce it.
+- **Frontend**: all 18 screens are built. Nothing is a placeholder anymore.
+- **Backend**: no matching/search beyond "who offers this service" (blocked on §9b — no geodata). Auth is enforced and ownership-checked on the endpoints that need it (§8).
 - **Seed data**: `01_Database/` (renamed from the stale `01_Database_CSV/`, merged in from `Leshen-Login`) matches the DrawSQL schema but nothing imports these CSVs anywhere — `DevDataSeeder` (§2) seeds its own demo data directly through JPA instead, independent of these files.
 - **Deploy**: `render.yaml` + `vercel.json` exist and are documented (INSTRUCTIONS.md §3) but haven't actually been deployed yet — this is untested against real Render/Vercel infrastructure.
+- **Register's response is minimal** (`"Registered Successfully"`, a plain string) and login returns a bare JWT with no user info — the frontend always makes a follow-up `GET /api/users/me` call, which works but is an extra round trip that a combined response could avoid.
+- No password reset, no email verification — not asked for, not built.
 
 ## 8. Auth Decision
 
-**Status (2026-09-17): email/password + JWT, merged in from the `Leshen-Login` branch.** This replaced an earlier Google OAuth2 scaffold — the team decided against Google auth in favor of a self-hosted login. If you're looking for Google OAuth2 code, it's gone; this section describes what's here now.
+**Status (2026-09-19): email/password + JWT, fully enforced.** Merged in from the `Leshen-Login` branch (replacing an earlier Google OAuth2 scaffold — the team decided against Google auth), then wired up to actually gate the app rather than just issue tokens nobody checks.
 
-- `User` entity: `email` (unique), `passwordHash` (Argon2, via `PasswordEncoder`), `firstName`, `lastName`, `phoneNumber`, `createdAt`. No `googleSub`.
-- **`POST /auth/register`** (`AuthController` → `AuthService.register`) — takes `email`/`firstName`/`lastName`/`password`/`phoneNumber`/`isProvider`, rejects if the email or phone number is already taken, hashes the password with Argon2, saves the user. **Note:** `isProvider` is accepted but not acted on yet — registering doesn't create a `ProviderProfile` row, so there's currently no self-serve way to become a provider through this endpoint.
-- **`POST /auth/login`** (`AuthService.login`) — verifies the password against the stored hash, returns a raw JWT string (not JSON) signed with HMAC-SHA256 via `JwtService`/`NimbusJwtEncoder`. The JWT only carries a `sub` claim (the user's id) — no email/name/roles in it.
-- Needs a `JWT_SECRET` env var (32+ characters — Argon2 doesn't need one, but the HMAC signer does) — see INSTRUCTIONS.md.
-- **Nothing validates the JWT on incoming requests yet.** `spring-boot-starter-oauth2-resource-server` is a dependency (added for `NimbusJwtEncoder`) but no `JwtDecoder`/resource-server filter is configured, and `SecurityConfig`'s filter chain is still `.anyRequest().permitAll()`. Business endpoints (`ServiceRequestController`, `QuoteController`, etc.) still run everything as a fixed demo user via `UserService.getDemoCustomer()` — logging in doesn't currently change what the app does.
-- Frontend: `Login.jsx` + new `Register.jsx` call the two endpoints directly (`api/auth.js`). The returned JWT + the email typed at login are stashed in `localStorage` and attached as a `Bearer` token on every backend request via an axios interceptor (`api/client.js`) — forward-wired, but inert until the backend actually checks it.
-- **What's left to make this real:** wire a `JwtDecoder` + resource-server filter into `SecurityConfig` so the JWT is actually verified; extract the real user from the token's `sub` claim in place of `UserService.getDemoCustomer()`; decide what `/auth/login`'s response should include (right now the frontend has no way to get the user's name/id back — only what it already knows from the login form); make `isProvider` on registration actually create a `ProviderProfile`.
+- `User` entity: `email` (unique), `passwordHash` (Argon2, via `PasswordEncoder`, `@JsonIgnore`'d so it never serializes into an API response), `firstName`, `lastName`, `phoneNumber`, `createdAt`.
+- **`POST /auth/register`** (`AuthController` → `AuthService.register`) — takes `email`/`firstName`/`lastName`/`password`/`phoneNumber`/`isProvider`, rejects if the email or phone number is already taken, hashes the password with Argon2, saves the user. If `isProvider` is true, also creates a minimal `ProviderProfile` for them (empty bio/location) — that's what `ProviderOnboarding.jsx` fills in on first login.
+- **`POST /auth/login`** (`AuthService.login`) — verifies the password, returns a raw JWT string (not JSON) signed with HMAC-SHA256 via `JwtService`/`NimbusJwtEncoder`. The JWT only carries a `sub` claim (the user's id).
+- Needs a `JWT_SECRET` env var (32+ characters) — see INSTRUCTIONS.md.
+- **The JWT is validated on every request now.** `SecurityConfig` has a `JwtDecoder` bean (same secret, `NimbusJwtDecoder`) wired into `.oauth2ResourceServer(oauth2 -> oauth2.jwt(...))`, and the filter chain is `.requestMatchers("/auth/**").permitAll().anyRequest().authenticated()`. A request with no token, or an invalid one, gets a 401 before it reaches any controller.
+- **Controllers use the real signed-in user**, not a demo stand-in: `UserService.getCurrentUser(Jwt jwt)` reads `jwt.getSubject()` and loads the `User`. `GET /api/users/me` exposes `{id, email, firstName, lastName, isProvider}` — this is what the frontend calls right after login to know who's signed in and which app (customer/provider) to route them into.
+- **Ownership is checked, not just identity.** Accepting/rejecting a quote, advancing a booking's status, and setting a preferred provider all verify the caller actually owns that resource (403 via a new `ForbiddenException` otherwise) — see `BookingService.acceptQuote`/`updateStatus`, `QuoteService.reject`.
+- Frontend: `AuthContext.jsx` calls `GET /api/users/me` on mount whenever a token exists, populating the real user (not a cached guess) and clearing the session on a 401. `ProtectedRoute` takes a `role` ("customer"/"provider") and every route in `AppRoutes.jsx` is gated — logged-out visits redirect to `/login`, wrong-role visits redirect to that role's own home.
+- **Known rough edge:** `/auth/login`'s response is still a bare JWT with no user info, so the frontend always makes a second round trip to `/api/users/me` right after. Fine functionally, just an extra request — worth folding into one response later if it matters.
 
 ## 9. Loophole / Gap Analysis (customer side, provider side, AI, infra)
 
 Full-app pass to find what's missing beyond "endpoints don't exist yet" — i.e. things that would break the product even after the obvious CRUD is built. Status updated after the §10 scaffolding pass.
 
-### 9a. Provider side — the bigger gap
-The Figma file (§5) only covers the **customer** journey, which is now fully built. Provider-side pages remain empty stubs (`frontend/src/pages/provider/`) with **no design and no real content**:
-- **No provider onboarding/verification flow** — `ProviderOnboarding.jsx` is a stub; still no ID/licensing/background-check step anywhere in the schema or use cases. Out of scope for MVP, but a real launch would need it.
-- **No real "provider reviews and responds to a quote request" flow** — the customer-side "Send quote request" (screen 9) auto-creates and auto-accepts the quote as an MVP shortcut instead (see §5). `RequestsFeed.jsx`/`RequestDetail.jsx` are where a real version of this belongs — still stubs.
-- **`availableToday` is a manually-set flag, not a real calendar** (added to `ProviderProfile` to match the Figma "Available today" tag — §3b). No availability/scheduling system behind it.
-- **No provider notification path** — still undesigned when a customer sends a quote request or books.
+### 9a. Provider side — now built (was the bigger gap)
+The Figma file (§5) only ever covered the **customer** journey — there's still no design for the provider side, so these 6 screens (`frontend/src/pages/provider/`) were designed freely, matching the customer screens' style (`bg-brand`/`bg-cream`, `Card`/`Button`/`Screen`). All are real and wired to real endpoints (§2):
+- **`ProviderDashboard.jsx`** — open-request and active-booking counts, links into the rest. Redirects to Onboarding on first login if the profile's still empty.
+- **`RequestsFeed.jsx`** — every open request (`GET /api/service-requests/open`), with an "Asked for you" badge when the customer set this provider as preferred.
+- **`RequestDetail.jsx`** — submits a real `Quote` (`POST /api/quotes`).
+- **`ProviderBookings.jsx`** — this is where a booking's status actually advances now (moved off the customer's read-only `BookingTracking.jsx`), and reaching `COMPLETED` fires the mock payment.
+- **`ProviderProfileEdit.jsx`** — bio/location/service radius/availability, plus a real add/remove list of service offerings (not just one hardcoded row).
+- **`ProviderOnboarding.jsx`** — same fields as ProviderProfileEdit, shown once as a first-time setup step.
+
+What's still genuinely missing (not addressed by this pass, unchanged from before):
+- **No provider verification** — no ID/licensing/background-check step anywhere. Out of scope for MVP, but a real launch would need it.
+- **`availableToday` is still a manually-set flag, not a real calendar** — no scheduling system behind it.
+- **No provider notification path** — still undesigned when a customer sends a quote request or a provider gets booked.
 
 ### 9b. Geolocation — matching can't actually work yet — still open
 `ProviderProfile.location` is still a plain string. No lat/long column, no PostGIS, no "nearby" query. **Out of MVP scope** (see §10) — the MVP will fake/skip real distance sorting rather than block on this.
@@ -217,7 +231,7 @@ The Figma file (§5) only covers the **customer** journey, which is now fully bu
 
 ### 9g. Data-modeling gaps — mostly addressed
 - ~~`Provider` entity conflated identity + profile~~ — fixed: split into `User` + `ProviderProfile` (§3b). **Seed CSVs still don't match** (§3a) — no longer blocking though, since `DevDataSeeder` seeds through JPA directly.
-- ~~No DTOs~~ — request/response DTOs now exist for the core flow (`dto/request`, `dto/response`) plus the new matching/profile DTOs (§2); entities are still returned directly from some controllers (e.g. `ServiceRequestController`, `BookingController`) rather than mapped to DTOs — works fine in practice since all the relevant `@ManyToOne`/`@OneToOne` associations default to EAGER fetch, but is still a shortcut worth cleaning up post-MVP.
+- ~~No DTOs~~ — request/response DTOs now exist for the core flow (`dto/request`, `dto/response`) plus the new matching/profile DTOs (§2); entities are still returned directly from some controllers (e.g. `ServiceRequestController`, `BookingController`) rather than mapped to DTOs — works fine in practice since all the relevant `@ManyToOne`/`@OneToOne` associations default to EAGER fetch, but is still a shortcut worth cleaning up post-MVP. **This bit us once already**: returning `User` directly meant `passwordHash` was serializing into every response that nested a customer or provider — found while testing real accounts, fixed with `@JsonIgnore` (§8). Worth double-checking for other sensitive fields if more entities get added to the direct-return list.
 - **Still open:** no Bean Validation annotations on entities (only on the new request DTOs); no unique constraints beyond `User.email` and `Service.name`.
 
 ### 9h. Infra / process — partially addressed

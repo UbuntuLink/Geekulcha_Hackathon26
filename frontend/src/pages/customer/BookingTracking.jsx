@@ -74,13 +74,13 @@ export default function BookingTracking() {
 
       <div className="mt-4 flex gap-2">
         <button
-          onClick={() => alert("Messaging isn't built yet — see PROJECT.md §9d.")}
+          onClick={() => alert("Messaging is coming soon.")}
           className="flex-1 rounded-lg border border-gray-300 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
         >
           Message provider
         </button>
         <button
-          onClick={() => alert("Dispute reporting isn't built yet — see PROJECT.md §9d.")}
+          onClick={() => alert("Issue reporting is coming soon.")}
           className="flex-1 rounded-lg border border-gray-300 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
         >
           Report an issue

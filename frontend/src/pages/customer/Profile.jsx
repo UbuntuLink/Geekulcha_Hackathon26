@@ -46,10 +46,6 @@ export default function Profile() {
           </>
         )}
       </Card>
-
-      <p className="mt-4 text-xs text-gray-400">
-        Login exists but isn't enforced on this screen yet — see PROJECT.md §8.
-      </p>
     </Screen>
   );
 }

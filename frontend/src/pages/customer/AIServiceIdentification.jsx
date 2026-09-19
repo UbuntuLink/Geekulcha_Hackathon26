@@ -35,7 +35,7 @@ export default function AIServiceIdentification() {
   }, [progress, id, serviceId, navigate]);
 
   return (
-    <Screen title="Understanding your request" subtitle="UbuntuLink AI is identifying the service you need.">
+    <Screen title="Understanding your request" subtitle="🤖 UbuntuLink AI is identifying the service you need.">
       <Card>
         <p className="text-sm font-medium text-gray-500">Your problem</p>
         <p className="mt-1 italic text-gray-900">"{classification.job_description}"</p>

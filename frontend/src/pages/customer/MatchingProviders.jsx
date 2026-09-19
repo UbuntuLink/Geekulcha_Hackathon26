@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Screen from "../../components/layout/Screen.jsx";
-import Card from "../../components/common/Card.jsx";
-import StarRating from "../../components/common/StarRating.jsx";
+import ProviderCard from "../../components/common/ProviderCard.jsx";
 import Loading from "../../components/common/Loading.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import EmptyState from "../../components/common/EmptyState.jsx";
 import { getMatchingProviders, getServiceRequest } from "../../api/services.js";
-import { formatRange } from "../../lib/format.js";
 import { getOnboarding } from "../../lib/preferences.js";
 
 export default function MatchingProviders() {
@@ -49,30 +47,16 @@ export default function MatchingProviders() {
       <ErrorBanner>{error}</ErrorBanner>
       {providers === null && !error && <Loading label="Finding providers near you..." />}
       {providers?.length === 0 && (
-        <EmptyState>No providers offer this service yet — see PROJECT.md for how to seed more demo data.</EmptyState>
+        <EmptyState>No providers offer this service yet — check back soon.</EmptyState>
       )}
 
       <div className="space-y-3">
         {providers?.map((p) => (
-          <Card
+          <ProviderCard
             key={p.providerProfileId}
-            className="cursor-pointer transition-shadow hover:shadow-md"
+            provider={p}
             onClick={() => navigate(`/providers/${p.providerProfileId}`, { state: { serviceRequestId: id } })}
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-semibold text-gray-900">{p.providerName}</p>
-                <StarRating rating={p.rating} reviewCount={p.reviewCount} />
-              </div>
-              {p.availableToday && (
-                <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-medium text-brand">
-                  Available
-                </span>
-              )}
-            </div>
-            <p className="mt-2 font-semibold text-brand">{formatRange(p.minPrice, p.maxPrice)}</p>
-            <p className="text-xs text-gray-500">{p.location}</p>
-          </Card>
+          />
         ))}
       </div>
 

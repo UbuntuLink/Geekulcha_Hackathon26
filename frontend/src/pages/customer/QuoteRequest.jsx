@@ -4,6 +4,7 @@ import Screen from "../../components/layout/Screen.jsx";
 import Card from "../../components/common/Card.jsx";
 import Button from "../../components/common/Button.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
+import Loading from "../../components/common/Loading.jsx";
 import { setPreferredProvider, estimatePrice, getServiceRequest } from "../../api/services.js";
 import { formatRange } from "../../lib/format.js";
 
@@ -20,15 +21,18 @@ export default function QuoteRequest() {
   const mainService = provider?.services?.[0];
 
   const [expectedRange, setExpectedRange] = useState(null);
+  const [loadingPrice, setLoadingPrice] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!mainService) return;
+    setLoadingPrice(true);
     getServiceRequest(id)
       .then((req) => estimatePrice(mainService.serviceName.toLowerCase(), req.description))
       .then((price) => setExpectedRange(price))
-      .catch(() => setExpectedRange(null));
+      .catch(() => setExpectedRange(null))
+      .finally(() => setLoadingPrice(false));
   }, [id, mainService]);
 
   if (!provider) {
@@ -64,6 +68,11 @@ export default function QuoteRequest() {
         <p className="font-semibold text-gray-900">{mainService?.serviceName ?? "Service"}</p>
       </Card>
 
+      {loadingPrice && (
+        <div className="mt-4">
+          <Loading label="🤖 Asking AI for a fair price estimate..." />
+        </div>
+      )}
       {expectedRange?.estimated_min_zar != null && (
         <p className="mt-4 font-medium text-brand">
           Expected price range: {formatRange(expectedRange.estimated_min_zar, expectedRange.estimated_max_zar)}

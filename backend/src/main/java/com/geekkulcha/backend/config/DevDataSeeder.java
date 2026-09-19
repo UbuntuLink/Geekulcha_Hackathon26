@@ -189,7 +189,7 @@ public class DevDataSeeder implements CommandLineRunner {
 
             ProviderProfile profile = new ProviderProfile();
             profile.setUser(providerUser);
-            profile.setBio("Demo provider account, seeded for testing — not a real tradesperson.");
+            profile.setBio("Demo provider account, seeded for testing - not a real tradesperson.");
             profile.setLocation("Pretoria, Gauteng");
             profile.setServiceRadiusKm(20);
             profile.setRating(5.0);

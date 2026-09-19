@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Button from "../../components/common/Button.jsx";
 import { Field, TextInput } from "../../components/common/Field.jsx";
-import { login } from "../../api/auth.js";
+import { login, getCurrentUser } from "../../api/auth.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function Login() {
@@ -19,8 +19,9 @@ export default function Login() {
     setError("");
     try {
       await login(email, password);
-      setUser({ email });
-      navigate("/home");
+      const currentUser = await getCurrentUser();
+      setUser(currentUser);
+      navigate(currentUser.isProvider ? "/provider/dashboard" : "/home");
     } catch (err) {
       setError("Invalid email or password.");
       console.error(err);

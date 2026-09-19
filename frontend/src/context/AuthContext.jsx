@@ -1,14 +1,28 @@
-import { createContext, useContext, useState } from "react";
-import { getStoredUser, logout as apiLogout } from "../api/auth";
+import { createContext, useContext, useEffect, useState } from "react";
+import { getCurrentUser, getStoredUser, getToken, logout as apiLogout } from "../api/auth";
 
 const AuthContext = createContext(null);
 
-// Reflects the email/password + JWT login (PROJECT.md §8). This is a client-side convenience
-// only — the backend doesn't validate the JWT on business endpoints yet, so being "logged in"
-// here doesn't currently change what the app can do (routes aren't gated, see AppRoutes.jsx).
+// The backend now enforces the JWT on every route except /auth/** (PROJECT.md §8) — so on
+// mount, if we have a token, confirm it's still good and fetch the real user (id/isProvider)
+// rather than trusting whatever's cached in localStorage.
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(getStoredUser());
-  const loading = false;
+  const [loading, setLoading] = useState(!!getToken());
+
+  useEffect(() => {
+    if (!getToken()) {
+      setLoading(false);
+      return;
+    }
+    getCurrentUser()
+      .then(setUser)
+      .catch(() => {
+        apiLogout();
+        setUser(null);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const logout = () => {
     apiLogout();

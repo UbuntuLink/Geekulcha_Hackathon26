@@ -57,12 +57,26 @@ public class QuoteService {
         return quoteRepository.findByServiceRequestId(serviceRequestId);
     }
 
+    @Transactional
     public Quote reject(long quoteId, long currentUserId) {
         Quote quote = getById(quoteId);
-        if (quote.getServiceRequest().getUser().getId() != currentUserId) {
+        var serviceRequest = quote.getServiceRequest();
+        if (serviceRequest.getUser().getId() != currentUserId) {
             throw new ForbiddenException("You don't own this service request");
         }
         quote.setStatus(QuoteStatus.REJECTED);
-        return quoteRepository.save(quote);
+        quoteRepository.save(quote);
+
+        // Reopen the request if that was its last pending quote — otherwise it's stuck at
+        // QUOTED forever with nothing pending, and invisible in the provider feed (§open only
+        // shows OPEN), so no one else could ever quote on it again.
+        boolean stillHasPending = quoteRepository.findByServiceRequestId(serviceRequest.getId()).stream()
+                .anyMatch(q -> q.getStatus() == QuoteStatus.PENDING);
+        if (!stillHasPending && serviceRequest.getStatus() == RequestStatus.QUOTED) {
+            serviceRequest.setStatus(RequestStatus.OPEN);
+            serviceRequestRepository.save(serviceRequest);
+        }
+
+        return quote;
     }
 }

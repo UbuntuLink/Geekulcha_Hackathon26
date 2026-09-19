@@ -11,6 +11,7 @@ import com.geekkulcha.backend.repository.ProviderServiceRepository;
 import com.geekkulcha.backend.repository.ServiceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /** Self-service provider profile management — ProviderOnboarding.jsx / ProviderProfileEdit.jsx. */
 @Service
@@ -59,6 +60,10 @@ public class ProviderProfileService {
         return providerMatchService.getProfile(profile.getId());
     }
 
+    // Spring Data's derived delete methods call EntityManager.remove() directly, which needs an
+    // active transaction — unlike save()/findById(), it's not covered by SimpleJpaRepository's
+    // own per-method @Transactional, so the caller (here) has to provide one.
+    @Transactional
     public ProviderProfileResponse removeOwnService(long userId, long serviceId) {
         ProviderProfile profile = getOwnProfile(userId);
         providerServiceRepository.deleteByProviderProfileIdAndServiceId(profile.getId(), serviceId);

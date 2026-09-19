@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import BottomNav from "./BottomNav.jsx";
 
 /** Shared page shell: optional back arrow + title, cream background, bottom nav slot. */
-export default function Screen({ title, subtitle, showBack = true, withNav = false, children }) {
+export default function Screen({ title, subtitle, showBack = true, withNav = false, navRole, children }) {
   const navigate = useNavigate();
 
   return (
@@ -19,7 +19,7 @@ export default function Screen({ title, subtitle, showBack = true, withNav = fal
         </div>
       )}
       {children}
-      {withNav && <BottomNav />}
+      {withNav && <BottomNav role={navRole} />}
     </div>
   );
 }

@@ -6,6 +6,10 @@ import EmptyState from "../../components/common/EmptyState.jsx";
 import { getOnboarding } from "../../lib/preferences.js";
 import { getMyServiceRequests, listServices } from "../../api/services.js";
 
+function requestRoute(req) {
+  return req.status === "OPEN" ? `/requests/${req.id}/matches` : `/requests/${req.id}/quotes`;
+}
+
 function greeting() {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
@@ -51,7 +55,7 @@ export default function CustomerHome() {
               <p className="text-sm capitalize text-gray-500">{req.status?.toLowerCase().replace("_", " ")}</p>
             </div>
             <button
-              onClick={() => navigate(`/requests/${req.id}/matches`)}
+              onClick={() => navigate(requestRoute(req))}
               className="text-sm font-medium text-brand hover:underline"
             >
               View

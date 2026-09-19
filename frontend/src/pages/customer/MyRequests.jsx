@@ -5,6 +5,10 @@ import Card from "../../components/common/Card.jsx";
 import EmptyState from "../../components/common/EmptyState.jsx";
 import { getMyServiceRequests } from "../../api/services.js";
 
+function requestRoute(req) {
+  return req.status === "OPEN" ? `/requests/${req.id}/matches` : `/requests/${req.id}/quotes`;
+}
+
 export default function MyRequests() {
   const navigate = useNavigate();
   const [requests, setRequests] = useState([]);
@@ -20,7 +24,7 @@ export default function MyRequests() {
         <Card
           key={req.id}
           className="mb-2 cursor-pointer transition-shadow hover:shadow-md"
-          onClick={() => navigate(`/requests/${req.id}/matches`)}
+          onClick={() => navigate(requestRoute(req))}
         >
           <p className="font-medium text-gray-900">{req.description}</p>
           <p className="text-sm capitalize text-gray-500">{req.status?.toLowerCase().replace("_", " ")}</p>

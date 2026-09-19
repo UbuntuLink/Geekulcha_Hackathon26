@@ -3,11 +3,15 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Screen from "../../components/layout/Screen.jsx";
 import Card from "../../components/common/Card.jsx";
 import Button from "../../components/common/Button.jsx";
-import { Field, TextArea, TextInput } from "../../components/common/Field.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
-import { createQuote, acceptQuote, estimatePrice, getServiceRequest } from "../../api/services.js";
+import { setPreferredProvider, estimatePrice, getServiceRequest } from "../../api/services.js";
 import { formatRange } from "../../lib/format.js";
 
+/**
+ * "Request a quote" now just flags this provider as preferred on the request (they get
+ * highlighted in their own Requests Feed) — it no longer creates a Quote itself. The provider
+ * submits the real Quote from RequestDetail.jsx after reviewing the job. See PROJECT.md §5.
+ */
 export default function QuoteRequest() {
   const { id } = useParams();
   const { state } = useLocation();
@@ -15,10 +19,6 @@ export default function QuoteRequest() {
   const provider = state?.provider;
   const mainService = provider?.services?.[0];
 
-  const [preferredTime, setPreferredTime] = useState("Today · As soon as possible");
-  const [message, setMessage] = useState(
-    `Please check the ${mainService?.serviceName?.toLowerCase() ?? "job"} and let me know the total cost before starting.`
-  );
   const [expectedRange, setExpectedRange] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -45,16 +45,8 @@ export default function QuoteRequest() {
     setSubmitting(true);
     setError("");
     try {
-      const amount = mainService ? (mainService.minPrice + mainService.maxPrice) / 2 : 0;
-      const quote = await createQuote({
-        serviceRequestId: Number(id),
-        providerProfileId: provider.providerProfileId,
-        amount,
-        message,
-      });
-      // MVP shortcut: auto-accept immediately (no separate provider-response step yet, §9a)
-      const booking = await acceptQuote(quote.id, { scheduledDate: null, scheduledTime: null });
-      navigate(`/bookings/${booking.id}/confirmation`);
+      await setPreferredProvider(id, provider.providerProfileId);
+      navigate(`/requests/${id}/quotes`);
     } catch (err) {
       setError("Couldn't send the quote request — is the backend running?");
       console.error(err);
@@ -64,20 +56,13 @@ export default function QuoteRequest() {
   };
 
   return (
-    <Screen title="Request a quote" subtitle="Confirm the job details before sending.">
+    <Screen title="Request a quote" subtitle="We'll flag your job to this provider.">
       <Card>
-        <p className="text-sm font-medium text-gray-500">Service</p>
+        <p className="text-sm font-medium text-gray-500">Provider</p>
+        <p className="font-semibold text-gray-900">{provider.providerName}</p>
+        <p className="mt-2 text-sm font-medium text-gray-500">Service</p>
         <p className="font-semibold text-gray-900">{mainService?.serviceName ?? "Service"}</p>
       </Card>
-
-      <div className="mt-4 space-y-4">
-        <Field label="Preferred time">
-          <TextInput value={preferredTime} onChange={(e) => setPreferredTime(e.target.value)} />
-        </Field>
-        <Field label="Message to provider">
-          <TextArea value={message} onChange={(e) => setMessage(e.target.value)} />
-        </Field>
-      </div>
 
       {expectedRange?.estimated_min_zar != null && (
         <p className="mt-4 font-medium text-brand">
@@ -90,7 +75,9 @@ export default function QuoteRequest() {
       <Button onClick={handleSubmit} disabled={submitting} className="mt-6">
         {submitting ? "Sending..." : "Send quote request"}
       </Button>
-      <p className="mt-2 text-center text-xs text-gray-500">You only pay after agreeing to the quote.</p>
+      <p className="mt-2 text-center text-xs text-gray-500">
+        Any provider can quote on this job — this just lets {provider.providerName.split(" ")[0]} know you're interested.
+      </p>
     </Screen>
   );
 }

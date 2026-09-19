@@ -4,7 +4,7 @@ import Screen from "../../components/layout/Screen.jsx";
 import Card from "../../components/common/Card.jsx";
 import Loading from "../../components/common/Loading.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
-import { getBooking, mockCharge, updateBookingStatus } from "../../api/services.js";
+import { getBooking } from "../../api/services.js";
 
 const STEPS = ["REQUEST_SENT", "ACCEPTED", "ON_THE_WAY", "COMPLETED"];
 const STEP_LABELS = {
@@ -14,11 +14,11 @@ const STEP_LABELS = {
   COMPLETED: "Completed",
 };
 
+/** Read-only for the customer now — the provider is the one who advances status (ProviderBookings.jsx). */
 export default function BookingTracking() {
   const { bookingId } = useParams();
   const navigate = useNavigate();
   const [booking, setBooking] = useState(null);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const load = () =>
@@ -44,24 +44,6 @@ export default function BookingTracking() {
 
   const currentIndex = STEPS.indexOf(booking.status);
 
-  const advance = async () => {
-    setBusy(true);
-    setError("");
-    try {
-      const next = STEPS[Math.min(currentIndex + 1, STEPS.length - 1)];
-      await updateBookingStatus(bookingId, next);
-      if (next === "COMPLETED") {
-        await mockCharge(bookingId, booking.quote.amount);
-      }
-      await load();
-    } catch (err) {
-      setError("Couldn't update the booking — is the backend running?");
-      console.error(err);
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <Screen title="Booking tracking" subtitle="ETA: today">
       <Card>
@@ -83,17 +65,12 @@ export default function BookingTracking() {
         </div>
       </Card>
 
-      {error && <div className="mt-4"><ErrorBanner>{error}</ErrorBanner></div>}
-
-      {booking.status !== "COMPLETED" && (
-        <button
-          onClick={advance}
-          disabled={busy}
-          className="mt-4 w-full rounded-lg border border-brand py-2.5 text-sm font-medium text-brand transition-colors hover:bg-brand/5 disabled:opacity-50"
-        >
-          {busy ? "Updating..." : `Simulate: mark "${STEP_LABELS[STEPS[currentIndex + 1]]}"`}
-        </button>
-      )}
+      <button
+        onClick={load}
+        className="mt-4 w-full rounded-lg border border-brand py-2.5 text-sm font-medium text-brand transition-colors hover:bg-brand/5"
+      >
+        Refresh status
+      </button>
 
       <div className="mt-4 flex gap-2">
         <button

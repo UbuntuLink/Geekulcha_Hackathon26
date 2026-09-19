@@ -1,6 +1,8 @@
 package com.geekkulcha.backend.config;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.crypto.SecretKey;
@@ -77,10 +79,29 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(
+
+        // Origin patterns rather than exact origins, so the deployed frontend keeps working when
+        // its URL changes — Vercel issues a new per-deploy hostname every push, plus branch and
+        // preview URLs, and any of them would otherwise be rejected.
+        List<String> allowedOriginPatterns = new ArrayList<>(List.of(
                 "http://localhost:5173",
-                System.getenv().getOrDefault("FRONTEND_URL", "https://ubuntulink.vercel.app")
+                "https://*.vercel.app"
         ));
+
+        // FRONTEND_URL is set in Render's dashboard and may be absent, empty, or a comma-separated
+        // list. Blanks are filtered out deliberately: getenv().getOrDefault() only falls back when
+        // the key is *absent*, so a variable created with an empty value used to put "" into this
+        // list, match no origin at all, and reject every browser request with a 403 at preflight —
+        // invisible in the backend logs, because the request never reaches a controller.
+        String frontendUrl = System.getenv("FRONTEND_URL");
+        if (frontendUrl != null) {
+            Arrays.stream(frontendUrl.split(","))
+                    .map(String::trim)
+                    .filter(origin -> !origin.isEmpty())
+                    .forEach(allowedOriginPatterns::add);
+        }
+
+        configuration.setAllowedOriginPatterns(allowedOriginPatterns);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

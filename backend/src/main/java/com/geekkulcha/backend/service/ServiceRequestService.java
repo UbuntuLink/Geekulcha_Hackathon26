@@ -4,7 +4,9 @@ import com.geekkulcha.backend.dto.request.ServiceRequestCreateRequest;
 import com.geekkulcha.backend.entity.RequestStatus;
 import com.geekkulcha.backend.entity.ServiceRequest;
 import com.geekkulcha.backend.entity.User;
+import com.geekkulcha.backend.exception.ForbiddenException;
 import com.geekkulcha.backend.exception.ResourceNotFoundException;
+import com.geekkulcha.backend.repository.ProviderProfileRepository;
 import com.geekkulcha.backend.repository.ServiceRepository;
 import com.geekkulcha.backend.repository.ServiceRequestRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ public class ServiceRequestService {
 
     private final ServiceRequestRepository serviceRequestRepository;
     private final ServiceRepository serviceRepository;
+    private final ProviderProfileRepository providerProfileRepository;
 
     public ServiceRequest create(User customer, ServiceRequestCreateRequest request) {
         ServiceRequest serviceRequest = new ServiceRequest();
@@ -48,5 +51,26 @@ public class ServiceRequestService {
 
     public List<ServiceRequest> findByUser(long userId) {
         return serviceRequestRepository.findByUserId(userId);
+    }
+
+    /** Provider's Requests Feed — every open request, not scoped to any one provider. */
+    public List<ServiceRequest> findOpen() {
+        return serviceRequestRepository.findByStatus(RequestStatus.OPEN);
+    }
+
+    public ServiceRequest setPreferredProvider(long id, long providerProfileId, long currentUserId) {
+        ServiceRequest serviceRequest = getById(id);
+        requireOwner(serviceRequest, currentUserId);
+
+        var provider = providerProfileRepository.findById(providerProfileId)
+                .orElseThrow(() -> new ResourceNotFoundException("Provider " + providerProfileId + " not found"));
+        serviceRequest.setPreferredProvider(provider);
+        return serviceRequestRepository.save(serviceRequest);
+    }
+
+    public void requireOwner(ServiceRequest serviceRequest, long currentUserId) {
+        if (serviceRequest.getUser().getId() != currentUserId) {
+            throw new ForbiddenException("You don't own this service request");
+        }
     }
 }

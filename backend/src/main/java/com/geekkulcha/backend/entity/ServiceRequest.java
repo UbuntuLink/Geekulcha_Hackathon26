@@ -26,6 +26,12 @@ public class ServiceRequest {
     @ManyToOne
     private Service service;
 
+    // Set when the customer taps "Request a quote" on a specific provider's profile (Figma
+    // screens 8-9) — highlights this request in that provider's feed, but doesn't restrict who
+    // else can quote on it. Nullable: a request may have no preferred provider yet.
+    @ManyToOne
+    private ProviderProfile preferredProvider;
+
     @Column(length = 2000)
     private String description;
 

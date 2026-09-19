@@ -1,6 +1,7 @@
 package com.geekkulcha.backend.service;
 
 import com.geekkulcha.backend.entity.*;
+import com.geekkulcha.backend.exception.ForbiddenException;
 import com.geekkulcha.backend.exception.ResourceNotFoundException;
 import com.geekkulcha.backend.repository.BookingRepository;
 import com.geekkulcha.backend.repository.QuoteRepository;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 /** Accepting a {@link Quote} creates a {@link Booking}. Figma screens 9-11. */
 @Service
@@ -23,9 +25,12 @@ public class BookingService {
     private final ServiceRequestRepository serviceRequestRepository;
 
     @Transactional
-    public Booking acceptQuote(long quoteId, LocalDate scheduledDate, LocalTime scheduledTime) {
+    public Booking acceptQuote(long quoteId, LocalDate scheduledDate, LocalTime scheduledTime, long currentUserId) {
         Quote quote = quoteRepository.findById(quoteId)
                 .orElseThrow(() -> new ResourceNotFoundException("Quote " + quoteId + " not found"));
+        if (quote.getServiceRequest().getUser().getId() != currentUserId) {
+            throw new ForbiddenException("You don't own this service request");
+        }
 
         quote.setStatus(QuoteStatus.ACCEPTED);
         quoteRepository.save(quote);
@@ -48,9 +53,17 @@ public class BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Booking " + id + " not found"));
     }
 
-    public Booking updateStatus(long id, BookingStatus status) {
+    /** Advancing a booking's status is the provider's action — see ProviderBookings.jsx. */
+    public Booking updateStatus(long id, BookingStatus status, long currentUserId) {
         Booking booking = getById(id);
+        if (booking.getQuote().getProviderProfile().getUser().getId() != currentUserId) {
+            throw new ForbiddenException("You don't own this booking");
+        }
         booking.setStatus(status);
         return bookingRepository.save(booking);
+    }
+
+    public List<Booking> findByProvider(long userId) {
+        return bookingRepository.findByQuote_ProviderProfile_User_Id(userId);
     }
 }

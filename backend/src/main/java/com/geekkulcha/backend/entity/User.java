@@ -1,5 +1,6 @@
 package com.geekkulcha.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,6 +27,9 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
+    // Never serialize this — entities are returned directly from several controllers (see
+    // PROJECT.md §9g), and the hash has no business being in any API response.
+    @JsonIgnore
     private String passwordHash;
 
     private String firstName;

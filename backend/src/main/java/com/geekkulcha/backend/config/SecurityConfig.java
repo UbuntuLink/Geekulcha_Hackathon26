@@ -12,7 +12,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
@@ -25,10 +28,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
  * (AuthController/AuthService/JwtService). Needs a JWT_SECRET env var (32+ chars — see
  * INSTRUCTIONS.md).
  *
- * Incoming requests aren't actually validated against the JWT yet — no resource-server filter
- * decodes/verifies it on protected routes, so every route is still permitAll() below. Business
- * endpoints (ServiceRequestController etc.) still act as a fixed demo user rather than the real
- * signed-in caller until that's wired up.
+ * Incoming requests ARE validated now: the resource-server filter decodes/verifies the JWT
+ * (same HMAC secret used to sign it) on every route except /auth/**. Controllers pull the
+ * current user via UserService.getCurrentUser(jwt), reading the `sub` claim as a user id.
  */
 @Configuration
 public class SecurityConfig {
@@ -41,22 +43,33 @@ public class SecurityConfig {
         return Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8();
     }
 
-    @Bean
-    public JwtEncoder jwtEncoder() {
-        SecretKey secretKey = new SecretKeySpec(jwtSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-        return NimbusJwtEncoder.withSecretKey(secretKey).build();
+    private SecretKey secretKey() {
+        return new SecretKeySpec(jwtSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, CorsConfigurationSource corsConfigurationSource) throws Exception {
+    public JwtEncoder jwtEncoder() {
+        return NimbusJwtEncoder.withSecretKey(secretKey()).build();
+    }
+
+    @Bean
+    public JwtDecoder jwtDecoder() {
+        return NimbusJwtDecoder.withSecretKey(secretKey()).macAlgorithm(MacAlgorithm.HS256).build();
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, CorsConfigurationSource corsConfigurationSource,
+                                                     JwtDecoder jwtDecoder) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.disable())
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll() // TODO: enforce JWT once a resource-server filter validates it, see PROJECT.md §8
-                );
+                        .requestMatchers("/auth/**").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder)));
 
         return http.build();
     }

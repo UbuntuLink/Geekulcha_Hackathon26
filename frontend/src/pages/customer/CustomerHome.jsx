@@ -144,7 +144,7 @@ export default function CustomerHome() {
       </button>
 
       <Card className="mt-4">
-        <p className="mb-2 text-sm font-semibold text-gray-900">🤖 Ask AI to find a provider</p>
+        <p className="mb-2 text-sm font-semibold text-gray-900"> Find a provider</p>
         <form onSubmit={handleAiSearch} className="flex gap-2">
           <TextInput
             value={aiQuery}
@@ -161,7 +161,7 @@ export default function CustomerHome() {
           </button>
         </form>
 
-        {aiSearching && <div className="mt-3"><Loading label="🤖 Asking AI..." /></div>}
+        {aiSearching && <div className="mt-3"><Loading label=" Asking AI....." /></div>}
         {aiError && <div className="mt-3"><ErrorBanner>{aiError}</ErrorBanner></div>}
         {aiExplanation && aiResults?.length > 0 && (
           <p className="mt-3 text-xs italic text-gray-500">{aiExplanation}</p>

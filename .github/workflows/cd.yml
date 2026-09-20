@@ -157,6 +157,9 @@ jobs:
               live)
                 commit=$(jq -r '.commit.id // "unknown"' deploy.json)
                 echo "$SERVICE is live at commit $commit"
+                # Tells the smoke check below that cutover already happened, so it can use a
+                # shorter patience budget.
+                echo "DEPLOY_CONFIRMED=true" >> "$GITHUB_ENV"
                 case "$commit" in
                   "$SHA"|unknown) ;;
                   *) echo "::warning::Render reports commit $commit live, but this run built $SHA." ;;
@@ -182,52 +185,80 @@ jobs:
           BASE_URL: ${{ vars[matrix.url_var] }}
           URL_VAR_NAME: ${{ matrix.url_var }}
           SERVICE: ${{ matrix.service }}
+          # Optional: the origin to test CORS with. Defaults to a throwaway *.vercel.app host,
+          # which the origin patterns in SecurityConfig.java allow, so this also proves preview
+          # deploys can reach the API. Override with your real domain if you add one.
+          FRONTEND_ORIGIN: ${{ vars.FRONTEND_ORIGIN }}
         run: |
           set -euo pipefail
 
           if [ -z "${BASE_URL:-}" ]; then
-            echo "::warning::Repo variable $URL_VAR_NAME is not set, so nothing checked that $SERVICE actually answers requests. See CD_PIPELINE.md section 4."
+            echo "::warning::Repo variable $URL_VAR_NAME is not set, so nothing checked that $SERVICE actually answers requests. See KEYS.md section 3.4."
             exit 0
           fi
 
           base="${BASE_URL%/}"
-          deadline=$(( $(date +%s) + 600 ))
+          origin="${FRONTEND_ORIGIN:-https://cd-smoke-check.vercel.app}"
+
+          # Every unexpected response is RETRIED, never fatal on sight. Render keeps the old
+          # instance serving until the new one passes its health check, so for the first minute
+          # or two of a deploy this check legitimately talks to the previous image and can see
+          # a stale 403. Failing immediately on that turned a normal cutover into a red build.
+          #
+          # Without RENDER_API_KEY the previous step could not wait for that cutover, so the
+          # budget has to cover the whole build as well as the boot.
+          if [ "${DEPLOY_CONFIRMED:-false}" = "true" ]; then
+            budget=600
+          else
+            budget=1500
+            echo "Deploy completion was not confirmed (no RENDER_API_KEY), so allowing $((budget / 60)) minutes for the build, cutover and cold start."
+          fi
+
+          deadline=$(( $(date +%s) + budget ))
           attempt=0
+          code=000
 
           while [ "$(date +%s)" -lt "$deadline" ]; do
             attempt=$(( attempt + 1 ))
-            code=000
 
             if [ "$SERVICE" = "backend" ]; then
-              # A CORS preflight from a *.vercel.app origin is the sharpest check available:
-              # the service has no health endpoint, every real route sits behind JWT auth, and
-              # a 403 here is exactly the production failure this pipeline exists to catch.
-              code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 90 \
+              # The service has no health endpoint and every real route sits behind JWT auth,
+              # so a CORS preflight is the most informative request available: a 200 proves the
+              # app is up, the security chain is wired, and browsers can actually reach it.
+              code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 60 \
                 -X OPTIONS "$base/auth/login" \
-                -H 'Origin: https://cd-smoke-check.vercel.app' \
+                -H "Origin: $origin" \
                 -H 'Access-Control-Request-Method: POST' \
-                -H 'Access-Control-Request-Headers: content-type' || echo 000)
+                -H 'Access-Control-Request-Headers: content-type') || code=000
               if [ "$code" = "200" ]; then
-                echo "backend is up and accepts Vercel origins (preflight $code)"
+                echo "backend is up and accepts $origin at preflight (200)"
                 exit 0
               fi
-              if [ "$code" = "403" ]; then
-                echo "::error::Backend is up but rejected a https://*.vercel.app origin at preflight (403 Invalid CORS request). Either the running image predates the origin-pattern CORS config in SecurityConfig.java, or FRONTEND_URL on Render exists with an empty value."
-                exit 1
-              fi
             else
-              code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 90 "$base/health" || echo 000)
+              code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 60 "$base/health") || code=000
               if [ "$code" = "200" ]; then
                 echo "ml-service /health is up"
                 exit 0
               fi
             fi
 
-            echo "  attempt $attempt: HTTP $code, retrying in 20s (a free-tier cold start takes up to 60s)"
+            [ -n "$code" ] || code=000
+            echo "  attempt $attempt: HTTP $code — retrying in 20s (cold start takes up to 60s; a deploy cutover takes longer)"
             sleep 20
           done
 
-          echo "::error::$SERVICE never answered successfully at $base within 10 minutes."
+          # Out of budget. The last response code says which failure this was.
+          case "$code" in
+            403)
+              echo "::error::Backend still rejects $origin at preflight (403 Invalid CORS request) after $((budget / 60)) minutes. The old image is still serving, or FRONTEND_URL on Render exists with an empty value. See KEYS.md section 1.3."
+              ;;
+            000)
+              echo "::error::$SERVICE never answered at $base within $((budget / 60)) minutes — the deploy failed, or the service is not starting. Check its Render logs and Events tab."
+              ;;
+            *)
+              echo "::error::$SERVICE answered with HTTP $code instead of 200 at $base for $((budget / 60)) minutes."
+              ;;
+          esac
           exit 1
 
   deploy-vercel:

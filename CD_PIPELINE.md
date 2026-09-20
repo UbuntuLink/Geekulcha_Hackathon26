@@ -12,9 +12,15 @@ The pipeline lives in [`.github/workflows/cd.yml`](.github/workflows/cd.yml).
 | Job | Runs | What happens |
 |---|---|---|
 | **build** | Every push to `master`/`main`, and manual runs | Builds all three services — backend (`mvnw package`), frontend (`npm ci && npm run build`), ML service (`pip install` + byte-compile). Fails the run if any of them break. |
-| **deploy** | Only if **build** passed | Pings Render's deploy hooks for the backend and ML service, and pushes the frontend to Vercel via the Vercel CLI. |
+| **deploy-render** | Only if **build** passed | Triggers a Render deploy for the backend and the ML service (in parallel), pinned to the commit this run built, then waits for it to report `live` and smoke-checks the running service. |
+| **deploy-vercel** | **Disabled by default** — only when the repo variable `DEPLOY_FRONTEND` is `true` | Builds and promotes the frontend via the Vercel CLI. Off because Vercel's GitHub integration already deploys `frontend/` on every push; running both would deploy each commit twice and race for the production alias. |
 
-**Before you've done the setup below, the deploy steps skip themselves with a warning instead of failing.** That's deliberate — you can merge this workflow now, wire up the platforms later, and adopt it one service at a time.
+**The deploy jobs fail when their secrets are missing.** They used to skip themselves with a warning, which produced a green check on every push while nothing was ever deployed — the backend ran a stale image for days and the only symptom was CORS errors in the browser. A deploy that didn't happen is a failure, so the run goes red and tells you which secret is missing.
+
+Two other things the pipeline now guards against:
+
+- **Deploys are pinned to a commit.** The deploy hook is called with `?ref=<sha>`, so Render builds the commit this run built rather than whatever it considers the branch tip.
+- **A green check means the new code is answering requests**, not just that a deploy was requested — as long as you've set the optional `RENDER_API_KEY` secret and the two URL variables in §4.
 
 ---
 
@@ -69,19 +75,39 @@ Now that both sides exist, go back to **Render** and set `FRONTEND_URL` on *both
 
 ## 4. Add the GitHub secrets
 
+> [KEYS.md](KEYS.md) is the full reference for every key in the project — where each one comes
+> from, which of the four places it belongs in, and how to verify it took effect. This section is
+> the short version for the pipeline's own secrets.
+
 Repo → **Settings → Secrets and variables → Actions → New repository secret**:
 
 | Secret | Where to get it |
 |---|---|
 | `RENDER_BACKEND_DEPLOY_HOOK` | Render → `ubuntulink-backend` → Settings → **Deploy Hook** → copy URL |
 | `RENDER_ML_DEPLOY_HOOK` | Render → `ubuntulink-ml-service` → Settings → **Deploy Hook** → copy URL |
-| `VERCEL_TOKEN` | Vercel → Account Settings → Tokens → Create |
-| `VERCEL_ORG_ID` | Run `vercel link` in `frontend/`, then read `.vercel/project.json` → `orgId` |
-| `VERCEL_PROJECT_ID` | Same file → `projectId` |
+| ~~`VERCEL_TOKEN`~~ | Not needed — Vercel deploys the frontend itself from GitHub, so `deploy-vercel` is off unless you set `DEPLOY_FRONTEND=true`. See KEYS.md §3.3. |
+| ~~`VERCEL_ORG_ID`~~ | Same — only if you take the frontend deploy away from Vercel's Git integration. |
+| ~~`VERCEL_PROJECT_ID`~~ | Same. |
 
 Deploy hook URLs are themselves secrets — anyone with the URL can trigger a deploy. Don't paste them into the repo, issues, or chat.
 
-Once all five are set, the next push to `master` deploys everything automatically.
+Once the two deploy hooks are set, the next push to `master` redeploys both Render services
+automatically. The frontend needs nothing here — Vercel is already watching `master` itself.
+
+### Optional, but this is what makes a green check mean something
+
+| Secret | Where to get it | What it buys you |
+|---|---|---|
+| `RENDER_API_KEY` | Render → Account Settings → **API Keys** → Create | The workflow polls the deploy it just triggered and fails the run on `build_failed` / `update_failed`, instead of assuming a triggered deploy succeeded. The service ID is read out of the deploy hook URL, so this is the only extra secret needed. |
+
+And under **Settings → Secrets and variables → Actions → Variables** (these are URLs, not secrets, so they go in the Variables tab):
+
+| Variable | Value | What it buys you |
+|---|---|---|
+| `BACKEND_URL` | `https://ubuntulink-backend-….onrender.com` | After the deploy, CI sends a CORS preflight from a `https://*.vercel.app` origin and fails if it isn't `200`. That single request catches both the stale-image case and a blank `FRONTEND_URL`. |
+| `ML_SERVICE_URL` | `https://ubuntulink-ml-service-….onrender.com` | Same idea, against `GET /health`. |
+
+Without these three the pipeline still deploys — it just warns that it couldn't confirm anything, which is the situation that let a broken deploy sit unnoticed in the first place.
 
 ---
 
@@ -89,9 +115,13 @@ Once all five are set, the next push to `master` deploys everything automaticall
 
 **Tests are skipped on purpose.** The backend builds with `-DskipTests`. The only test in the repo is `BackendApplicationTests.contextLoads()`, a `@SpringBootTest` that boots the entire application — which needs a reachable Supabase database *and* `JWT_SECRET`, neither of which exist on a CI runner. Running it would fail every build. There is no real test coverage anywhere in this project yet (PROJECT.md §9h); if that changes, drop `-DskipTests` and give the runner the env vars it needs.
 
-**The frontend is built twice.** Once in the `build` job (to catch breakage before deploying anything) and again by Vercel during `vercel build`. That's intentional — the first build is the gate, the second is the artifact Vercel actually serves.
+**The frontend is built twice, and the CI build is not a gate for it.** The `build` job compiles `frontend/` to catch breakage, but Vercel builds and ships its own copy straight from the push — it doesn't wait for GitHub Actions and doesn't care whether the run went red. So a broken frontend reaches production regardless; the CI build only tells you sooner. If you want a real gate, either set an *Ignored Build Step* in Vercel or move the deploy into this pipeline (`DEPLOY_FRONTEND=true`, KEYS.md §3.3).
 
-**Render's free tier spins down.** The first request after idle takes 30-60s to wake. A deploy also takes a few minutes; the pipeline triggers it and returns immediately rather than waiting, so a green GitHub check means "deploy started", not "deploy finished". Watch Render's dashboard for the actual result.
+**Render's free tier spins down.** The first request after idle takes 30-60s to wake, which is why the smoke check retries for up to 10 minutes before giving up rather than failing on the first timeout.
+
+**The deploy jobs are slow on purpose.** With `RENDER_API_KEY` set, `deploy-render` waits up to 20 minutes for Render to finish building and report `live`, then waits again for the service to answer a real request. A run that takes 15 minutes but tells you the truth beats a 40-second run that tells you nothing.
+
+**A cold-start log looks exactly like a fresh deploy.** Render prints the full Spring Boot banner and `Started BackendApplication` every time a spun-down free-tier service wakes up. That log is not evidence that your latest commit is running — check the service's **Events** tab for the deployed commit SHA, or just read the smoke-check step in CI.
 
 **Manual runs deploy whatever branch you dispatch from.** `workflow_dispatch` is enabled for re-running a deploy without a new commit — but it deploys the ref you select, so be deliberate if you dispatch from a feature branch.
 
@@ -121,7 +151,10 @@ Rolling back code does **not** roll back the database. `ddl-auto=update` only ev
 |---|---|
 | `./mvnw: Permission denied` | `backend/mvnw` lost its executable bit. The workflow runs `chmod +x ./mvnw` first, so this only appears if that line was removed. |
 | Build fails on `npm ci` | `frontend/package-lock.json` is out of sync with `package.json`. Run `npm install` locally and commit the updated lockfile. |
-| Deploy steps say "skipping" | The corresponding secret isn't set — see §4. Expected before setup is done. |
+| Deploy job fails with `… is not set, so <service> was NOT deployed` | The corresponding secret is missing — see §4. Nothing was deployed; this is the workflow refusing to be green about it. |
+| Smoke check fails with `rejected a https://*.vercel.app origin at preflight` | The running image predates the origin-pattern CORS config in `SecurityConfig.java`, or `FRONTEND_URL` exists on Render with an empty value (an empty string is an allowed origin that matches nothing). Delete the variable or set it to a real URL, then redeploy. |
+| `Render reports commit X live, but this run built Y` | The service is connected to a different branch, or a concurrent deploy won. Check the service's **Events** tab. |
+| Deploy hook returns HTTP 400 | Usually the `?ref=<sha>` pin: the Render service isn't connected to this repo, or can't see that commit. |
 | Deployed frontend calls `localhost:8080` | `VITE_API_BASE_URL` wasn't set **in Vercel** (§2). Setting it as a GitHub secret has no effect. |
 | CORS errors in production | `FRONTEND_URL` on the Render services doesn't match the real Vercel URL (§3). |
 | Backend deploy succeeds but the service won't start | Missing env var on Render — check the service's logs for `Could not resolve placeholder 'SUPABASE_DB_URL'` or `'JWT_SECRET'`. |

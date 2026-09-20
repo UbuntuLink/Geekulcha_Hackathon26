@@ -1,8 +1,17 @@
 name: CD
 
-# Deploys on every push to master/main. Setup (Render blueprint, Vercel project, the five
-# repo secrets below) is documented in CD_PIPELINE.md — until those exist, the build job
-# still runs and the deploy steps skip themselves with a warning rather than failing red.
+# Deploys on every push to master/main. Platform setup (Render blueprint, Vercel project, the
+# repo secrets) is documented in CD_PIPELINE.md.
+#
+# The deploy steps FAIL when their secrets are missing. The first version of this workflow
+# skipped them with a `::warning::` instead, which meant every push got a green check while
+# nothing was ever deployed — the backend served a stale image for days and the only symptom
+# was CORS errors in the browser. A deploy that did not happen is a failure, not a warning.
+#
+# Scope: this pipeline owns the two RENDER services. The frontend is deployed by Vercel's own
+# GitHub integration, so deploy-vercel below is disabled unless DEPLOY_FRONTEND=true — an
+# opt-out chosen deliberately, not the accidental skipping described above.
+
 on:
   push:
     branches: [master, main]
@@ -62,49 +71,205 @@ jobs:
           pip install -r requirements.txt
           python -m compileall app
 
-  deploy:
-    name: Deploy
+  deploy-render:
+    name: Deploy ${{ matrix.service }} to Render
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: backend
+            hook_secret: RENDER_BACKEND_DEPLOY_HOOK
+            url_var: BACKEND_URL
+          - service: ml-service
+            hook_secret: RENDER_ML_DEPLOY_HOOK
+            url_var: ML_SERVICE_URL
+    steps:
+      - name: Trigger Render deploy
+        id: trigger
+        env:
+          HOOK: ${{ secrets[matrix.hook_secret] }}
+          SERVICE: ${{ matrix.service }}
+          HOOK_SECRET_NAME: ${{ matrix.hook_secret }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${HOOK:-}" ]; then
+            echo "::error::$HOOK_SECRET_NAME is not set, so $SERVICE was NOT deployed. Add it under repo Settings -> Secrets and variables -> Actions (CD_PIPELINE.md section 4)."
+            exit 1
+          fi
+
+          # ?ref pins the deploy to the exact commit this run built. Without it Render deploys
+          # whatever it currently considers the branch tip, which is how a pushed fix can sit
+          # undeployed while the dashboard still shows a successful earlier deploy.
+          case "$HOOK" in
+            *\?*) url="${HOOK}&ref=${SHA}" ;;
+            *)    url="${HOOK}?ref=${SHA}" ;;
+          esac
+
+          code=$(curl -sS -o hook-response.json -w '%{http_code}' -X POST "$url")
+          if [ "$code" != "200" ]; then
+            echo "::error::Render deploy hook for $SERVICE returned HTTP $code"
+            cat hook-response.json || true
+            exit 1
+          fi
+
+          deploy_id=$(jq -r '.deploy.id // empty' hook-response.json)
+          if [ -z "$deploy_id" ]; then
+            echo "::error::Render accepted the hook but returned no deploy id — treating that as a failed deploy."
+            cat hook-response.json || true
+            exit 1
+          fi
+
+          # The service id is already in the hook URL (.../deploy/srv-xxxx?key=...); taking it
+          # from there saves the status poll below from needing a secret of its own.
+          service_id=$(printf '%s' "$HOOK" | sed -n 's#.*/deploy/\(srv-[A-Za-z0-9]*\).*#\1#p')
+
+          echo "deploy_id=$deploy_id" >> "$GITHUB_OUTPUT"
+          echo "service_id=$service_id" >> "$GITHUB_OUTPUT"
+          echo "Triggered $SERVICE deploy $deploy_id at $SHA"
+
+      - name: Wait for the deploy to go live
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          DEPLOY_ID: ${{ steps.trigger.outputs.deploy_id }}
+          SERVICE_ID: ${{ steps.trigger.outputs.service_id }}
+          SERVICE: ${{ matrix.service }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${RENDER_API_KEY:-}" ] || [ -z "${SERVICE_ID:-}" ]; then
+            echo "::warning::RENDER_API_KEY not set — cannot confirm the $SERVICE deploy finished. The smoke check below is then the only signal. See CD_PIPELINE.md section 4."
+            exit 0
+          fi
+
+          # Render's free tier builds Docker images slowly, so 20 minutes is generous enough
+          # that a timeout here means something is genuinely wrong rather than merely slow.
+          deadline=$(( $(date +%s) + 1200 ))
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            curl -sS -H "Authorization: Bearer $RENDER_API_KEY" -H "Accept: application/json" \
+              "https://api.render.com/v1/services/$SERVICE_ID/deploys/$DEPLOY_ID" > deploy.json
+            status=$(jq -r '.status // "unknown"' deploy.json)
+            case "$status" in
+              live)
+                commit=$(jq -r '.commit.id // "unknown"' deploy.json)
+                echo "$SERVICE is live at commit $commit"
+                case "$commit" in
+                  "$SHA"|unknown) ;;
+                  *) echo "::warning::Render reports commit $commit live, but this run built $SHA." ;;
+                esac
+                exit 0
+                ;;
+              build_failed|update_failed|pre_deploy_failed|canceled|deactivated)
+                echo "::error::Render deploy $DEPLOY_ID for $SERVICE ended as '$status' — check that service's Events tab."
+                exit 1
+                ;;
+              *)
+                echo "  $status ..."
+                sleep 15
+                ;;
+            esac
+          done
+
+          echo "::error::Timed out after 20 minutes waiting for the $SERVICE deploy to go live."
+          exit 1
+
+      - name: Smoke check the deployed service
+        env:
+          BASE_URL: ${{ vars[matrix.url_var] }}
+          URL_VAR_NAME: ${{ matrix.url_var }}
+          SERVICE: ${{ matrix.service }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${BASE_URL:-}" ]; then
+            echo "::warning::Repo variable $URL_VAR_NAME is not set, so nothing checked that $SERVICE actually answers requests. See CD_PIPELINE.md section 4."
+            exit 0
+          fi
+
+          base="${BASE_URL%/}"
+          deadline=$(( $(date +%s) + 600 ))
+          attempt=0
+
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            attempt=$(( attempt + 1 ))
+            code=000
+
+            if [ "$SERVICE" = "backend" ]; then
+              # A CORS preflight from a *.vercel.app origin is the sharpest check available:
+              # the service has no health endpoint, every real route sits behind JWT auth, and
+              # a 403 here is exactly the production failure this pipeline exists to catch.
+              code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 90 \
+                -X OPTIONS "$base/auth/login" \
+                -H 'Origin: https://cd-smoke-check.vercel.app' \
+                -H 'Access-Control-Request-Method: POST' \
+                -H 'Access-Control-Request-Headers: content-type' || echo 000)
+              if [ "$code" = "200" ]; then
+                echo "backend is up and accepts Vercel origins (preflight $code)"
+                exit 0
+              fi
+              if [ "$code" = "403" ]; then
+                echo "::error::Backend is up but rejected a https://*.vercel.app origin at preflight (403 Invalid CORS request). Either the running image predates the origin-pattern CORS config in SecurityConfig.java, or FRONTEND_URL on Render exists with an empty value."
+                exit 1
+              fi
+            else
+              code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 90 "$base/health" || echo 000)
+              if [ "$code" = "200" ]; then
+                echo "ml-service /health is up"
+                exit 0
+              fi
+            fi
+
+            echo "  attempt $attempt: HTTP $code, retrying in 20s (a free-tier cold start takes up to 60s)"
+            sleep 20
+          done
+
+          echo "::error::$SERVICE never answered successfully at $base within 10 minutes."
+          exit 1
+
+  deploy-vercel:
+    name: Deploy frontend to Vercel
+    # OFF unless you ask for it. Vercel's own GitHub integration already deploys frontend/ on
+    # every push to master, so running this as well would deploy the same commit twice and race
+    # for the production alias. Turn it on only if you disconnect that integration and want
+    # Actions to own the frontend deploy: repo Settings -> Secrets and variables -> Actions ->
+    # Variables -> DEPLOY_FRONTEND = true, plus the three VERCEL_* secrets (KEYS.md section 3.3).
+    if: vars.DEPLOY_FRONTEND == 'true'
     needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # Each step guards on its own secret *inside* the step rather than via a job-level `if:`,
-      # because the `secrets` context isn't available in job-level conditions.
-      - name: Deploy backend to Render
-        env:
-          HOOK: ${{ secrets.RENDER_BACKEND_DEPLOY_HOOK }}
-        run: |
-          if [ -z "$HOOK" ]; then
-            echo "::warning::RENDER_BACKEND_DEPLOY_HOOK not set — skipping backend deploy (see CD_PIPELINE.md)"
-            exit 0
-          fi
-          curl -fsS -X POST "$HOOK" > /dev/null
-          echo "Triggered Render backend deploy."
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
-      - name: Deploy ML service to Render
-        env:
-          HOOK: ${{ secrets.RENDER_ML_DEPLOY_HOOK }}
-        run: |
-          if [ -z "$HOOK" ]; then
-            echo "::warning::RENDER_ML_DEPLOY_HOOK not set — skipping ML service deploy (see CD_PIPELINE.md)"
-            exit 0
-          fi
-          curl -fsS -X POST "$HOOK" > /dev/null
-          echo "Triggered Render ML service deploy."
-
-      - name: Deploy frontend to Vercel
+      - name: Deploy
         working-directory: frontend
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
-            echo "::warning::Vercel secrets not set — skipping frontend deploy (see CD_PIPELINE.md)"
-            exit 0
+          set -euo pipefail
+
+          missing=""
+          [ -n "${VERCEL_TOKEN:-}" ]      || missing="$missing VERCEL_TOKEN"
+          [ -n "${VERCEL_ORG_ID:-}" ]     || missing="$missing VERCEL_ORG_ID"
+          [ -n "${VERCEL_PROJECT_ID:-}" ] || missing="$missing VERCEL_PROJECT_ID"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing Vercel secrets:$missing — the frontend was NOT deployed. See CD_PIPELINE.md section 4."
+            exit 1
           fi
+
           npm install -g vercel@latest
           vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          # VITE_* values are inlined here, by Vercel's own build, from the project's env vars —
+          # GitHub secrets cannot supply them. See CD_PIPELINE.md section 2.
           vercel build --prod --token="$VERCEL_TOKEN"
-          vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+          url=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          echo "Deployed to $url"
+          echo "Frontend: $url" >> "$GITHUB_STEP_SUMMARY"

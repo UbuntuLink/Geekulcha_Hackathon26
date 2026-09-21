@@ -4,9 +4,11 @@ import Screen from "../../components/layout/Screen.jsx";
 import Button from "../../components/common/Button.jsx";
 import { Field, TextInput } from "../../components/common/Field.jsx";
 import { setOnboarding, getOnboarding } from "../../lib/preferences.js";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 
 export default function CustomerOnboarding() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const existing = getOnboarding();
   const [name, setName] = useState(existing.name || "");
   const [location, setLocation] = useState(existing.location || "");
@@ -18,12 +20,12 @@ export default function CustomerOnboarding() {
   };
 
   return (
-    <Screen title="Let's get you set up" subtitle="A few details help us find providers near you." showBack={false}>
+    <Screen title={t("customer.setup")} subtitle={t("customer.subtitle")} showBack={false}>
       <div className="space-y-4">
-        <Field label="Your name">
+        <Field label={t("form.name")}>
           <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Tebogo" />
         </Field>
-        <Field label="Location">
+        <Field label={t("form.location")}>
           <TextInput
             value={location}
             onChange={(e) => setLocation(e.target.value)}
@@ -31,7 +33,7 @@ export default function CustomerOnboarding() {
           />
         </Field>
         <div>
-          <p className="mb-1 text-sm font-medium text-gray-700">What matters most?</p>
+          <p className="mb-1 text-sm font-medium text-gray-700">{t("form.whatMatters")}</p>
           <div className="flex gap-2">
             {["price", "ratings"].map((option) => (
               <button
@@ -49,7 +51,7 @@ export default function CustomerOnboarding() {
           </div>
         </div>
         <Button onClick={handleContinue} disabled={!name || !location} className="mt-4">
-          Continue
+          {t("action.continue")}
         </Button>
       </div>
     </Screen>

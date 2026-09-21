@@ -13,8 +13,10 @@ import {
   updateMyProviderProfile,
 } from "../../api/services.js";
 import { formatRange } from "../../lib/format.js";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 
 export default function ProviderProfileEdit() {
+  const { t } = useLanguage();
   const [profile, setProfile] = useState(null);
   const [allServices, setAllServices] = useState([]);
   const [form, setForm] = useState(null);
@@ -81,23 +83,23 @@ export default function ProviderProfileEdit() {
 
   if (!profile || !form) {
     return (
-      <Screen title="Your profile" showBack={false} withNav navRole="provider">
+      <Screen title={t("provider.profile")} showBack={false} withNav navRole="provider">
         <Loading />
       </Screen>
     );
   }
 
   return (
-    <Screen title="Your profile" showBack={false} withNav navRole="provider">
+    <Screen title={t("provider.profile")} showBack={false} withNav navRole="provider">
       <Card>
         <div className="space-y-4">
-          <Field label="Bio">
+          <Field label={t("provider.bio")}>
             <TextArea value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
           </Field>
-          <Field label="Location">
+          <Field label={t("provider.location")}>
             <TextInput value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
           </Field>
-          <Field label="Service radius (km)">
+          <Field label={t("provider.serviceRadius")}>
             <TextInput
               type="number"
               min="0"
@@ -111,20 +113,18 @@ export default function ProviderProfileEdit() {
               checked={form.availableToday}
               onChange={(e) => setForm({ ...form, availableToday: e.target.checked })}
             />
-            Available today
+            {form.availableToday ? t("provider.availableToday") : t("provider.unavailableToday")}
           </label>
         </div>
         {error && <div className="mt-4"><ErrorBanner>{error}</ErrorBanner></div>}
         <Button className="mt-4" onClick={handleSaveProfile} disabled={saving}>
-          {saving ? "Saving..." : "Save profile"}
+          {saving ? t("provider.saving") : t("provider.saveProfile")}
         </Button>
       </Card>
 
       <div className="mt-4">
-        <h2 className="mb-2 text-base font-semibold text-gray-900">Your services</h2>
-        {profile.services.length === 0 && (
-          <p className="mb-2 text-sm text-gray-500">You haven't added any services yet.</p>
-        )}
+        <h2 className="mb-2 text-base font-semibold text-gray-900">{t("provider.yourServices")}</h2>
+        {profile.services.length === 0 && <p className="mb-2 text-sm text-gray-500">{t("provider.noServices")}</p>}
         {profile.services.map((s) => (
           <Card key={s.serviceId} className="mb-2 flex items-center justify-between">
             <div>
@@ -135,19 +135,19 @@ export default function ProviderProfileEdit() {
               onClick={() => handleRemoveService(s.serviceId)}
               className="text-sm font-medium text-red-600 hover:underline"
             >
-              Remove
+              {t("provider.remove")}
             </button>
           </Card>
         ))}
 
         <Card className="mt-2">
-          <p className="mb-2 text-sm font-medium text-gray-700">Add a service</p>
+          <p className="mb-2 text-sm font-medium text-gray-700">{t("provider.addService")}</p>
           <select
             value={newService.serviceId}
             onChange={(e) => setNewService({ ...newService, serviceId: e.target.value })}
             className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           >
-            <option value="">Choose a service...</option>
+            <option value="">{t("provider.chooseService")}</option>
             {allServices.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -158,20 +158,20 @@ export default function ProviderProfileEdit() {
             <TextInput
               type="number"
               min="0"
-              placeholder="Min price"
+              placeholder={t("provider.minPrice")}
               value={newService.minPrice}
               onChange={(e) => setNewService({ ...newService, minPrice: e.target.value })}
             />
             <TextInput
               type="number"
               min="0"
-              placeholder="Max price"
+              placeholder={t("provider.maxPrice")}
               value={newService.maxPrice}
               onChange={(e) => setNewService({ ...newService, maxPrice: e.target.value })}
             />
           </div>
           <Button variant="outline" className="mt-2" onClick={handleAddService} disabled={!newService.serviceId}>
-            Add service
+            {t("provider.addService")}
           </Button>
         </Card>
       </div>

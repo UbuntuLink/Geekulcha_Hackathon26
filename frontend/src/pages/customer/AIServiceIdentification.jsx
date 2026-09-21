@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Screen from "../../components/layout/Screen.jsx";
 import Card from "../../components/common/Card.jsx";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 
 const FALLBACK_CLASSIFICATION = {
   category: "plumbing",
@@ -14,6 +15,7 @@ export default function AIServiceIdentification() {
   const { id } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const classification = state?.classification || FALLBACK_CLASSIFICATION;
   const serviceId = state?.serviceId ?? null;
   const [progress, setProgress] = useState(0);
@@ -35,30 +37,28 @@ export default function AIServiceIdentification() {
   }, [progress, id, serviceId, navigate]);
 
   return (
-    <Screen title="Understanding your request" subtitle="🤖 UbuntuLink AI is identifying the service you need.">
+    <Screen title={t("customer.understandingTitle")} subtitle={t("customer.understandingSubtitle")}>
       <Card>
-        <p className="text-sm font-medium text-gray-500">Your problem</p>
+        <p className="text-sm font-medium text-gray-500">{t("customer.yourProblem")}</p>
         <p className="mt-1 italic text-gray-900">"{classification.job_description}"</p>
       </Card>
 
       <div className="mt-4 rounded-xl bg-brand p-4 text-white">
-        <p className="text-sm">✓ Service identified</p>
+        <p className="text-sm">✓ {t("customer.serviceIdentified")}</p>
         <p className="text-lg font-bold">{capitalize(classification.category)}</p>
       </div>
 
-      <p className="mt-6 text-sm font-medium text-gray-700">Finding providers near you...</p>
+      <p className="mt-6 text-sm font-medium text-gray-700">{t("customer.findingProviders")}</p>
       <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-200">
         <div className="h-full bg-brand transition-all duration-300" style={{ width: `${progress}%` }} />
       </div>
-      <p className="mt-2 text-xs text-gray-500">
-        Matching on service, distance, price, ratings and availability.
-      </p>
+      <p className="mt-2 text-xs text-gray-500">{t("customer.matchingInfo")}</p>
 
       <button
         onClick={() => navigate(`/requests/${id}/matches`, { state: { serviceId } })}
         className="mt-6 text-sm font-medium text-brand hover:underline"
       >
-        Skip →
+        {t("common.skip")} →
       </button>
     </Screen>
   );

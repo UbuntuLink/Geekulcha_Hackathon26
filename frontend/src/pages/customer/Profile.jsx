@@ -4,25 +4,27 @@ import Card from "../../components/common/Card.jsx";
 import Button from "../../components/common/Button.jsx";
 import { getOnboarding } from "../../lib/preferences.js";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 
 export default function Profile() {
   const { name, location, priority } = getOnboarding();
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   return (
-    <Screen title="Your profile" showBack={false} withNav>
+    <Screen title={t("provider.profile")} showBack={false} withNav>
       <Card>
-        <p className="text-sm text-gray-500">Name</p>
-        <p className="font-medium text-gray-900">{name || "Not set"}</p>
-        <p className="mt-3 text-sm text-gray-500">Location</p>
-        <p className="font-medium text-gray-900">{location || "Not set"}</p>
-        <p className="mt-3 text-sm text-gray-500">What matters most</p>
-        <p className="font-medium capitalize text-gray-900">{priority || "Not set"}</p>
+        <p className="text-sm text-gray-500">{t("common.name")}</p>
+        <p className="font-medium text-gray-900">{name || t("common.notSet")}</p>
+        <p className="mt-3 text-sm text-gray-500">{t("common.location")}</p>
+        <p className="font-medium text-gray-900">{location || t("common.notSet")}</p>
+        <p className="mt-3 text-sm text-gray-500">{t("form.whatMatters")}</p>
+        <p className="font-medium capitalize text-gray-900">{priority || t("common.notSet")}</p>
       </Card>
 
       <Card className="mt-3">
-        <p className="text-sm text-gray-500">Account</p>
+        <p className="text-sm text-gray-500">{t("common.account")}</p>
         {user ? (
           <>
             <p className="font-medium text-gray-900">{user.email}</p>
@@ -34,14 +36,14 @@ export default function Profile() {
                 navigate("/login");
               }}
             >
-              Sign out
+              {t("common.signOut")}
             </Button>
           </>
         ) : (
           <>
-            <p className="font-medium text-gray-900">Not signed in</p>
+            <p className="font-medium text-gray-900">{t("common.notSignedIn")}</p>
             <Link to="/login" className="mt-2 inline-block text-sm font-medium text-brand hover:underline">
-              Sign in →
+              {t("common.signIn")} →
             </Link>
           </>
         )}

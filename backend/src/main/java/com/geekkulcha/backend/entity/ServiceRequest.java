@@ -39,6 +39,12 @@ public class ServiceRequest {
     @Column(length = 2000)
     private String aiClassificationRaw;
 
+    @Lob
+    @Column(name = "photo_data_url")
+    private String photoDataUrl;
+
+    private String photoName;
+
     private String location;
 
     private LocalDate preferredDate;

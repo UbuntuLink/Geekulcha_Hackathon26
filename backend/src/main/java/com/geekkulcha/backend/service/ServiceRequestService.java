@@ -34,6 +34,8 @@ public class ServiceRequestService {
         serviceRequest.setLocation(request.location());
         serviceRequest.setPreferredDate(request.preferredDate());
         serviceRequest.setAiClassificationRaw(request.aiClassificationRaw());
+        serviceRequest.setPhotoDataUrl(request.photoDataUrl());
+        serviceRequest.setPhotoName(request.photoName());
         serviceRequest.setStatus(RequestStatus.OPEN);
         serviceRequest.setCreatedAt(Instant.now());
 

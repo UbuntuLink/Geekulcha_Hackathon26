@@ -7,6 +7,7 @@ import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import Loading from "../../components/common/Loading.jsx";
 import { setPreferredProvider, estimatePrice, getServiceRequest } from "../../api/services.js";
 import { formatRange } from "../../lib/format.js";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 
 /**
  * "Request a quote" now just flags this provider as preferred on the request (they get
@@ -17,6 +18,7 @@ export default function QuoteRequest() {
   const { id } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const provider = state?.provider;
   const mainService = provider?.services?.[0];
 
@@ -37,10 +39,8 @@ export default function QuoteRequest() {
 
   if (!provider) {
     return (
-      <Screen title="Request a quote">
-        <p className="text-sm text-gray-500">
-          Missing provider details — go back to "Compare Providers" and pick a provider first.
-        </p>
+      <Screen title={t("customer.requestQuote")}>
+        <p className="text-sm text-gray-500">{t("common.startFromProblem")}</p>
       </Screen>
     );
   }
@@ -60,12 +60,12 @@ export default function QuoteRequest() {
   };
 
   return (
-    <Screen title="Request a quote" subtitle="We'll flag your job to this provider.">
+    <Screen title={t("customer.requestQuote")} subtitle={t("customer.quoteRequestSubtitle")}>
       <Card>
-        <p className="text-sm font-medium text-gray-500">Provider</p>
+        <p className="text-sm font-medium text-gray-500">{t("customer.providerTitle")}</p>
         <p className="font-semibold text-gray-900">{provider.providerName}</p>
-        <p className="mt-2 text-sm font-medium text-gray-500">Service</p>
-        <p className="font-semibold text-gray-900">{mainService?.serviceName ?? "Service"}</p>
+        <p className="mt-2 text-sm font-medium text-gray-500">{t("customer.serviceTitle")}</p>
+        <p className="font-semibold text-gray-900">{mainService?.serviceName ?? t("common.service")}</p>
       </Card>
 
       {loadingPrice && (
@@ -75,17 +75,17 @@ export default function QuoteRequest() {
       )}
       {expectedRange?.estimated_min_zar != null && (
         <p className="mt-4 font-medium text-brand">
-          Expected price range: {formatRange(expectedRange.estimated_min_zar, expectedRange.estimated_max_zar)}
+          {t("customer.expectedPrice")}: {formatRange(expectedRange.estimated_min_zar, expectedRange.estimated_max_zar)}
         </p>
       )}
 
       {error && <div className="mt-4"><ErrorBanner>{error}</ErrorBanner></div>}
 
       <Button onClick={handleSubmit} disabled={submitting} className="mt-6">
-        {submitting ? "Sending..." : "Send quote request"}
+        {submitting ? t("customer.sending") : t("customer.sendQuoteRequest")}
       </Button>
       <p className="mt-2 text-center text-xs text-gray-500">
-        Any provider can quote on this job — this just lets {provider.providerName.split(" ")[0]} know you're interested.
+        {t("customer.quoteInfo")} {provider.providerName.split(" ")[0]} {t("customer.quoteInfoTail")}
       </p>
     </Screen>
   );

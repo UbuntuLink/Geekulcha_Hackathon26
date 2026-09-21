@@ -5,10 +5,12 @@ import Button from "../../components/common/Button.jsx";
 import { TextArea } from "../../components/common/Field.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import { submitReview } from "../../api/services.js";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 
 export default function ReviewProvider() {
   const { bookingId } = useParams();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -31,17 +33,17 @@ export default function ReviewProvider() {
 
   if (done) {
     return (
-      <Screen title="Thank you!" showBack={false}>
-        <p className="text-gray-600">Your review helps other customers find great providers.</p>
+      <Screen title={t("customer.thankYou")} showBack={false}>
+        <p className="text-gray-600">{t("customer.reviewThanks")}</p>
         <Button className="mt-6" onClick={() => navigate("/home")}>
-          Back to home
+          {t("customer.backHome")}
         </Button>
       </Screen>
     );
   }
 
   return (
-    <Screen title="Review provider" subtitle="How was your experience?">
+    <Screen title={t("customer.reviewTitle")} subtitle={t("customer.reviewSubtitle")}>
       <div className="flex justify-center gap-2 py-4">
         {[1, 2, 3, 4, 5].map((star) => (
           <button
@@ -56,11 +58,11 @@ export default function ReviewProvider() {
       <TextArea
         value={comment}
         onChange={(e) => setComment(e.target.value)}
-        placeholder="Fast, professional and affordable."
+        placeholder={t("customer.reviewPlaceholder")}
       />
       {error && <div className="mt-4"><ErrorBanner>{error}</ErrorBanner></div>}
       <Button className="mt-6" onClick={handleSubmit} disabled={submitting}>
-        {submitting ? "Submitting..." : "Submit review"}
+        {submitting ? t("customer.sending") : t("customer.submitReview")}
       </Button>
     </Screen>
   );

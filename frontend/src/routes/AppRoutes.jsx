@@ -60,8 +60,8 @@ export default function AppRoutes() {
         <Route path="/bookings/:bookingId/review" element={<ProtectedRoute role="customer"><ReviewProvider /></ProtectedRoute>} />
         <Route path="/requests/mine" element={<ProtectedRoute role="customer"><MyRequests /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute role="customer"><Profile /></ProtectedRoute>} />
-        <Route path="/requests/review" element={<ReviewRequest />}/>
-        <Route path="/requests/not-supported" element={<ServiceNotSupported />}/>
+        <Route path="/requests/review" element={<ProtectedRoute role="customer"><ReviewRequest /></ProtectedRoute>} />
+        <Route path="/requests/not-supported" element={<ProtectedRoute role="customer"><ServiceNotSupported /></ProtectedRoute>} />
 
         {/* Provider side — freely designed, no Figma (PROJECT.md §9a) */}
         <Route path="/provider/onboarding" element={<ProtectedRoute role="provider"><ProviderOnboarding /></ProtectedRoute>} />

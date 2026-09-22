@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Button from "../../components/common/Button.jsx";
+import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import { Field, TextInput } from "../../components/common/Field.jsx";
+import AuthShell from "../../components/layout/AuthShell.jsx";
 import { login, getCurrentUser } from "../../api/auth.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 
@@ -32,37 +34,30 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col justify-center bg-cream px-6 py-10">
-      <h1 className="text-2xl font-bold text-gray-900">UbuntuLink</h1>
-      <p className="mt-1 text-gray-500">Local help. Right when you need it.</p>
-
+    <AuthShell title="Welcome back" subtitle="Sign in to continue to your UbuntuLink account.">
       {state?.justReset && (
-        <p className="mt-4 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2 text-sm text-brand">
-          Password updated — sign in with your new password.
-        </p>
+        <div className="mb-4 rounded-xl border border-brand/20 bg-brand-mist px-3.5 py-3 text-sm font-medium text-brand">
+          ✓ Password updated — sign in with your new password.
+        </div>
       )}
 
-      <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <Field label="Email">
-          <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" required />
         </Field>
         <Field label="Password">
-          <TextInput type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <TextInput type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" autoComplete="current-password" required />
         </Field>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
         <Button type="submit" disabled={submitting}>
           {submitting ? "Signing in..." : "Sign in"}
         </Button>
       </form>
 
-      <div className="mt-4 flex flex-col items-center gap-2 text-sm text-gray-500">
-        <Link to="/forgot-password" className="font-medium text-brand">
-          Forgot password?
-        </Link>
-        <p>
-          No account? <Link to="/register" className="font-medium text-brand">Register</Link>
-        </p>
+      <div className="mt-5 flex flex-col items-center gap-2 text-sm text-gray-500">
+        <Link to="/forgot-password" className="font-semibold text-brand hover:underline">Forgot password?</Link>
+        <p>No account? <Link to="/register" className="font-semibold text-brand hover:underline">Create one</Link></p>
       </div>
-    </div>
+    </AuthShell>
   );
 }

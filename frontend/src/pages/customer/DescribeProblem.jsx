@@ -25,7 +25,7 @@ export default function DescribeProblem() {
       );
 
       const created = await createServiceRequest({
-        description,
+        description: classification?.job_description || description,
         location: getOnboarding().location || null,
         preferredDate: null,
         aiClassificationRaw: JSON.stringify(classification),

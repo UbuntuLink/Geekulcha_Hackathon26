@@ -17,3 +17,11 @@ class ClassifyResponse(BaseModel):
     advice: Optional[str] = None
     urgency: str
     job_description: str
+
+class RefineDescriptionRequest(BaseModel):
+    job_description: str
+    additional_details: str
+
+class RefineDescriptionResponse(BaseModel):
+    job_description: str
+    is_relevant: bool

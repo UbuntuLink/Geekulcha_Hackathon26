@@ -10,6 +10,8 @@ import Welcome from "../pages/customer/Welcome.jsx";
 import CustomerOnboarding from "../pages/customer/CustomerOnboarding.jsx";
 import CustomerHome from "../pages/customer/CustomerHome.jsx";
 import DescribeProblem from "../pages/customer/DescribeProblem.jsx";
+import ServiceNotSupported from "../pages/customer/ServiceNotSupported.jsx";
+import ReviewRequest from "../pages/customer/ReviewRequest.jsx";
 import AIServiceIdentification from "../pages/customer/AIServiceIdentification.jsx";
 import MatchingProviders from "../pages/customer/MatchingProviders.jsx";
 import CompareProviders from "../pages/customer/CompareProviders.jsx";
@@ -58,6 +60,8 @@ export default function AppRoutes() {
         <Route path="/bookings/:bookingId/review" element={<ProtectedRoute role="customer"><ReviewProvider /></ProtectedRoute>} />
         <Route path="/requests/mine" element={<ProtectedRoute role="customer"><MyRequests /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute role="customer"><Profile /></ProtectedRoute>} />
+        <Route path="/requests/review" element={<ReviewRequest />}/>
+        <Route path="/requests/not-supported" element={<ServiceNotSupported />}/>
 
         {/* Provider side — freely designed, no Figma (PROJECT.md §9a) */}
         <Route path="/provider/onboarding" element={<ProtectedRoute role="provider"><ProviderOnboarding /></ProtectedRoute>} />

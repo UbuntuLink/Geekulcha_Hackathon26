@@ -1,17 +1,23 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import Screen from "../../components/layout/Screen.jsx";
 import Button from "../../components/common/Button.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import Loading from "../../components/common/Loading.jsx";
-import { classifyMessage, createServiceRequest, listServices } from "../../api/services.js";
-import { getOnboarding } from "../../lib/preferences.js";
+
+import {
+  classifyMessage,
+  listServices,
+  createUnsupportedServiceRequest,
+} from "../../api/services.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
 export default function DescribeProblem() {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const fileInputRef = useRef(null);
+
   const [description, setDescription] = useState("");
   const [photoDataUrl, setPhotoDataUrl] = useState("");
   const [photoName, setPhotoName] = useState("");
@@ -50,34 +56,56 @@ export default function DescribeProblem() {
 
   const handleSubmit = async () => {
     if (!description.trim() && !photoDataUrl) return;
+
     setLoading(true);
     setError("");
+
     try {
-      const customerMessage = description.trim() || `Customer uploaded an image for diagnosis${photoName ? ` (${photoName})` : ""}.`;
-      const classification = await classifyMessage(customerMessage, photoDataUrl || null);
-      const services = await listServices().catch(() => []);
-      const matchedService = services.find(
-        (s) => s.name.toLowerCase() === classification.category?.toLowerCase()
+      const customerMessage =
+        description.trim() ||
+        `Customer uploaded an image for diagnosis${photoName ? ` (${photoName})` : ""}.`;
+
+      const classification = await classifyMessage(
+        customerMessage,
+        photoDataUrl || null
       );
 
-      const created = await createServiceRequest({
-        description: description.trim() || customerMessage,
-        location: getOnboarding().location || null,
-        preferredDate: null,
-        aiClassificationRaw: JSON.stringify(classification),
-        serviceId: matchedService?.id ?? null,
-        photoDataUrl: photoDataUrl || null,
-        photoName: photoName || null,
-      });
+      if (classification.category?.toLowerCase() === "other") {
+        await createUnsupportedServiceRequest({
+          description: description.trim() || customerMessage,
+          advice: classification.advice,
+        });
 
-      navigate(`/requests/${created.id}/classification`, {
-        state: { classification, serviceId: matchedService?.id ?? null },
+        navigate("/requests/not-supported", {
+          state: {
+            originalDescription: description.trim() || customerMessage,
+            advice: classification.advice,
+          },
+        });
+
+        return;
+      }
+
+      const services = await listServices().catch(() => []);
+      const matchedService = services.find(
+        (service) =>
+          service.name?.toLowerCase() ===
+          classification.category?.toLowerCase()
+      );
+
+      navigate("/requests/review", {
+        state: {
+          originalDescription: description.trim() || customerMessage,
+          classification,
+          serviceId: matchedService?.id ?? null,
+        },
       });
     } catch (err) {
+      console.error(err);
+
       setError(
         "Couldn't reach the ML service or backend — make sure both are running locally (see INSTRUCTIONS.md)."
       );
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -114,19 +142,31 @@ export default function DescribeProblem() {
 
         {photoDataUrl && (
           <div className="mt-3 flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3">
-            <img src={photoDataUrl} alt="Problem preview" className="h-16 w-16 rounded-md object-cover" />
+            <img
+              src={photoDataUrl}
+              alt="Problem preview"
+              className="h-16 w-16 rounded-md object-cover"
+            />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-gray-800">{photoName}</p>
               <p className="text-xs text-gray-500">{t("customer.readyAttach")}</p>
             </div>
-            <button type="button" onClick={clearPhoto} className="text-xs font-medium text-brand hover:text-brand-dark">
+            <button
+              type="button"
+              onClick={clearPhoto}
+              className="text-xs font-medium text-brand hover:text-brand-dark"
+            >
               {t("common.remove")}
             </button>
           </div>
         )}
       </div>
 
-      {error && <div className="mt-4"><ErrorBanner>{error}</ErrorBanner></div>}
+      {error && (
+        <div className="mt-4">
+          <ErrorBanner>{error}</ErrorBanner>
+        </div>
+      )}
 
       {loading && (
         <div className="mt-4 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2">
@@ -134,7 +174,11 @@ export default function DescribeProblem() {
         </div>
       )}
 
-      <Button onClick={handleSubmit} disabled={loading || (!description.trim() && !photoDataUrl)} className="mt-6">
+      <Button
+        onClick={handleSubmit}
+        disabled={loading || (!description.trim() && !photoDataUrl)}
+        className="mt-6"
+      >
         {loading ? t("customer.aiLoadingShort") : t("customer.findRightService")}
       </Button>
     </Screen>

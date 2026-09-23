@@ -23,6 +23,18 @@ export const createServiceRequest = (payload) =>
 export const getServiceRequest = (id) =>
   apiClient.get(`/api/service-requests/${id}`).then((res) => res.data);
 
+export const refineDescription = (job_description, additional_details) => mlClient
+    .post("/classify/refine-description", {
+      job_description,
+      additional_details,
+    })
+    .then((res) => res.data);
+
+export const createUnsupportedServiceRequest = (payload) =>
+  apiClient
+    .post("/api/unsupported-service-requests", payload)
+    .then((res) => res.data);
+
 export const getMyServiceRequests = () =>
   apiClient.get("/api/service-requests/mine").then((res) => res.data);
 

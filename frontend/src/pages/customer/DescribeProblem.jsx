@@ -6,6 +6,7 @@ import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import Loading from "../../components/common/Loading.jsx";
 import { classifyMessage, createServiceRequest, listServices } from "../../api/services.js";
 import { getOnboarding } from "../../lib/preferences.js";
+import { matchService } from "../../lib/matching.js";
 
 export default function DescribeProblem() {
   const navigate = useNavigate();
@@ -18,11 +19,12 @@ export default function DescribeProblem() {
     setLoading(true);
     setError("");
     try {
-      const classification = await classifyMessage(description);
       const services = await listServices().catch(() => []);
-      const matchedService = services.find(
-        (s) => s.name.toLowerCase() === classification.category?.toLowerCase()
-      );
+      const classification = await classifyMessage(description, services.map((s) => s.name));
+      // Not an exact name comparison: the classifier's wording and the catalog's wording do not
+      // always agree ("mechanic" vs "Automotive Repair"), and the description itself is a second
+      // chance to find the right row. See lib/matching.js.
+      const matchedService = matchService(services, classification.category, description)?.service;
 
       const created = await createServiceRequest({
         description,

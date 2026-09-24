@@ -8,6 +8,7 @@ import Loading from "../../components/common/Loading.jsx";
 import ProviderCard from "../../components/common/ProviderCard.jsx";
 import { TextInput } from "../../components/common/Field.jsx";
 import { getOnboarding } from "../../lib/preferences.js";
+import { detectIntent, matchService } from "../../lib/matching.js";
 import { classifyMessage, getMatchingProviders, getMyServiceRequests, listServices } from "../../api/services.js";
 
 function requestRoute(req) {
@@ -49,51 +50,74 @@ export default function CustomerHome() {
   const activeCount = recentRequests.filter((r) => ACTIVE_STATUSES.includes(r.status)).length;
   const completedCount = recentRequests.filter((r) => r.status === "COMPLETED").length;
 
-  // Real AI call (POST /classify) to figure out the service category from free text, then
-  // simple keyword heuristics on the same text to sort/filter the real matches — see PROJECT.md.
+  // Free-text search. The AI (POST /classify) reads the query and names a category; matchService
+  // then maps that — and the person's own words — onto a real catalog row, tolerating typos,
+  // synonyms and the AI naming a category slightly differently from the database.
+  //
+  // The AI is an aid, not a gate: if the ML service is asleep or slow (Render free tier), the
+  // query alone is matched locally rather than failing the search.
   const handleAiSearch = async (e) => {
     e.preventDefault();
-    if (!aiQuery.trim()) return;
+    const query = aiQuery.trim();
+    if (!query) return;
+
     setAiSearching(true);
     setAiError("");
     setAiResults(null);
-    try {
-      const classification = await classifyMessage(aiQuery);
-      const allServices = services.length ? services : await listServices();
-      const matched = allServices.find((s) => s.name.toLowerCase() === classification.category?.toLowerCase());
 
-      if (!matched) {
-        setAiError(`Couldn't match that to a service we support yet (AI thought: "${classification.category}").`);
+    try {
+      const allServices = services.length ? services : await listServices();
+
+      let classification = null;
+      let aiUnavailable = false;
+      try {
+        classification = await classifyMessage(query, allServices.map((s) => s.name));
+      } catch (err) {
+        aiUnavailable = true;
+        console.error(err);
+      }
+
+      // The AI's category is tried first, then the raw query — so "plumer" still finds Plumbing
+      // even when the classifier gave up and said "other".
+      const match = matchService(allServices, classification?.category, query);
+
+      if (!match) {
+        const examples = allServices.slice(0, 4).map((s) => s.name.toLowerCase()).join(", ");
+        setAiError(
+          `Couldn't work out which service you need. Try naming the trade — ${examples} — or pick a category below.`
+        );
         setAiResults([]);
         return;
       }
 
-      let list = await getMatchingProviders(matched.id);
-      const q = aiQuery.toLowerCase();
-      let why = `Showing ${matched.name.toLowerCase()} providers`;
+      const list = await getMatchingProviders(match.service.id);
+      const { sort, urgent } = detectIntent(query, classification?.sort_preference);
 
-      if (/cheap|afford|budget|low.?cost|inexpensive/.test(q)) {
-        list = [...list].sort((a, b) => a.minPrice - b.minPrice);
+      let ranked = [...list];
+      let why = `Showing ${match.service.name.toLowerCase()} providers`;
+
+      if (sort === "cheapest") {
+        ranked.sort((a, b) => a.minPrice - b.minPrice);
         why += ", cheapest first";
-      } else if (/best|top|good|highly.?rated|highest.?rat/.test(q)) {
-        list = [...list].sort((a, b) => b.rating - a.rating);
-        why += ", highest rated first";
       } else {
-        list = [...list].sort((a, b) => b.rating - a.rating);
+        ranked.sort((a, b) => b.rating - a.rating);
+        if (sort === "best_rated") why += ", highest rated first";
       }
 
-      if (/today|now|asap|urgent|immediately/.test(q)) {
-        const availableOnly = list.filter((p) => p.availableToday);
+      if (urgent || classification?.sort_preference === "soonest") {
+        const availableOnly = ranked.filter((p) => p.availableToday);
         if (availableOnly.length > 0) {
-          list = availableOnly;
+          ranked = availableOnly;
           why += ", available today";
         }
       }
 
+      if (aiUnavailable) why += " (matched without AI — the service is waking up)";
+
       setAiExplanation(why + ".");
-      setAiResults(list);
+      setAiResults(ranked);
     } catch (err) {
-      setAiError("Couldn't reach the AI service — make sure it's running.");
+      setAiError("Couldn't load providers — is the backend running?");
       console.error(err);
     } finally {
       setAiSearching(false);
@@ -149,7 +173,7 @@ export default function CustomerHome() {
           <TextInput
             value={aiQuery}
             onChange={(e) => setAiQuery(e.target.value)}
-            placeholder="e.g. cheap plumber available today"
+            placeholder="e.g. best rated plumber near me"
             className="flex-1"
           />
           <button

@@ -9,7 +9,7 @@ router = APIRouter(prefix="/classify", tags=["classification"])
 @router.post("", response_model=ClassifyResponse)
 def classify(request: ClassifyRequest) -> ClassifyResponse:
     try:
-        result = classify_request(request.message)
+        result = classify_request(request.message, request.categories)
         return ClassifyResponse(**result)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Classification failed: {exc}") from exc

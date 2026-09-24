@@ -39,18 +39,27 @@ public class DevDataSeeder implements CommandLineRunner {
     // Known credentials so you can log in immediately without registering — see INSTRUCTIONS.md.
     private static final String DEMO_PASSWORD = "Demo1234!";
 
-    // Matches the AI classifier's category list, python/prompts/job_classification_prompt.txt
+    // The real catalog, matching 01_Database/ubuntulink_services.csv — which is what the shared
+    // Supabase database actually contains. Local dev used to seed a different, shorter list
+    // ("Mechanic", "Beauty", "Other"), so a query that worked locally could find nothing in
+    // production. The AI classifier is given these exact names at call time
+    // (see python/app/services/classification_service.py), so the two never drift apart again.
     private static final String[][] SERVICE_CATEGORIES = {
-            {"Plumbing", "Leak repairs, blocked drains, installations"},
-            {"Electrical", "Wiring, faults, installations"},
-            {"Cleaning", "Home and office cleaning"},
-            {"Gardening", "Lawn care, landscaping"},
-            {"Mechanic", "Vehicle repairs and servicing"},
-            {"Tutoring", "Academic tutoring, all levels"},
-            {"Beauty", "Hair, nails, makeup"},
-            {"Painting", "Interior and exterior painting"},
-            {"Handyman", "General home repairs"},
-            {"Other", "Anything else"},
+            {"Plumbing", "Pipe, tap, drain, toilet, sink, geyser and general plumbing repairs or installations"},
+            {"Cleaning", "Home, office and general cleaning services"},
+            {"Electrical", "Electrical repairs, fault finding, wiring and installation services"},
+            {"Gardening", "Garden maintenance, lawn care, trimming, planting and general outdoor upkeep"},
+            {"Automotive Repair", "Vehicle inspection, maintenance and general mechanic repair services"},
+            {"Tutoring", "Academic tutoring and learning support for school, college or other subjects"},
+            {"Braiding", "Hair braiding and related styling services"},
+            {"Hairdressing", "Hair cutting, styling, treatment and general hairdressing services"},
+            {"Nail Services", "Manicures, pedicures, nail care and nail styling services"},
+            {"Makeup Services", "Makeup application for everyday, event and special-occasion needs"},
+            {"Painting", "Interior, exterior and general painting services"},
+            {"Building & Construction", "General building, construction, repairs and small structural work"},
+            {"Tailoring", "Clothing alterations, repairs, sewing and custom tailoring services"},
+            {"Photography", "Photography services for events, portraits, products and other occasions"},
+            {"Handyman", "General home repairs and odd jobs"},
     };
 
     @Override

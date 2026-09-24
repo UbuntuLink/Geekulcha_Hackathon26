@@ -2,8 +2,10 @@ import { apiClient } from "./client";
 import { mlClient } from "./mlClient";
 
 // --- ML service (Python/FastAPI) ---
-export const classifyMessage = (message) =>
-  mlClient.post("/classify", { message }).then((res) => res.data);
+// `categories` is the live catalog from GET /api/services. Passing it makes the model answer in
+// the exact names the database uses, instead of its own vocabulary — see matching.js for why.
+export const classifyMessage = (message, categories = null) =>
+  mlClient.post("/classify", { message, categories }).then((res) => res.data);
 
 export const estimatePrice = (category, message) =>
   mlClient.post("/price", { category, message }).then((res) => res.data);

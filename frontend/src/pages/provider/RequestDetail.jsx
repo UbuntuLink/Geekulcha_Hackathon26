@@ -7,10 +7,12 @@ import Loading from "../../components/common/Loading.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import { Field, TextArea, TextInput } from "../../components/common/Field.jsx";
 import { createQuote, getServiceRequest } from "../../api/services.js";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 
 export default function RequestDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [request, setRequest] = useState(null);
   const [amount, setAmount] = useState("");
   const [message, setMessage] = useState("");
@@ -43,10 +45,10 @@ export default function RequestDetail() {
 
   if (done) {
     return (
-      <Screen title="Quote sent">
+      <Screen title={t("customer.sendQuoteRequest")}>
         <p className="text-gray-600">The customer can now see and accept your quote.</p>
         <Button className="mt-6" onClick={() => navigate("/provider/requests")}>
-          Back to requests
+          {t("customer.backHome")}
         </Button>
       </Screen>
     );
@@ -54,14 +56,14 @@ export default function RequestDetail() {
 
   if (!request) {
     return (
-      <Screen title="Request detail">
+      <Screen title={t("nav.requests")}>
         {error ? <ErrorBanner>{error}</ErrorBanner> : <Loading />}
       </Screen>
     );
   }
 
   return (
-    <Screen title={request.service?.name ?? "Request detail"}>
+    <Screen title={request.service?.name ?? t("nav.requests")}>
       <Card>
         <p className="text-sm font-medium text-gray-500">Customer's description</p>
         <p className="mt-1 text-gray-900">{request.description}</p>
@@ -80,7 +82,7 @@ export default function RequestDetail() {
       {error && <div className="mt-4"><ErrorBanner>{error}</ErrorBanner></div>}
 
       <Button onClick={handleSubmit} disabled={submitting || !amount} className="mt-6">
-        {submitting ? "Sending..." : "Send quote"}
+        {submitting ? t("customer.sending") : t("customer.sendQuoteRequest")}
       </Button>
     </Screen>
   );

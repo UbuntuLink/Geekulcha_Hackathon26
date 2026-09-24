@@ -3,13 +3,23 @@
 @tailwind utilities;
 
 body {
+  margin: 0;
   background-color: #e8e4d8;
 }
 
 #root {
-  max-width: 480px;
+  width: min(100%, 960px);
+  max-width: 960px;
   min-height: 100vh;
   margin: 0 auto;
   background-color: #f5f1e4;
   box-shadow: 0 0 24px rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 640px) {
+  #root {
+    width: 100%;
+    max-width: 100%;
+    box-shadow: none;
+  }
 }

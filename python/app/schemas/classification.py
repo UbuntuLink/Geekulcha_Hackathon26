@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ClassifyRequest(BaseModel):
@@ -8,6 +8,10 @@ class ClassifyRequest(BaseModel):
     # database uses. Without it the model falls back to the default list in the prompt file,
     # which drifts from the catalog the moment a service is renamed or added.
     categories: Optional[List[str]] = None
+    # An optional photo of the problem, as a data URL, sent to the model as a second input.
+    photo_data_url: Optional[str] = Field(default=None, alias="photoDataUrl")
+
+    model_config = {"populate_by_name": True}
 
 
 class ClassifyResponse(BaseModel):

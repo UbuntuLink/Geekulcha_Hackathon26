@@ -22,7 +22,11 @@ router = APIRouter(
 @router.post("", response_model=ClassifyResponse)
 def classify(request: ClassifyRequest) -> ClassifyResponse:
     try:
-        result = classify_request(request.message, request.categories)
+        result = classify_request(
+            request.message,
+            request.categories,
+            request.photo_data_url,
+        )
 
         return ClassifyResponse(**result)
 

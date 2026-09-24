@@ -35,23 +35,40 @@ def _system_prompt(categories: Optional[List[str]]) -> str:
     )
 
 
-def classify_request(customer_message: str, categories: Optional[List[str]] = None) -> dict:
-    """Classify a free-text customer message into a service category. Raises on API/parse failure —
-    callers (see app/routers/classification.py) decide how to surface that as an HTTP error."""
+def classify_request(
+    customer_message: str,
+    categories: Optional[List[str]] = None,
+    photo_data_url: Optional[str] = None,
+) -> dict:
+    """Classify a customer message, and any photo attached to it, into a service category.
+
+    `categories` is the caller's live catalog (see _system_prompt). If a data URL image is
+    provided it is sent as a multimodal OpenRouter input, so the model can diagnose the issue
+    from the picture as well as the words.
+
+    Raises on API/parse failure — callers (see app/routers/classification.py) decide how to
+    surface that as an HTTP error.
+    """
+    text_prompt = (
+        customer_message.strip()
+        if customer_message and customer_message.strip()
+        else "Analyze the uploaded image and identify the likely service issue."
+    )
+
+    user_content = [{"type": "text", "text": text_prompt}]
+    if photo_data_url:
+        user_content.append({
+            "type": "image_url",
+            "image_url": {"url": photo_data_url},
+        })
 
     response = client.chat.completions.create(
         model=MODEL,
         max_tokens=400,
         temperature=0,
         messages=[
-            {
-                "role": "system",
-                "content": _system_prompt(categories)
-            },
-            {
-                "role": "user",
-                "content": customer_message
-            },
+            {"role": "system", "content": _system_prompt(categories)},
+            {"role": "user", "content": user_content},
         ],
     )
 

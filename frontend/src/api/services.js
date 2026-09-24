@@ -4,8 +4,18 @@ import { mlClient } from "./mlClient";
 // --- ML service (Python/FastAPI) ---
 // `categories` is the live catalog from GET /api/services. Passing it makes the model answer in
 // the exact names the database uses, instead of its own vocabulary — see matching.js for why.
-export const classifyMessage = (message, categories = null) =>
-  mlClient.post("/classify", { message, categories }).then((res) => res.data);
+// `photoDataUrl` is an optional data-URL image the model inspects alongside the text.
+//
+// Both were added as the second argument on separate branches; categories kept that position
+// because it is the one every caller passes.
+export const classifyMessage = (message, categories = null, photoDataUrl = null) =>
+  mlClient
+    .post("/classify", {
+      message,
+      ...(categories ? { categories } : {}),
+      ...(photoDataUrl ? { photoDataUrl } : {}),
+    })
+    .then((res) => res.data);
 
 export const estimatePrice = (category, message) =>
   mlClient.post("/price", { category, message }).then((res) => res.data);

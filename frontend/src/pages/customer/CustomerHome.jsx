@@ -10,22 +10,31 @@ import { TextInput } from "../../components/common/Field.jsx";
 import { getOnboarding } from "../../lib/preferences.js";
 import { detectIntent, matchService } from "../../lib/matching.js";
 import { classifyMessage, getMatchingProviders, getMyServiceRequests, listServices } from "../../api/services.js";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 
 function requestRoute(req) {
   return req.status === "OPEN" ? `/requests/${req.id}/matches` : `/requests/${req.id}/quotes`;
 }
 
-function greeting() {
+function greeting(language) {
   const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
+  const dict = {
+    en: ["Good morning", "Good afternoon", "Good evening"],
+    zu: ["Sawubona", "Sawubona", "Sawubona"],
+    tn: ["Dumela", "Dumela", "Dumela"],
+    af: ["Goeiemôre", "Goeiemiddag", "Goeienaand"],
+  };
+  const labels = dict[language] || dict.en;
+  if (hour < 12) return labels[0];
+  if (hour < 18) return labels[1];
+  return labels[2];
 }
 
 const ACTIVE_STATUSES = ["OPEN", "QUOTED", "BOOKED"];
 
 export default function CustomerHome() {
   const navigate = useNavigate();
+  const { language, t } = useLanguage();
   const { name } = getOnboarding();
   const [recentRequests, setRecentRequests] = useState([]);
   const [services, setServices] = useState([]);
@@ -144,18 +153,18 @@ export default function CustomerHome() {
   return (
     <Screen showBack={false} withNav>
       <p className="text-sm text-gray-500">
-        {greeting()}, {name || "there"}
+        {greeting(language)}, {name || "there"}
       </p>
-      <h1 className="mt-1 text-2xl font-bold text-gray-900">What do you need help with?</h1>
+      <h1 className="mt-1 text-2xl font-bold text-gray-900">{t("customer.helpTitle")}</h1>
 
       <div className="mt-4 grid grid-cols-2 gap-3">
         <Card>
           <p className="text-3xl font-bold text-brand">{activeCount}</p>
-          <p className="text-sm text-gray-500">Active requests</p>
+          <p className="text-sm text-gray-500">{t("customer.activeRequests")}</p>
         </Card>
         <Card>
           <p className="text-3xl font-bold text-brand">{completedCount}</p>
-          <p className="text-sm text-gray-500">Completed jobs</p>
+          <p className="text-sm text-gray-500">{t("customer.completedJobs")}</p>
         </Card>
       </div>
 
@@ -163,12 +172,12 @@ export default function CustomerHome() {
         onClick={() => navigate("/requests/new")}
         className="mt-4 w-full rounded-xl bg-brand p-4 text-left text-white transition-colors hover:bg-brand-dark"
       >
-        <p className="text-lg font-semibold">Describe your problem</p>
-        <p className="text-sm text-white/80">We'll help identify the right service.</p>
+        <p className="text-lg font-semibold">{t("customer.describe")}</p>
+        <p className="text-sm text-white/80">{t("customer.describeSubtitle")}</p>
       </button>
 
       <Card className="mt-4">
-        <p className="mb-2 text-sm font-semibold text-gray-900">Find a provider</p>
+        <p className="mb-2 text-sm font-semibold text-gray-900">{t("customer.findProvider")}</p>
         <form onSubmit={handleAiSearch} className="flex gap-2">
           <TextInput
             value={aiQuery}
@@ -181,7 +190,7 @@ export default function CustomerHome() {
             disabled={aiSearching || !aiQuery.trim()}
             className="rounded-lg bg-brand px-4 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
           >
-            Ask AI
+            {t("customer.askAi")}
           </button>
         </form>
 
@@ -191,7 +200,7 @@ export default function CustomerHome() {
           <p className="mt-3 text-xs italic text-gray-500">{aiExplanation}</p>
         )}
         {aiResults?.length === 0 && !aiError && (
-          <p className="mt-3 text-sm text-gray-500">No providers matched that yet.</p>
+          <p className="mt-3 text-sm text-gray-500">{t("customer.noResults")}</p>
         )}
         {aiResults?.length > 0 && (
           <div className="mt-2 space-y-2">
@@ -203,9 +212,9 @@ export default function CustomerHome() {
       </Card>
 
       <div className="mt-6">
-        <h2 className="mb-2 text-base font-semibold text-gray-900">Recent requests</h2>
+        <h2 className="mb-2 text-base font-semibold text-gray-900">{t("customer.recent")}</h2>
         {recentRequests.length === 0 && (
-          <EmptyState>No requests yet — describe a problem to get started.</EmptyState>
+          <EmptyState>{t("customer.noRequests")}</EmptyState>
         )}
         {recentRequests.slice(0, 3).map((req) => (
           <Card key={req.id} className="mb-2 flex items-center justify-between">
@@ -224,9 +233,9 @@ export default function CustomerHome() {
       </div>
 
       <div className="mt-6">
-        <h2 className="mb-2 text-base font-semibold text-gray-900">Browse by category</h2>
+        <h2 className="mb-2 text-base font-semibold text-gray-900">{t("customer.browse")}</h2>
         {services.length === 0 ? (
-          <EmptyState>Loading services...</EmptyState>
+          <EmptyState>{t("customer.loadingServices")}</EmptyState>
         ) : (
           <div className="flex flex-wrap gap-2">
             {services.map((s) => (

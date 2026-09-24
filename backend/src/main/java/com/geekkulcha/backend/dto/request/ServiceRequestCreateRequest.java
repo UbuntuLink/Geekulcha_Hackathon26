@@ -10,6 +10,8 @@ public record ServiceRequestCreateRequest(
         String location,
         LocalDate preferredDate,
         String aiClassificationRaw,
-        Long serviceId
+        Long serviceId,
+        String photoDataUrl,
+        String photoName
 ) {
 }

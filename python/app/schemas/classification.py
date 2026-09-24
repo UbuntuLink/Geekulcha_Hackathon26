@@ -21,3 +21,13 @@ class ClassifyResponse(BaseModel):
     # ranked. Optional so an older model response, or a cached prompt, still validates.
     sort_preference: Optional[str] = None
     job_description: str = ""
+
+
+class RefineDescriptionRequest(BaseModel):
+    job_description: str
+    additional_details: str
+
+
+class RefineDescriptionResponse(BaseModel):
+    job_description: str
+    is_relevant: bool

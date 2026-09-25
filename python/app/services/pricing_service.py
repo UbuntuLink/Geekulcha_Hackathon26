@@ -9,10 +9,8 @@ def estimate_price(category: str, message: str) -> dict:
     real reference rates today — see PROJECT.md §9f for the other 7 categories."""
     user_content = f'Category: {category}\nCustomer message: "{message}"'
     raw = chat(
-        [
-            {"role": "system", "content": PRICING_SYSTEM_PROMPT},
-            {"role": "user", "content": user_content},
-        ],
+        system=PRICING_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_content}],
         max_tokens=300,
     )
     try:

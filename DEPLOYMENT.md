@@ -21,7 +21,7 @@ You'll need accounts on **Render** and **Vercel** (both free tiers are fine — 
 | Value | What it is |
 |---|---|
 | `SUPABASE_DB_URL` | Postgres connection string, in **JDBC** form: `jdbc:postgresql://…` |
-| `OPEN_ROUTER_API_KEY` | OpenRouter key (`sk-or-v1-…`) for the AI classification/pricing calls |
+| `ANTHROPIC_API_KEY` | Anthropic key (`sk-ant-…`) for the AI classification/pricing calls |
 | `JWT_SECRET` | **Generate a new one for production** — any random 32+ character string. Don't reuse the local dev value. |
 
 > Never commit these. They go straight into the Render/Vercel dashboards.
@@ -60,7 +60,7 @@ Both are defined in [`render.yaml`](render.yaml) at the repo root, so Render cre
    **`ubuntulink-ml-service`**
    | Variable | Value |
    |---|---|
-   | `OPEN_ROUTER_API_KEY` | the OpenRouter key |
+   | `ANTHROPIC_API_KEY` | the Anthropic key |
    | `FRONTEND_URL` | **leave blank** — filled in at Step 3 |
 
 8. **Apply.**
@@ -118,7 +118,7 @@ Open the Vercel URL and:
 1. **Register** an account → **Log in**
 2. Complete onboarding → land on the dashboard
 3. **Describe your problem** → type something like *"my kitchen sink is leaking"* → the AI
-   classification should come back with a category (this proves the ML service, the OpenRouter
+   classification should come back with a category (this proves the ML service, the Anthropic
    key, and CORS are all working)
 4. Continue to **Matching Providers** → real providers should appear (proves the backend and the
    database connection are working)
@@ -180,6 +180,6 @@ afterward. Watch the service's **Logs** tab for the real outcome.
 | `/api/services` returns 401 | **Correct.** Auth is enforced on everything except `/auth/**`. |
 | Site loads, but every API call fails | Either `FRONTEND_URL` on Render doesn't match the Vercel URL (CORS — Step 3), or `VITE_*` wasn't set in Vercel (Step 2). Browser console will say which. |
 | Frontend calls `localhost:8080` in production | `VITE_API_BASE_URL` wasn't set **in Vercel** before the build. Set it and redeploy — a rebuild is required, since the value is baked into the bundle. |
-| AI classification fails, rest works | `OPEN_ROUTER_API_KEY` missing/invalid on the ML service, or the ML service is cold-starting — retry after a minute. |
+| AI classification fails, rest works | `ANTHROPIC_API_KEY` missing/invalid on the ML service, or the ML service is cold-starting — retry after a minute. |
 | Vercel build fails | Confirm **Root Directory** is `frontend`. |
 | Everything slow | Region mismatch — services in Oregon talking to a Frankfurt database. Recreate in Frankfurt (Step 1.5). |

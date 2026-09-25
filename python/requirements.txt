@@ -3,4 +3,4 @@ fastapi
 pydantic
 python-dotenv
 requests
-openai
+anthropic

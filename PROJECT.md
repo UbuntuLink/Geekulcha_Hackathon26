@@ -16,7 +16,7 @@ This document describes the state of the project as of **2026-09-19**, based on 
 |---|---|---|
 | Backend API | Java 23, Spring Boot 4.1.1 (`web`, `data-jpa`, `validation`, `security`, `oauth2-client`) | Render (Docker) |
 | Database | PostgreSQL (hosted on Supabase) | Supabase |
-| ML / AI service | Python, FastAPI + Uvicorn, calling LLMs via OpenRouter (`anthropic/claude-haiku-4.5`) | Render |
+| ML / AI service | Python, FastAPI + Uvicorn, calling Claude directly via the Anthropic SDK (`claude-haiku-4-5`) | Render |
 | Frontend | React 18 + Vite + Tailwind + React Router | Vercel |
 | Auth | Email/password + JWT (Argon2 hashing) — see §8 | — |
 | Payments | Mock only for MVP — see §10 | — |
@@ -47,7 +47,7 @@ Geekulcha_Hackathon26/
 ├── python/                   # ML service → Render
 │   ├── app/
 │   │   ├── main.py           # FastAPI app (POST /classify, POST /price, GET /health)
-│   │   ├── core/              # llm_client.py (OpenRouter client), config.py
+│   │   ├── core/              # llm_client.py (Anthropic client), config.py
 │   │   ├── routers/           # classification.py, pricing.py
 │   │   ├── schemas/           # pydantic request/response models
 │   │   └── services/          # classify_request(), estimate_price() — actual logic
@@ -154,13 +154,13 @@ Two more screens exist for bottom-nav completeness with **no Figma design** (kep
 
 Now a real FastAPI service (`python/app/`), not just CLI scripts:
 
-- **`POST /classify`** (`app/routers/classification.py`) — wraps `classify_request()` (`app/services/classification_service.py`). Sends the raw customer message to `anthropic/claude-haiku-4.5` via OpenRouter using `prompts/job_classification_prompt.txt`. Returns `category`, `confidence`, `reasoning`, `clarifying_question`, `advice`, `urgency`, `sort_preference` (`cheapest`/`best_rated`/`soonest`/`none`), `job_description`. Backs Figma screen 5.
+- **`POST /classify`** (`app/routers/classification.py`) — wraps `classify_request()` (`app/services/classification_service.py`). Sends the raw customer message to `claude-haiku-4-5` through the Anthropic SDK using `prompts/job_classification_prompt.txt`. Returns `category`, `confidence`, `reasoning`, `clarifying_question`, `advice`, `urgency`, `sort_preference` (`cheapest`/`best_rated`/`soonest`/`none`), `job_description`. Backs Figma screen 5.
   - **The category vocabulary comes from the caller.** The request takes an optional `categories` list, and the frontend passes the live `GET /api/services` names, so the model can only answer in names that exist as rows. The prompt file's own list is a fallback for direct/CLI calls. This replaced a fixed 10-word list ("mechanic", "beauty", "other") that the 15-row catalog did not contain — 8 of 15 categories were unreachable, because the frontend compared the two with `===`.
   - The prompt is explicit about misspellings, SMS shorthand, SA/multilingual phrasing, and provider-search wording ("find me the best rated plumber") as opposed to problem descriptions.
 - **`POST /price`** (`app/routers/pricing.py`) — wraps `estimate_price()` (`app/services/pricing_service.py`). Grounded in hardcoded SA market reference rates for plumbing/electrical only; other categories get a wide, explicitly-labeled unverified estimate. Backs the price hint on Figma screen 9.
 - **`GET /health`** — for Render's health check.
 - `customer_message.py` / `pricing.py` at the package root are now thin CLI wrappers around the same `app/services` code (no logic duplication) — still useful for local testing against `test_messages/test_messages.txt`.
-- Needs `OPEN_ROUTER_API_KEY` (local: `.env` via `python-dotenv`; Render: set directly in the service's env vars).
+- Needs `ANTHROPIC_API_KEY` (local: `.env` via `python-dotenv`; Render: set directly in the service's env vars). `CLAUDE_MODEL` overrides the model, `LLM_MAX_TOKENS` caps output tokens.
 
 **Bugs found and fixed while scaffolding:**
 - ~~Both prompt templates were missing a comma before the last JSON field in their example response format~~ — fixed in `job_classification_prompt.txt` and `pricing_system_prompt.txt`.
@@ -168,7 +168,7 @@ Now a real FastAPI service (`python/app/`), not just CLI scripts:
 
 **Now wired in:** the frontend calls `/classify` and `/price` directly (`DescribeProblem.jsx`, `QuoteRequest.jsx`) — the backend never calls the ML service itself, it just stores whatever classification JSON the frontend already has (`ServiceRequest.aiClassificationRaw`).
 
-**Still not done:** no retry/timeout/circuit-breaker around OpenRouter calls; low-confidence classifications and `clarifying_question` aren't surfaced anywhere in the UI; `aiClassificationRaw` is stored as an unstructured JSON string, not parsed into real columns. See §9f.
+**Still not done:** no circuit-breaker around the model calls (the Anthropic SDK retries 429s, 5xx and connection errors, and `llm_client.chat()` turns the rest into a readable `LlmUnavailable`, but nothing trips open after repeated failures); low-confidence classifications and `clarifying_question` aren't surfaced anywhere in the UI; `aiClassificationRaw` is stored as an unstructured JSON string, not parsed into real columns. See §9f.
 
 ## 7. What's Not Built Yet (gap summary)
 
@@ -232,7 +232,7 @@ What's still genuinely missing (not addressed by this pass, unchanged from befor
 ### 9f. AI layer loopholes — partially addressed
 - ~~Two prompt JSON bugs, wrong hardcoded model id~~ — fixed, see §6.
 - ~~Not called from anywhere~~ — now called directly from the frontend (`DescribeProblem.jsx`, `QuoteRequest.jsx`), see §5/§6.
-- **Still open:** low-confidence classification and `clarifying_question` still have nowhere to go in the UI. AI output is persisted (`ServiceRequest.aiClassificationRaw`) but only as a raw string blob, not structured. Photo upload (Figma screen 4) still has no backend (no storage, no upload endpoint — the button is an inert placeholder). No retry/timeout/circuit-breaker around OpenRouter calls. Pricing still only grounded for 2 of 9 categories.
+- **Still open:** low-confidence classification and `clarifying_question` still have nowhere to go in the UI. AI output is persisted (`ServiceRequest.aiClassificationRaw`) but only as a raw string blob, not structured. Photo upload (Figma screen 4) still has no backend (no storage, no upload endpoint — the button is an inert placeholder). No circuit-breaker around the model calls. Pricing still only grounded for 2 of 9 categories.
 
 ### 9g. Data-modeling gaps — mostly addressed
 - ~~`Provider` entity conflated identity + profile~~ — fixed: split into `User` + `ProviderProfile` (§3b). **Seed CSVs still don't match** (§3a) — no longer blocking though, since `DevDataSeeder` seeds through JPA directly.
@@ -251,7 +251,7 @@ Decisions made to keep this shippable as a hackathon MVP:
 - **Frontend → Vercel.** `frontend/vercel.json` sets the build command (`npm run build`), output dir (`dist`), and a SPA rewrite so React Router's client-side routes don't 404 on refresh. Needs `VITE_API_BASE_URL` (backend Render URL) and `VITE_ML_API_BASE_URL` (ML service Render URL) set as Vercel env vars — see `frontend/.env.example`.
 - **Backend + ML service → Render**, both defined in the root `render.yaml` blueprint:
   - `ubuntulink-backend` — Docker runtime, builds from `backend/Dockerfile`. Needs `SUPABASE_DB_URL`, `JWT_SECRET`, `FRONTEND_URL` set in Render's dashboard (marked `sync: false` in the blueprint — secrets aren't committed).
-  - `ubuntulink-ml-service` — Python runtime, `uvicorn app.main:app`. Needs `OPEN_ROUTER_API_KEY`, `FRONTEND_URL`.
+  - `ubuntulink-ml-service` — Python runtime, `uvicorn app.main:app`. Needs `ANTHROPIC_API_KEY`, `FRONTEND_URL`.
   - Fixed a real deploy blocker while wiring this up: `application.properties`'s `spring.config.import` for the local `.env` file wasn't marked `optional:`, which would have crashed backend startup on Render (no `.env` file is deployed there — real config comes from Render's env vars instead).
 - **Payments are mocked for the MVP, not real.** `Payment` entity + `MockPaymentService` always returns `MOCK_PAID` — there's no Stripe/PayFast/escrow integration, and none is planned before the hackathon deadline. `POST /api/bookings/{id}/payment/mock-charge` is the only payment endpoint. Real payment integration is a deliberate post-MVP cut (§9c).
 - **Also deliberately cut from MVP scope** (don't build these unless asked): real geolocation/distance matching (§9b), provider verification/vetting (§9a), disputes/cancellations/messaging (§9d), provider→customer reviews (§9e), `service_task_size` price tiers.

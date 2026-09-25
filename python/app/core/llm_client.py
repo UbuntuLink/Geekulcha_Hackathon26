@@ -1,111 +1,103 @@
 import os
-import re
-import time
 
-from openai import APIConnectionError, APIStatusError, OpenAI
+import anthropic
 
-from app.core.config import OPEN_ROUTER_API_KEY
+from app.core.config import ANTHROPIC_API_KEY
 
-MODEL = "anthropic/claude-haiku-4.5"  # OpenRouter naming
+# The Anthropic API names models without a vendor prefix (OpenRouter called this
+# "anthropic/claude-haiku-4.5"). Override with CLAUDE_MODEL to try a bigger model —
+# "claude-sonnet-5" or "claude-opus-5" — without touching code.
+MODEL = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5")
 
-client = OpenAI(
-    api_key=OPEN_ROUTER_API_KEY,
-    base_url="https://openrouter.ai/api/v1",
-)
-
-# A whole-run ceiling, for squeezing work out of a nearly empty account without editing code.
+# A whole-run ceiling, for keeping a demo inside a known budget without editing code.
 _MAX_TOKENS_OVERRIDE = os.getenv("LLM_MAX_TOKENS")
 
-_MAX_ATTEMPTS = 3
-_MAX_SLEEP_SECONDS = 120
-
-# OpenRouter says "You requested up to 400 tokens, but can only afford 322" when the balance is
-# nearly gone. That number is the largest request the remaining credit will pay for.
-_AFFORDABLE = re.compile(r"can only afford (\d+)")
+# The SDK already retries 429s, 5xx and connection errors with backoff, so there is no retry
+# loop here — max_retries is the only knob.
+client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY, max_retries=3)
 
 
 class LlmUnavailable(RuntimeError):
     """The model could not be reached or paid for.
 
-    Raised instead of letting a raw openai error escape, so callers can print one readable line
-    rather than a screenful of nested JSON, and can tell "top up your account" apart from
+    Raised instead of letting a raw SDK error escape, so callers can print one readable line
+    rather than a screenful of nested JSON, and can tell "top up the account" apart from
     "something in the request was wrong".
     """
 
 
-def _retry_after_seconds(exc: APIStatusError) -> float | None:
-    header = None
-    response = getattr(exc, "response", None)
-    if response is not None:
-        header = response.headers.get("retry-after")
-    if header is None:
-        return None
-    try:
-        return min(float(header), _MAX_SLEEP_SECONDS)
-    except (TypeError, ValueError):
-        return None
+def chat(system: str, messages: list, max_tokens: int = 350, temperature: float = 0) -> str:
+    """One call to Claude, returning the concatenated text of the reply.
 
-
-def chat(messages, max_tokens: int = 350, temperature: float = 0) -> str:
-    """One call to the model, returning the raw text.
-
-    Retries the two failures that are worth retrying — a rate limit, and a request that is only
-    slightly too large for the remaining credit — and turns everything else into LlmUnavailable.
+    Note the shape difference from the OpenAI-style API this replaced: Anthropic takes the
+    system prompt as its own top-level argument rather than a first message with role "system".
     """
     tokens = int(_MAX_TOKENS_OVERRIDE) if _MAX_TOKENS_OVERRIDE else max_tokens
 
-    for attempt in range(_MAX_ATTEMPTS):
-        last_attempt = attempt == _MAX_ATTEMPTS - 1
+    try:
+        response = client.messages.create(
+            model=MODEL,
+            max_tokens=tokens,
+            temperature=temperature,
+            system=system,
+            messages=messages,
+        )
 
-        try:
-            response = client.chat.completions.create(
-                model=MODEL,
-                max_tokens=tokens,
-                temperature=temperature,
-                messages=messages,
-            )
-            return response.choices[0].message.content
+    except anthropic.AuthenticationError as exc:
+        raise LlmUnavailable(
+            "Anthropic rejected the API key. Check ANTHROPIC_API_KEY in python/.env."
+        ) from exc
 
-        except APIStatusError as exc:
-            body = str(exc)
+    except anthropic.PermissionDeniedError as exc:
+        raise LlmUnavailable("This Anthropic key is not allowed to use that model.") from exc
 
-            if exc.status_code == 402:
-                # Shrink to what the balance actually covers and try once more, rather than
-                # failing a request the account could still pay for.
-                affordable = _AFFORDABLE.search(body)
-                if affordable:
-                    budget = int(affordable.group(1))
-                    if 120 <= budget < tokens:
-                        tokens = budget
-                        continue
-                    raise LlmUnavailable(
-                        f"OpenRouter credit is down to roughly {budget} tokens — too little for a "
-                        "useful answer. Top up at https://openrouter.ai/settings/credits."
-                    ) from exc
+    except anthropic.NotFoundError as exc:
+        raise LlmUnavailable(f"Anthropic does not know the model '{MODEL}'.") from exc
 
-                wait = _retry_after_seconds(exc)
-                if wait and not last_attempt:
-                    # in_flight_budget_exhausted: earlier requests are still settling.
-                    time.sleep(wait)
-                    continue
+    except anthropic.RateLimitError as exc:
+        raise LlmUnavailable(
+            "Anthropic rate limit reached, and the retries did not clear it. Wait a minute."
+        ) from exc
 
-                raise LlmUnavailable(
-                    "OpenRouter refused the request for lack of credit. Top up at "
-                    "https://openrouter.ai/settings/credits."
-                ) from exc
+    except anthropic.BadRequestError as exc:
+        # An exhausted account arrives as a 400 rather than a dedicated billing error.
+        if "credit balance" in str(exc).lower():
+            raise LlmUnavailable(
+                "The Anthropic account is out of credit. Top up at "
+                "https://console.anthropic.com/settings/billing."
+            ) from exc
+        raise LlmUnavailable(f"Anthropic rejected the request: {exc}") from exc
 
-            if exc.status_code == 429 and not last_attempt:
-                time.sleep(_retry_after_seconds(exc) or 20)
-                continue
+    except anthropic.APIConnectionError as exc:
+        raise LlmUnavailable("Could not reach Anthropic — check your connection.") from exc
 
-            raise LlmUnavailable(f"OpenRouter returned HTTP {exc.status_code}.") from exc
+    except anthropic.APIStatusError as exc:
+        raise LlmUnavailable(f"Anthropic returned HTTP {exc.status_code}.") from exc
 
-        except APIConnectionError as exc:
-            if last_attempt:
-                raise LlmUnavailable("Could not reach OpenRouter — check your connection.") from exc
-            time.sleep(5)
+    # content is a list of blocks; only the text ones carry the answer.
+    return "".join(block.text for block in response.content if block.type == "text")
 
-    raise LlmUnavailable("OpenRouter did not answer after several attempts.")
+
+def image_block(photo_data_url: str) -> dict:
+    """Turn a browser data URL into an Anthropic image block.
+
+    The frontend sends "data:image/jpeg;base64,AAAA...". The OpenAI-shaped API took that whole
+    string; Anthropic wants the media type and the payload as separate fields.
+    """
+    header, _, payload = photo_data_url.partition(",")
+
+    if not payload:  # bare base64, no data-URL wrapper
+        payload, media_type = photo_data_url, "image/jpeg"
+    else:
+        media_type = header.removeprefix("data:").split(";")[0].strip() or "image/jpeg"
+
+    if media_type not in {"image/jpeg", "image/png", "image/gif", "image/webp"}:
+        media_type = "image/jpeg"
+
+    return {
+        "type": "image",
+        "source": {"type": "base64", "media_type": media_type, "data": payload},
+    }
 
 
 def load_prompt(filename: str) -> str:

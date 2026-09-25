@@ -1,7 +1,7 @@
 import json
 from typing import List, Optional
 
-from app.core.llm_client import chat, clean_json_response, load_prompt
+from app.core.llm_client import chat, clean_json_response, image_block, load_prompt
 
 
 CLASSIFICATION_SYSTEM_PROMPT = load_prompt(
@@ -43,8 +43,8 @@ def classify_request(
     """Classify a customer message, and any photo attached to it, into a service category.
 
     `categories` is the caller's live catalog (see _system_prompt). If a data URL image is
-    provided it is sent as a multimodal OpenRouter input, so the model can diagnose the issue
-    from the picture as well as the words.
+    provided it is sent as a second content block, so the model can diagnose the issue from the
+    picture as well as the words.
 
     Raises on API/parse failure — callers (see app/routers/classification.py) decide how to
     surface that as an HTTP error.
@@ -57,16 +57,11 @@ def classify_request(
 
     user_content = [{"type": "text", "text": text_prompt}]
     if photo_data_url:
-        user_content.append({
-            "type": "image_url",
-            "image_url": {"url": photo_data_url},
-        })
+        user_content.append(image_block(photo_data_url))
 
     raw = chat(
-        [
-            {"role": "system", "content": _system_prompt(categories)},
-            {"role": "user", "content": user_content},
-        ],
+        system=_system_prompt(categories),
+        messages=[{"role": "user", "content": user_content}],
         max_tokens=400,
     )
 
@@ -89,11 +84,8 @@ Additional details:
 """
 
     raw = chat(
-        [
-            {
-                "role": "system",
-                "content": REFINE_DESCRIPTION_SYSTEM_PROMPT
-            },
+        system=REFINE_DESCRIPTION_SYSTEM_PROMPT,
+        messages=[
             {
                 "role": "user",
                 "content": customer_message

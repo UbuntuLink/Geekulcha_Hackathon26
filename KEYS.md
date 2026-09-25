@@ -16,7 +16,7 @@ and it usually fails *silently*:
 
 | Place | Holds | Used by |
 |---|---|---|
-| **Render** → each service → Environment | Database URL, JWT secret, OpenRouter key, frontend URL | The running backend and ML service |
+| **Render** → each service → Environment | Database URL, JWT secret, Anthropic key, frontend URL | The running backend and ML service |
 | **Vercel** → project → Settings → Environment Variables | The two `VITE_*` API URLs | The frontend **build** — baked into the JS bundle |
 | **GitHub** → Settings → Secrets and variables → Actions | Deploy hooks, API keys, service URLs | The CD workflow, to trigger and verify deploys |
 | **Local `.env` files** (never committed) | Your own dev copies | `./mvnw spring-boot:run`, `uvicorn`, `npm run dev` |
@@ -35,7 +35,7 @@ and it usually fails *silently*:
 | `SUPABASE_DB_URL` | Render → backend | Yes | [1.1](#11-supabase_db_url) |
 | `JWT_SECRET` | Render → backend | Yes | [1.2](#12-jwt_secret) |
 | `FRONTEND_URL` | Render → backend **and** ML service | Optional | [1.3](#13-frontend_url) |
-| `OPEN_ROUTER_API_KEY` | Render → ML service | Yes | [1.4](#14-open_router_api_key) |
+| `ANTHROPIC_API_KEY` | Render → ML service | Yes | [1.4](#14-anthropic_api_key) |
 | `VITE_API_BASE_URL` | Vercel → project | Yes | [2.1](#21-the-two-vite-urls) |
 | `VITE_ML_API_BASE_URL` | Vercel → project | Yes | [2.1](#21-the-two-vite-urls) |
 | `RENDER_BACKEND_DEPLOY_HOOK` | GitHub → **Secrets** | Yes, for CD | [3.1](#31-render-deploy-hooks) |
@@ -125,15 +125,22 @@ controller. The code now filters blanks out, but an empty variable is still a li
 No scheme-less values (`ubuntulink.vercel.app` ✗), no trailing slash (`https://x.vercel.app/` ✗).
 An origin is scheme + host + port, nothing else.
 
-## 1.4 `OPEN_ROUTER_API_KEY`
+## 1.4 `ANTHROPIC_API_KEY`
 
 **Service:** `ubuntulink-ml-service`
 
-<https://openrouter.ai> → sign in → **Keys** (under your avatar) → **Create Key** → name it
-`ubuntulink-prod` → copy. Starts with `sk-or-v1-`. Shown once.
+<https://console.anthropic.com> → **Settings → API keys** → **Create Key** → name it
+`ubuntulink-prod` → copy. Starts with `sk-ant-`. Shown once.
 
-Set a credit limit on the key while you're there — it's a spend-capable credential, and this is
+Set a spend limit on the key while you're there — it's a spend-capable credential, and this is
 the only one in the project where a leak costs money directly.
+
+The model is `claude-haiku-4-5` ($1 per million input tokens, $5 per million output). Set
+`CLAUDE_MODEL` to `claude-sonnet-5` or `claude-opus-5` to trade cost for capability without a
+code change, and `LLM_MAX_TOKENS` to cap output tokens for a whole run.
+
+> This replaced an OpenRouter key. If `OPEN_ROUTER_API_KEY` is still set anywhere it is now
+> ignored — delete it so nobody wonders which one is live.
 
 > Read by [python/app/core/config.py](python/app/core/config.py). Without it the AI
 > classification and pricing endpoints fail at call time, not at startup.
@@ -289,7 +296,7 @@ JWT_SECRET=any-random-32-plus-character-string-for-dev
 
 **`python/.env`**
 ```properties
-OPEN_ROUTER_API_KEY=sk-or-v1-...
+ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 **`frontend/.env.local`** (copy [frontend/.env.example](frontend/.env.example))
@@ -311,7 +318,7 @@ Do it in this order; each step needs a URL produced by the one before.
 
 - [ ] Render: create both services (blueprint from `render.yaml`, or by hand — see DEPLOYMENT.md)
 - [ ] Render backend: set `SUPABASE_DB_URL` (§1.1) and `JWT_SECRET` (§1.2)
-- [ ] Render ML: set `OPEN_ROUTER_API_KEY` (§1.4)
+- [ ] Render ML: set `ANTHROPIC_API_KEY` (§1.4)
 - [ ] Render: **delete** `FRONTEND_URL` on both unless you have a custom domain (§1.3)
 - [ ] Note both Render service URLs
 - [ ] Vercel: create the project, root directory `frontend`
@@ -377,7 +384,7 @@ Rotate first, investigate after. All of these are replaceable in under two minut
 
 | Key | How to rotate |
 |---|---|
-| `OPEN_ROUTER_API_KEY` | OpenRouter → Keys → delete → create → update Render. **Do this one first** — it can spend money. |
+| `ANTHROPIC_API_KEY` | console.anthropic.com → Settings → API keys → delete → create → update Render. **Do this one first** — it can spend money. |
 | `JWT_SECRET` | Generate a new one, update Render. Signs everyone out; nothing else breaks. |
 | `SUPABASE_DB_URL` | Supabase → Settings → Database → reset password, rebuild the JDBC URL, update Render. |
 | Deploy hooks | Render → service → Settings → Deploy Hook → **Regenerate**, update the GitHub secret. |

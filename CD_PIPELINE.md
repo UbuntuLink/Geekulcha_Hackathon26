@@ -46,7 +46,7 @@ Fill in the env vars it prompts for (these are marked `sync: false` in the bluep
 | backend | `SUPABASE_DB_URL` | Same JDBC string as your local `backend/.env` |
 | backend | `JWT_SECRET` | **Generate a new one** — don't reuse your local dev secret |
 | backend | `FRONTEND_URL` | Leave blank for now, filled in at §3 |
-| ml-service | `OPEN_ROUTER_API_KEY` | Same key as your local `python/.env` |
+| ml-service | `ANTHROPIC_API_KEY` | Same key as your local `python/.env` |
 | ml-service | `FRONTEND_URL` | Leave blank for now, filled in at §3 |
 
 Let both deploy once, then note their URLs (something like `https://ubuntulink-backend.onrender.com`).

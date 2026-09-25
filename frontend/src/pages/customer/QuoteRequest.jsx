@@ -70,7 +70,7 @@ export default function QuoteRequest() {
 
       {loadingPrice && (
         <div className="mt-4">
-          <Loading label="🤖 Asking AI for a fair price estimate..." />
+          <Loading label=" Asking AI for a fair price estimate..." />
         </div>
       )}
       {expectedRange?.estimated_min_zar != null && (

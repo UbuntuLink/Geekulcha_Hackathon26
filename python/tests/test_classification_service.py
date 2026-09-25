@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -6,7 +6,7 @@ from app.services.classification_service import classify_request
 
 
 class ClassificationServiceTests(unittest.TestCase):
-    @patch("app.services.classification_service.client.chat.completions.create")
+    @patch("app.core.llm_client.client.chat.completions.create")
     def test_classify_request_includes_photo_in_multimodal_request(self, mock_create):
         mock_create.return_value.choices = [
             SimpleNamespace(
@@ -38,7 +38,7 @@ class ClassificationServiceTests(unittest.TestCase):
         user_content = payload["messages"][1]["content"]
         self.assertTrue(any(part.get("type") == "image_url" for part in user_content if isinstance(part, dict)))
 
-    @patch("app.services.classification_service.client.chat.completions.create")
+    @patch("app.core.llm_client.client.chat.completions.create")
     def test_classify_request_uses_the_callers_catalog(self, mock_create):
         mock_create.return_value.choices = [
             SimpleNamespace(
@@ -61,7 +61,7 @@ class ClassificationServiceTests(unittest.TestCase):
         self.assertIn("Automotive Repair", system_prompt)
         self.assertIn("Plumbing", system_prompt)
 
-    @patch("app.services.classification_service.client.chat.completions.create")
+    @patch("app.core.llm_client.client.chat.completions.create")
     def test_classify_request_without_a_catalog_uses_the_prompt_file(self, mock_create):
         mock_create.return_value.choices = [
             SimpleNamespace(

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
+from app.core.llm_client import LlmUnavailable
 from app.schemas.classification import (
     ClassifyRequest,
     ClassifyResponse,
@@ -30,6 +31,11 @@ def classify(request: ClassifyRequest) -> ClassifyResponse:
 
         return ClassifyResponse(**result)
 
+    # 503 rather than 502: the model is unavailable or unpaid, which is a temporary state of this
+    # service, not a bad reply from upstream.
+    except LlmUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
     except Exception as exc:
         raise HTTPException(
             status_code=502,
@@ -52,6 +58,9 @@ def refine(
         )
 
         return RefineDescriptionResponse(**result)
+
+    except LlmUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     except Exception as exc:
         raise HTTPException(

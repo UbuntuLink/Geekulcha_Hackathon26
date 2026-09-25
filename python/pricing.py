@@ -2,8 +2,10 @@
 app/services/pricing_service.py so the FastAPI app (app/main.py) and this
 script share one implementation — see PROJECT.md §7/§10 for the deploy plan."""
 import os
+import sys
 import time
 
+from app.core.llm_client import LlmUnavailable
 from app.services.pricing_service import estimate_price  # noqa: F401 (re-exported for callers)
 
 
@@ -34,8 +36,17 @@ def main():
     test_cases = load_test_cases(test_case_path)
 
     for i, (category, message) in enumerate(test_cases, start=1):
-        result = estimate_price(category, message)
         print(f"\n[{category}] {message}")
+
+        # A credit or connectivity failure hits every remaining case the same way, so stop on the
+        # first one instead of printing the same error forty times — or, as before, dying on an
+        # uncaught exception halfway through the run.
+        try:
+            result = estimate_price(category, message)
+        except LlmUnavailable as exc:
+            print(f"  -> stopped at case {i} of {len(test_cases)}: {exc}")
+            sys.exit(1)
+
         print(f"  -> R{result.get('estimated_min_zar')}-R{result.get('estimated_max_zar')} "
               f"({result.get('based_on')}) — {result.get('reasoning')}")
 

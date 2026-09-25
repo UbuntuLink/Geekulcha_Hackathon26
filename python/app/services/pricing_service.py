@@ -1,5 +1,5 @@
 import json
-from app.core.llm_client import client, MODEL, load_prompt, clean_json_response
+from app.core.llm_client import chat, clean_json_response, load_prompt
 
 PRICING_SYSTEM_PROMPT = load_prompt("pricing_system_prompt.txt")
 
@@ -8,15 +8,13 @@ def estimate_price(category: str, message: str) -> dict:
     """Estimate a ZAR price range for a classified job. Only plumbing/electrical are grounded in
     real reference rates today — see PROJECT.md §9f for the other 7 categories."""
     user_content = f'Category: {category}\nCustomer message: "{message}"'
-    response = client.chat.completions.create(
-        model=MODEL,
-        max_tokens=300,
-        messages=[
+    raw = chat(
+        [
             {"role": "system", "content": PRICING_SYSTEM_PROMPT},
             {"role": "user", "content": user_content},
         ],
+        max_tokens=300,
     )
-    raw = response.choices[0].message.content
     try:
         return json.loads(clean_json_response(raw))
     except json.JSONDecodeError:

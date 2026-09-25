@@ -2,8 +2,10 @@
 app/services/classification_service.py so the FastAPI app (app/main.py) and this
 script share one implementation — see PROJECT.md §7/§10 for the deploy plan."""
 import os
+import sys
 import time
 
+from app.core.llm_client import LlmUnavailable
 from app.services.classification_service import classify_request  # noqa: F401 (re-exported for callers)
 
 
@@ -22,10 +24,18 @@ if __name__ == "__main__":
     for i, msg in enumerate(test_messages, start=1):
         print("Customer said:", msg)
         print("Classification:")
+
         try:
             print(classify_request(msg))
+        except LlmUnavailable as exc:
+            # Out of credit or unreachable: every remaining message fails identically, so say it
+            # once and stop, rather than repeating a screenful of nested JSON per message.
+            print(f"  stopped at message {i} of {len(test_messages)}: {exc}")
+            sys.exit(1)
         except Exception as e:
+            # A parse or data problem is specific to this message — keep going.
             print(f"An error occurred: {e}")
+
         print()  # blank line for readability
 
         if i % 7 == 0 and i != len(test_messages):

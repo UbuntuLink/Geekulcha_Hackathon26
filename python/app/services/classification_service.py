@@ -1,7 +1,7 @@
 import json
 from typing import List, Optional
 
-from app.core.llm_client import client, MODEL, load_prompt, clean_json_response
+from app.core.llm_client import chat, clean_json_response, load_prompt
 
 
 CLASSIFICATION_SYSTEM_PROMPT = load_prompt(
@@ -62,17 +62,13 @@ def classify_request(
             "image_url": {"url": photo_data_url},
         })
 
-    response = client.chat.completions.create(
-        model=MODEL,
-        max_tokens=400,
-        temperature=0,
-        messages=[
+    raw = chat(
+        [
             {"role": "system", "content": _system_prompt(categories)},
             {"role": "user", "content": user_content},
         ],
+        max_tokens=400,
     )
-
-    raw = response.choices[0].message.content
 
     return json.loads(clean_json_response(raw))
 
@@ -92,11 +88,8 @@ Additional details:
 {additional_details}
 """
 
-    response = client.chat.completions.create(
-        model=MODEL,
-        max_tokens=200,
-        temperature=0,
-        messages=[
+    raw = chat(
+        [
             {
                 "role": "system",
                 "content": REFINE_DESCRIPTION_SYSTEM_PROMPT
@@ -106,8 +99,7 @@ Additional details:
                 "content": customer_message
             },
         ],
+        max_tokens=200,
     )
-
-    raw = response.choices[0].message.content
 
     return json.loads(clean_json_response(raw))

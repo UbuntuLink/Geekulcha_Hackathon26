@@ -10,6 +10,7 @@ import LocationPicker from "../../components/common/LocationPicker.jsx";
 import { getCurrentUser } from "../../api/auth.js";
 import { addMyProviderService, createMyProviderProfile, listServices } from "../../api/services.js";
 import { getOnboarding } from "../../lib/preferences.js";
+import { isValidSaId } from "../../lib/saId.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
@@ -69,6 +70,12 @@ export default function BecomeProvider() {
   const validate = () => {
     if (!/^\d{13}$/.test(form.idNumber)) {
       return t("becomeProvider.idError");
+    }
+
+    // Catch a mistyped digit here rather than after a round trip that comes back as a bare
+    // rejection. Same rule the backend applies — see lib/saId.js.
+    if (!isValidSaId(form.idNumber)) {
+      return "That ID number doesn't look right. The last digit is a check digit, so one wrong digit invalidates the whole number.";
     }
 
     if (!form.bio.trim() || !form.location.trim() || !form.serviceId) {
@@ -133,7 +140,15 @@ export default function BecomeProvider() {
           (typeof err?.response?.data === "string" ? err.response.data : "");
         setError(backendMessage || t("becomeProvider.idRejected"));
       } else {
-        setError(t("becomeProvider.saveError"));
+        // Says what actually happened. The old copy blamed a missing provider-upgrade endpoint,
+        // which sent people looking for a deployment problem when the real cause was a 500 —
+        // usually a rejected ID escaping as an unmapped exception.
+        const backendMessage = err?.response?.data?.message;
+        setError(
+          backendMessage
+            ? `Couldn't create your provider profile: ${backendMessage}`
+            : "Couldn't create your provider profile. Check the backend log for the reason."
+        );
       }
     } finally {
       setSubmitting(false);

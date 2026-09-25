@@ -95,13 +95,19 @@ public class ProviderProfileService {
                 );
 
         if (providerProfileRepository.existsByUserId(userId)) {
-                throw new RuntimeException("User is already a provider");
+                // IllegalStateException so this surfaces as 409, which is what the frontend
+                // checks for to say "you're already a provider" instead of a generic failure.
+                throw new IllegalStateException("User is already a provider");
         }
 
         boolean valid = checkIdService.validateId(dto.getIdNumber());
 
         if (!valid) {
-        throw new IllegalArgumentException("Invalid South African ID number");
+            // Says why, because "invalid" on its own sends people hunting for a broken endpoint
+            // when they have simply mistyped a digit.
+            throw new IllegalArgumentException(
+                    "That South African ID number didn't pass validation. Check the 13 digits — "
+                            + "the last one is a check digit, so a single typo makes the whole number invalid.");
         }
         
         // 3. Only create provider AFTER successful validation

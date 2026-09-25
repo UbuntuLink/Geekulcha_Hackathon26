@@ -163,8 +163,8 @@ filter as everything else, so it needs a bearer token like any other non-`/auth`
 
 ## Running it locally
 
-Full setup, including every key and account you need, is in [INSTRUCTIONS.md](INSTRUCTIONS.md).
-The short version, three terminals:
+[RUN.md](RUN.md) is the one-page how-to-start reference; [INSTRUCTIONS.md](INSTRUCTIONS.md) covers
+first-time setup, including every key and account you need. The short version, three terminals:
 
 ```bash
 cd backend  && ./mvnw spring-boot:run                       # port 8080, needs backend/.env

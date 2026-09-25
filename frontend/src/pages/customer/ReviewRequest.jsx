@@ -26,61 +26,50 @@ export default function ReviewRequest() {
   const { originalDescription, classification, serviceId } = location.state || {};
 
   const originalAiDescription = classification?.job_description || originalDescription || "";
-  const [jobDescription, setJobDescription] = useState(originalAiDescription);
   const [additionalDetails, setAdditionalDetails] = useState("");
-  const [lastRefinedDetails, setLastRefinedDetails] = useState("");
   const [loading, setLoading] = useState(false);
+  const [refining, setRefining] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
-  const [updated, setUpdated] = useState(false);
 
-  const handleUpdateDescription = async () => {
-    const details = additionalDetails.trim();
-    if (!details) {
-      setError("Please enter some additional information about the problem.");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    setUpdated(false);
-
-    try {
-      const result = await refineDescription(originalAiDescription, details);
-      setJobDescription(result.job_description);
-
-      if (!result.is_relevant) {
-        setError("That doesn't seem related to the original problem. Please add details that help explain this request.");
-        return;
-      }
-
-      setLastRefinedDetails(details);
-      setUpdated(true);
-    } catch (err) {
-      console.error(err);
-      setError("Couldn't update the request description. Please try again.");
-    } finally {
-      setLoading(false);
-      setSending(false);
-    }
-  };
-
+  // One button, one model call. There used to be a separate "Update AI summary" step: you
+  // refined the summary, then submitted, and submitting without refining first was refused.
+  // Every edit-and-refine cycle was billed, and forgetting the first button was a dead end.
+  // The refine now happens once, here, and only when there is something to refine.
   const handleFindProviders = async () => {
     if (loading) return;
     setError("");
-    const currentDetails = additionalDetails.trim();
 
-    if (currentDetails && currentDetails !== lastRefinedDetails) {
-      setError("You changed the additional details. Update the request summary before continuing.");
-      return;
-    }
+    const details = additionalDetails.trim();
+    let jobDescription = originalAiDescription;
 
     setLoading(true);
-    setSending(true);
     try {
+      if (details) {
+        setRefining(true);
+        try {
+          const result = await refineDescription(originalAiDescription, details);
+
+          if (!result.is_relevant) {
+            setError("That doesn't seem related to the original problem. Please add details that help explain this request.");
+            return;
+          }
+
+          jobDescription = result.job_description;
+        } catch (err) {
+          // The model being down must not block someone from raising a request, so keep their
+          // words verbatim instead of losing them. They are stored on the request either way.
+          console.error(err);
+          jobDescription = `${originalAiDescription} Additional details from the customer: ${details}`;
+        } finally {
+          setRefining(false);
+        }
+      }
+
+      setSending(true);
       const finalClassification = {
         ...classification,
-        additional_details: currentDetails || null,
+        additional_details: details || null,
         job_description: jobDescription,
       };
 
@@ -144,10 +133,14 @@ export default function ReviewRequest() {
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">✦</span>
               <div className="min-w-0">
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-brand/60">Provider-ready summary</p>
-                <p className="mt-2 text-[15px] font-semibold leading-6 text-ink lg:text-base lg:leading-7">{jobDescription}</p>
+                <p className="mt-2 text-[15px] font-semibold leading-6 text-ink lg:text-base lg:leading-7">{originalAiDescription}</p>
               </div>
             </div>
-            {updated && <p className="mt-3 rounded-xl bg-brand-mist px-3 py-2 text-xs font-semibold text-brand">✓ Updated with your additional details</p>}
+            {additionalDetails.trim() && (
+              <p className="mt-3 rounded-xl bg-brand-mist px-3 py-2 text-xs font-semibold text-brand">
+                Your extra details are folded in when you continue.
+              </p>
+            )}
           </Card>
 
           <details className="rounded-2xl border border-white/80 bg-white/60 px-4 py-3 text-sm text-gray-600 shadow-sm lg:px-5 lg:py-4">
@@ -163,26 +156,21 @@ export default function ReviewRequest() {
             id="additional-details"
             value={additionalDetails}
             onChange={(e) => {
-              const value = e.target.value;
-              setAdditionalDetails(value);
+              setAdditionalDetails(e.target.value);
               setError("");
-              setUpdated(false);
-              if (!value.trim()) {
-                setJobDescription(originalAiDescription);
-                setLastRefinedDetails("");
-              }
             }}
             placeholder="e.g. The water is leaking underneath the sink and started this morning."
             className="mt-3 min-h-[130px] w-full resize-y rounded-2xl border border-gray-200 bg-brand-mist/40 p-3.5 text-sm leading-6 transition-all placeholder:text-gray-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand/10 lg:min-h-[170px]"
           />
-          <Button variant="soft" onClick={handleUpdateDescription} disabled={loading || !additionalDetails.trim()} className="mt-3">
-            {loading && !sending ? "Updating summary..." : "Update AI summary"}
-          </Button>
         </Card>
       </div>
 
       {error && <div className="mt-4"><ErrorBanner>{error}</ErrorBanner></div>}
-      {loading && <div className="mt-3 rounded-2xl border border-brand/15 bg-brand-mist px-4"><Loading label={sending ? "Sending your request…" : "Checking and refining your details..."} /></div>}
+      {loading && (
+        <div className="mt-3 rounded-2xl border border-brand/15 bg-brand-mist px-4">
+          <Loading label={refining ? "Folding in your extra details…" : "Sending your request…"} />
+        </div>
+      )}
 
       <div className="mt-5 lg:flex lg:items-center lg:justify-end lg:gap-4">
         <p className="mb-2 text-center text-xs text-gray-400 lg:mb-0">Your request is only saved when you continue.</p>

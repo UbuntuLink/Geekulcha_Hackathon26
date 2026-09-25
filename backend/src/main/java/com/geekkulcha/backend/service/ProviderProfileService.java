@@ -1,17 +1,22 @@
 package com.geekkulcha.backend.service;
 
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.geekkulcha.backend.dto.request.AddProviderServiceRequest;
+import com.geekkulcha.backend.dto.request.CreateProviderProfileDto;
 import com.geekkulcha.backend.dto.request.UpdateProviderProfileRequest;
 import com.geekkulcha.backend.dto.response.ProviderProfileResponse;
 import com.geekkulcha.backend.entity.ProviderProfile;
 import com.geekkulcha.backend.entity.ProviderService;
+import com.geekkulcha.backend.entity.User;
 import com.geekkulcha.backend.exception.ResourceNotFoundException;
 import com.geekkulcha.backend.repository.ProviderProfileRepository;
 import com.geekkulcha.backend.repository.ProviderServiceRepository;
 import com.geekkulcha.backend.repository.ServiceRepository;
+import com.geekkulcha.backend.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /** Self-service provider profile management — ProviderOnboarding.jsx / ProviderProfileEdit.jsx. */
 @Service
@@ -22,6 +27,8 @@ public class ProviderProfileService {
     private final ProviderServiceRepository providerServiceRepository;
     private final ServiceRepository serviceRepository;
     private final ProviderMatchService providerMatchService;
+    private final UserRepository userRepository;
+    private final CheckIdService checkIdService;
 
     public ProviderProfile getOwnProfile(long userId) {
         return providerProfileRepository.findByUserId(userId)
@@ -68,5 +75,49 @@ public class ProviderProfileService {
         ProviderProfile profile = getOwnProfile(userId);
         providerServiceRepository.deleteByProviderProfileIdAndServiceId(profile.getId(), serviceId);
         return providerMatchService.getProfile(profile.getId());
+    }
+
+    @Transactional
+    public ProviderProfileResponse createForCurrentUser(
+                Long userId,
+                CreateProviderProfileDto dto
+    ) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new RuntimeException("User not found")
+                );
+
+        if (providerProfileRepository.existsByUserId(userId)) {
+                throw new RuntimeException("User is already a provider");
+        }
+
+        boolean valid = checkIdService.validateId(dto.getIdNumber());
+
+        if (!valid) {
+        throw new IllegalArgumentException("Invalid South African ID number");
+        }
+        
+        // 3. Only create provider AFTER successful validation
+        ProviderProfile profile = new ProviderProfile();
+
+        profile.setUser(user);
+        profile.setBio(dto.getBio());
+        profile.setLocation(dto.getLocation());
+
+        profile.setServiceRadiusKm(
+                dto.getServiceRadiusKm() == null
+                        ? 0
+                        : dto.getServiceRadiusKm()
+        );
+
+        profile.setAvailableToday(dto.isAvailableToday());
+
+        // CheckID passed
+        profile.setIdValidated(true);
+
+        providerProfileRepository.save(profile);
+
+        return getOwnProfileResponse(userId);
     }
 }

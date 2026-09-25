@@ -8,8 +8,9 @@ import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import EmptyState from "../../components/common/EmptyState.jsx";
 import Button from "../../components/common/Button.jsx";
 import ProgressSteps from "../../components/common/ProgressSteps.jsx";
-import { getMatchingProviders, getServiceRequest } from "../../api/services.js";
+import { getMatchingProviders, getMyProviderProfile, getServiceRequest } from "../../api/services.js";
 import { getOnboarding } from "../../lib/preferences.js";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 const SORT_OPTIONS = [
   { key: "recommended", label: "Recommended" },
@@ -23,6 +24,7 @@ export default function MatchingProviders() {
   const { state } = useLocation();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [providers, setProviders] = useState(null);
   const [error, setError] = useState("");
   const preferredPriority = getOnboarding().priority;
@@ -40,14 +42,25 @@ export default function MatchingProviders() {
           setProviders([]);
           return;
         }
-        const list = await getMatchingProviders(serviceId);
+        let list = await getMatchingProviders(serviceId);
+
+        // Now that any user can be a provider, someone browsing as a customer could be offered
+        // their own profile to quote on. Drop it.
+        if (user?.isProvider) {
+          const ownProfile = await getMyProviderProfile().catch(() => null);
+          if (ownProfile?.providerProfileId != null) {
+            list = list.filter((provider) => provider.providerProfileId !== ownProfile.providerProfileId);
+          }
+        }
+        // No pre-sort by onboarding priority here: sortedProviders below already applies it,
+        // together with the sort chips, so sorting twice would only be overwritten.
         setProviders(list);
       } catch (err) {
         setError("Couldn't load providers — is the backend running?");
         console.error(err);
       }
     })();
-  }, [id, state]);
+  }, [id, state, user?.isProvider]);
 
   const sortedProviders = useMemo(() => {
     if (!providers) return providers;

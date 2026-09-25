@@ -6,7 +6,7 @@ import Button from "../../components/common/Button.jsx";
 import Loading from "../../components/common/Loading.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import { Field, TextArea, TextInput } from "../../components/common/Field.jsx";
-import { createQuote, getServiceRequest } from "../../api/services.js";
+import { createQuote, getMyServiceRequests, getServiceRequest } from "../../api/services.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
 export default function RequestDetail() {
@@ -19,10 +19,14 @@ export default function RequestDetail() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
+  const [isOwnRequest, setIsOwnRequest] = useState(false);
 
   useEffect(() => {
-    getServiceRequest(id)
-      .then(setRequest)
+    Promise.all([getServiceRequest(id), getMyServiceRequests().catch(() => [])])
+      .then(([loadedRequest, ownRequests]) => {
+        setRequest(loadedRequest);
+        setIsOwnRequest(ownRequests.some((ownRequest) => Number(ownRequest.id) === Number(id)));
+      })
       .catch((err) => {
         setError("Couldn't load this request — is the backend running?");
         console.error(err);
@@ -30,6 +34,11 @@ export default function RequestDetail() {
   }, [id]);
 
   const handleSubmit = async () => {
+    if (isOwnRequest) {
+      setError("You can't submit a quote on your own service request.");
+      return;
+    }
+
     setSubmitting(true);
     setError("");
     try {
@@ -70,6 +79,12 @@ export default function RequestDetail() {
         <p className="mt-2 text-sm text-gray-500">{request.location}</p>
       </Card>
 
+      {isOwnRequest && (
+        <div className="mt-4">
+          <ErrorBanner>This is your own service request, so you cannot quote on it as a provider.</ErrorBanner>
+        </div>
+      )}
+
       <div className="mt-4 space-y-4">
         <Field label="Your quote (ZAR)">
           <TextInput type="number" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="450" />
@@ -81,7 +96,7 @@ export default function RequestDetail() {
 
       {error && <div className="mt-4"><ErrorBanner>{error}</ErrorBanner></div>}
 
-      <Button onClick={handleSubmit} disabled={submitting || !amount} className="mt-6">
+      <Button onClick={handleSubmit} disabled={submitting || !amount || isOwnRequest} className="mt-6">
         {submitting ? t("customer.sending") : t("customer.sendQuoteRequest")}
       </Button>
     </Screen>

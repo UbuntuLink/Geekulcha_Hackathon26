@@ -8,8 +8,9 @@ import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import Loading from "../../components/common/Loading.jsx";
 import ProgressSteps from "../../components/common/ProgressSteps.jsx";
 
-import { refineDescription, createServiceRequest } from "../../api/services.js";
+import { refineDescription, createServiceRequest, getMyProviderProfile } from "../../api/services.js";
 import { getOnboarding } from "../../lib/preferences.js";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 const urgencyStyle = {
   low: "bg-gray-100 text-gray-600",
@@ -21,6 +22,7 @@ const urgencyStyle = {
 export default function ReviewRequest() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const { originalDescription, classification, serviceId } = location.state || {};
 
   const originalAiDescription = classification?.job_description || originalDescription || "";
@@ -82,9 +84,17 @@ export default function ReviewRequest() {
         job_description: jobDescription,
       };
 
+      let requestLocation = getOnboarding().location || null;
+      if (!requestLocation && user?.isProvider) {
+        const providerProfile = await getMyProviderProfile().catch(() => null);
+        requestLocation = providerProfile?.location || null;
+      }
+
       const created = await createServiceRequest({
         description: jobDescription,
-        location: getOnboarding().location || null,
+        // Falls back to the provider profile's location for a provider who never went through
+        // customer onboarding — see requestLocation above.
+        location: requestLocation,
         preferredDate: null,
         aiClassificationRaw: JSON.stringify(finalClassification),
         serviceId: serviceId ?? null,

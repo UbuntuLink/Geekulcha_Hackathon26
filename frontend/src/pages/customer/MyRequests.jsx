@@ -6,6 +6,8 @@ import EmptyState from "../../components/common/EmptyState.jsx";
 import { getMyServiceRequests } from "../../api/services.js";
 
 function requestRoute(req) {
+  const bookingId = req.bookingId ?? req.booking?.id ?? null;
+  if (bookingId) return `/bookings/${bookingId}`;
   return req.status === "OPEN" ? `/requests/${req.id}/matches` : `/requests/${req.id}/quotes`;
 }
 

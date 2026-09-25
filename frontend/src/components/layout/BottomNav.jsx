@@ -21,6 +21,9 @@ const CUSTOMER_LINKS = [
 const PROVIDER_LINKS = [
   { to: "/provider/dashboard", label: "nav.dashboard", icon: "dashboard" },
   { to: "/provider/requests", label: "nav.requests", icon: "requests" },
+  // A provider is an ordinary customer too now (any user can become one), so they need a way
+  // back to the requests they raised themselves — not just the feed they quote on.
+  { to: "/requests/mine", label: "nav.myRequests", icon: "requests" },
   { to: "/provider/bookings", label: "nav.bookings", icon: "bookings" },
   { to: "/provider/profile", label: "nav.profile", icon: "profile" },
 ];

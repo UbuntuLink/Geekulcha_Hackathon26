@@ -23,6 +23,21 @@ export default function Profile() {
         <p className="font-medium capitalize text-gray-900">{priority || t("common.notSet")}</p>
       </Card>
 
+      {!user?.isProvider && (
+        <Card className="mt-3 overflow-hidden border-brand/20 bg-gradient-to-br from-brand/5 to-white">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand/10 text-lg">🛠️</div>
+            <div className="flex-1">
+              <p className="font-semibold text-gray-900">{t("becomeProvider.ctaTitle")}</p>
+              <p className="mt-1 text-sm leading-5 text-gray-500">{t("becomeProvider.ctaSubtitle")}</p>
+              <Button className="mt-3" onClick={() => navigate("/become-provider")}>
+                {t("becomeProvider.ctaButton")}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       <Card className="mt-3">
         <p className="text-sm text-gray-500">{t("common.account")}</p>
         {user ? (

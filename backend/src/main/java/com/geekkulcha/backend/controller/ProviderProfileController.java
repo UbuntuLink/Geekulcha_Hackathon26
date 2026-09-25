@@ -1,15 +1,26 @@
 package com.geekkulcha.backend.controller;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.geekkulcha.backend.dto.request.AddProviderServiceRequest;
+import com.geekkulcha.backend.dto.request.CreateProviderProfileDto;
 import com.geekkulcha.backend.dto.request.UpdateProviderProfileRequest;
 import com.geekkulcha.backend.dto.response.ProviderProfileResponse;
 import com.geekkulcha.backend.service.ProviderProfileService;
 import com.geekkulcha.backend.service.UserService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.*;
 
 /**
  * Self-service provider profile management (distinct from the public read-only
@@ -41,5 +52,16 @@ public class ProviderProfileController {
     @DeleteMapping("/services/{serviceId}")
     public ProviderProfileResponse removeService(@AuthenticationPrincipal Jwt jwt, @PathVariable long serviceId) {
         return providerProfileService.removeOwnService(userService.getCurrentUser(jwt).getId(), serviceId);
+    }
+
+    @PostMapping
+    public ProviderProfileResponse becomeProvider(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody CreateProviderProfileDto dto
+    ) {
+        return providerProfileService.createForCurrentUser(
+                userService.getCurrentUser(jwt).getId(),
+                dto
+        );
     }
 }

@@ -43,6 +43,7 @@ export default function BookingTracking() {
   }
 
   const currentIndex = STEPS.indexOf(booking.status);
+  const hasReview = Boolean(booking.review || booking.reviewId || booking.reviewed || booking.hasReview);
 
   return (
     <Screen title="Booking tracking" subtitle="ETA: today">
@@ -87,13 +88,19 @@ export default function BookingTracking() {
         </button>
       </div>
 
-      {booking.status === "COMPLETED" && (
+      {booking.status === "COMPLETED" && !hasReview && (
         <button
           onClick={() => navigate(`/bookings/${bookingId}/review`)}
           className="mt-4 w-full rounded-lg bg-brand py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-dark"
         >
           Leave a review
         </button>
+      )}
+
+      {booking.status === "COMPLETED" && hasReview && (
+        <div className="mt-4 rounded-lg bg-green-50 px-4 py-3 text-center text-sm font-medium text-green-700">
+          Review submitted ✓
+        </div>
       )}
     </Screen>
   );

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Screen from "../../components/layout/Screen.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import Card from "../../components/common/Card.jsx";
-import { getMyBookings, getMyProviderProfile, getOpenRequests } from "../../api/services.js";
+import { getMyBookings, getMyProviderProfile, getMyServiceRequests, getOpenRequests } from "../../api/services.js";
 
 const ACTIVE_STATUSES = ["REQUEST_SENT", "ACCEPTED", "ON_THE_WAY"];
 
@@ -19,7 +19,12 @@ export default function ProviderDashboard() {
       setProfile(p);
       if (!p.bio) navigate("/provider/onboarding", { replace: true });
     });
-    getOpenRequests().then((list) => setOpenCount(list.length));
+    Promise.all([getOpenRequests(), getMyServiceRequests().catch(() => [])])
+      .then(([openRequests, ownRequests]) => {
+        const ownRequestIds = new Set(ownRequests.map((request) => Number(request.id)));
+        setOpenCount(openRequests.filter((request) => !ownRequestIds.has(Number(request.id))).length);
+      })
+      .catch(() => setOpenCount(0));
     getMyBookings().then((list) => setActiveCount(list.filter((b) => ACTIVE_STATUSES.includes(b.status)).length));
   }, [navigate]);
 
@@ -69,6 +74,16 @@ export default function ProviderDashboard() {
           </Card>
         )}
       </div>
+
+      {/* Browsing requests and the profile card are already in the grid above; this is the one
+          genuinely new action from provider-job-request — a provider needing help themselves. */}
+      <button
+        onClick={() => navigate("/requests/new")}
+        className="mt-5 w-full rounded-2xl border border-brand/25 bg-white p-4 text-left text-brand shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand/5 lg:p-5"
+      >
+        <p className="text-lg font-semibold">{t("provider.requestService")}</p>
+        <p className="mt-0.5 text-sm text-gray-500">{t("provider.requestServiceSubtitle")}</p>
+      </button>
     </Screen>
   );
 }

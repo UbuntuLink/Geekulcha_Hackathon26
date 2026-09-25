@@ -1,12 +1,15 @@
 package com.geekkulcha.backend.service;
 
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.stereotype.Service;
+
+import com.geekkulcha.backend.entity.ProviderProfile;
 import com.geekkulcha.backend.entity.User;
 import com.geekkulcha.backend.exception.ResourceNotFoundException;
 import com.geekkulcha.backend.repository.ProviderProfileRepository;
 import com.geekkulcha.backend.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +26,9 @@ public class UserService {
     }
 
     public boolean isProvider(long userId) {
-        return providerProfileRepository.findByUserId(userId).isPresent();
+        return providerProfileRepository
+                .findByUserId(userId)
+                .map(ProviderProfile::isIdValidated)
+                .orElse(false);
     }
 }

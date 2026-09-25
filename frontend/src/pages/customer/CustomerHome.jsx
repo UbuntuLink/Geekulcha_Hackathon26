@@ -24,7 +24,6 @@ function greeting(t) {
   return t("customer.greetingEvening");
 }
 
-const ACTIVE_STATUSES = ["OPEN", "QUOTED", "BOOKED"];
 export default function CustomerHome() {
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -60,8 +59,6 @@ export default function CustomerHome() {
 
   }, [name, navigate]);
 
-  const activeCount = recentRequests.filter((r) => ACTIVE_STATUSES.includes(r.status)).length;
-  const completedCount = recentRequests.filter((r) => r.status === "COMPLETED").length;
 
   useEffect(() => {
     let active = true;
@@ -170,27 +167,22 @@ export default function CustomerHome() {
 
   return (
     <Screen showBack={false} withNav size="wide" desktopNav="hero">
+      {/* Stripped back: the decorative blur blobs, the orbiting dots, the "A little help. A lot of
+          community." tagline and the "AI-assisted matching" badge were all marketing dressing
+          inside an app the person has already signed into. What's left is who they are, what they
+          can do, and where they are. */}
       <section className="home-hero hero-glass relative overflow-hidden rounded-3xl bg-brand p-5 text-white shadow-lift sm:p-6 lg:p-8 xl:p-10">
-        <div className="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-white/10 blur-2xl lg:h-64 lg:w-64" />
-        <div className="pointer-events-none absolute bottom-0 right-1/4 hidden h-28 w-28 rounded-full bg-white/5 blur-2xl lg:block" />
-        <div className="pointer-events-none absolute right-10 top-7 hidden h-32 w-32 rounded-full border border-white/10 lg:block">
-          <span className="absolute -left-2 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-emerald-300/80 shadow-[0_0_20px_rgba(110,231,183,0.6)]" />
-          <span className="absolute -right-1 top-4 h-2.5 w-2.5 rounded-full bg-white/55" />
-          <span className="absolute bottom-2 left-1/2 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-white/35" />
-        </div>
-
         <div id="hero-navigation-anchor" aria-hidden="true" className="hero-navigation-anchor hidden lg:block" />
         <div className="relative lg:flex lg:items-end lg:justify-between lg:gap-10">
           <div>
-            <p className="hero-eyebrow mb-3 inline-flex items-center gap-2 text-xs font-semibold text-white/85"><span className="h-1.5 w-1.5 rounded-full bg-emerald-200" /> A little help. A lot of community.</p>
             <p className="text-sm font-medium text-white/70">{greeting(t)}, {name || "there"}</p>
             <h1 className="mt-1 max-w-[620px] text-[1.75rem] font-extrabold leading-tight tracking-[-0.03em] sm:text-3xl lg:text-[2.65rem] lg:leading-[1.05]">
               {t("customer.helpTitle")}
             </h1>
-            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-white/65">
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1"><svg aria-hidden="true" className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 10c0 6-8 11-8 11S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>{location || "Your area"}</span>
-              <span className="rounded-full bg-white/10 px-2.5 py-1">AI-assisted matching</span>
-            </div>
+            <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-white/65">
+              <svg aria-hidden="true" className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 10c0 6-8 11-8 11S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+              {location || "Your area"}
+            </p>
           </div>
 
           <button
@@ -206,7 +198,10 @@ export default function CustomerHome() {
         </div>
       </section>
 
-      <Card className="mt-6 sm:p-6">
+      <div className="home-grid mt-6">
+        {/* Searching and browsing are the same job — finding someone — so they live in one card
+            rather than two stacked ones competing for the same decision. */}
+        <Card className="home-categories min-w-0 sm:p-6 lg:p-7">
         <p className="mb-1 text-sm font-extrabold text-ink">{t("customer.findProvider")}</p>
         <p className="mb-3 text-xs text-gray-500">Describe who you need in your own words — spelling doesn't matter.</p>
         <form onSubmit={handleAiSearch} className="flex gap-2">
@@ -244,10 +239,8 @@ export default function CustomerHome() {
             ))}
           </div>
         )}
-      </Card>
 
-      <div className="home-grid mt-6">
-        <Card className="home-categories min-w-0 sm:p-6 lg:p-7">
+        <div className="mt-6 border-t border-brand/10 pt-5">
           {selectedCategory ? (
             <div key={selectedCategory.id} className="category-view">
               <button
@@ -311,23 +304,13 @@ export default function CustomerHome() {
               )}
             </div>
           )}
+        </div>
         </Card>
 
         <aside className="home-sidebar space-y-5">
-          <div className="grid grid-cols-2 gap-3">
-            <Card className="relative overflow-hidden lg:p-5">
-              <span className="absolute right-3 top-3 h-7 w-7 rounded-full bg-brand-soft" />
-              <p className="text-3xl font-extrabold tracking-tight text-brand lg:text-4xl">{activeCount}</p>
-              <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-gray-400">{t("customer.activeRequests")}</p>
-            </Card>
-            <Card className="relative overflow-hidden lg:p-5">
-              <span className="absolute right-3 top-3 grid h-7 w-7 place-items-center rounded-full bg-brand-soft text-xs text-brand">✓</span>
-              <p className="text-3xl font-extrabold tracking-tight text-brand lg:text-4xl">{completedCount}</p>
-              <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-gray-400">{t("customer.completedJobs")}</p>
-            </Card>
-          </div>
-
-
+          {/* The two big counters are gone. "1 active, 0 completed" is a vanity number on a
+              hackathon account, and the list underneath already says the same thing with the
+              detail that actually matters — which request, and what state it's in. */}
           <section className="home-recent min-w-0">
             <div className="mb-2.5 flex items-center justify-between">
               <h2 className="text-base font-extrabold text-ink lg:text-lg">{t("customer.recent")}</h2>

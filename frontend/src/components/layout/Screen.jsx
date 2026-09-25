@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import BottomNav from "./BottomNav.jsx";
 import BrandMark from "../common/BrandMark.jsx";
-import { useAuth } from "../../context/AuthContext.jsx";
-import { LANGUAGES, useLanguage } from "../../context/LanguageContext.jsx";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 
 const widthClasses = {
   compact: "max-w-3xl",
@@ -32,19 +31,11 @@ export default function Screen({
 }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { user, logout } = useAuth();
-  const { language, setLanguage, t } = useLanguage();
+  const { t } = useLanguage();
   const widthClass = widthClasses[size] ?? widthClasses.normal;
   const contentRef = useRef(null);
-  const [isSpeaking, setIsSpeaking] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
-
-  useEffect(() => {
-    return () => {
+  return () => {
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
         window.speechSynthesis.cancel();
       }
@@ -123,36 +114,29 @@ export default function Screen({
       <div className="pointer-events-none absolute -left-24 top-64 h-52 w-52 rounded-full bg-white/70 blur-3xl lg:h-80 lg:w-80" />
 
       <div className={`relative mx-auto w-full ${widthClass} px-4 pt-5 sm:px-6 sm:pt-6 lg:px-8 ${withNav && desktopNav !== "hero" ? "lg:pt-28" : "lg:pt-8"} xl:px-10`}>
-        {/* The brand mark is hidden on desktop because the nav bar already shows it — but the
-            controls must not be, or a signed-in user on a laptop has no way to log out. That is
-            what happened when these were folded into one row that was hidden wholesale. */}
+        {/* No top bar. The nav bar is the app bar; account controls live there on desktop and on
+            the Profile screen on phones, where the nav is an icon dock with no room. Only the
+            brand mark appears above a phone screen that has no title of its own. */}
         {!title && !showBack && withNav && (
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div className="lg:hidden">
-              <BrandMark compact />
-            </div>
-            <div className="ml-auto">{controls}</div>
+          <div className="mb-4 lg:hidden">
+            <BrandMark compact />
           </div>
         )}
         {(title || showBack) && (
           <header className="mb-6 animate-fade-up lg:mb-8">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              {/* Only the left side collapses on desktop — see the comment above. */}
-              <div className={!showBack && withNav ? "lg:hidden" : ""}>
-                {showBack ? (
-                  <button
-                    onClick={() => navigate(-1)}
-                    className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-brand/10 bg-white/70 px-3 text-sm font-semibold text-gray-600 shadow-sm backdrop-blur transition-all hover:-translate-y-0.5 hover:border-brand/25 hover:text-brand active:scale-95"
-                    aria-label={t("common.back")}
-                  >
-                    <span aria-hidden="true">←</span>
-                    {t("common.back")}
-                  </button>
-                ) : (
-                  <BrandMark compact />
-                )}
-              </div>
-              <div className="ml-auto">{controls}</div>
+            <div className={`mb-4 flex items-center gap-3 ${!showBack && withNav ? "lg:hidden" : ""}`}>
+              {showBack ? (
+                <button
+                  onClick={() => navigate(-1)}
+                  className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-brand/10 bg-white/70 px-3 text-sm font-semibold text-gray-600 shadow-sm backdrop-blur transition-all hover:-translate-y-0.5 hover:border-brand/25 hover:text-brand active:scale-95"
+                  aria-label={t("common.back")}
+                >
+                  <span aria-hidden="true">←</span>
+                  {t("common.back")}
+                </button>
+              ) : (
+                <BrandMark compact />
+              )}
             </div>
 
             {eyebrow && (

@@ -1,10 +1,10 @@
-"""Check that the model provider in python/.env is reachable, and say what is wrong if not.
+"""Check that the model provider in python/.env is configured, and say what is wrong if not.
 
-    python check_llm.py
+    python check_llm.py            # config + the models your key can see. No generation.
+    python check_llm.py --call     # also send one short test prompt.
 
-Prints the provider, the key status, the models the key can actually see, and the result of one
-cheap test call. Run it after changing LLM_BASE_URL, LLM_MODEL or the key — model names differ
-per provider and go out of date, so listing them beats guessing.
+The app is the only thing that should be generating text against the provider, so the test call
+is opt-in. Everything the default run does is free: reading .env and listing models.
 """
 
 import sys
@@ -20,7 +20,9 @@ from app.core.llm_client import (
 )
 
 
-def main() -> int:
+def main(argv: list[str]) -> int:
+    make_call = "--call" in argv
+
     print(f"base URL : {BASE_URL}")
     print(f"model    : {MODEL}")
 
@@ -37,15 +39,22 @@ def main() -> int:
     print(f"key      : {len(LLM_API_KEY)} characters, from {LLM_API_KEY_SOURCE}")
 
     print("\nModels this key can see:")
+    model_found = False
     try:
         names = sorted(model.id for model in client.models.list())
         for name in names:
-            marker = "  <- LLM_MODEL" if name.endswith(MODEL) or name == MODEL else ""
-            print(f"  {name}{marker}")
-        if not any(name == MODEL or name.endswith(MODEL) for name in names):
+            is_current = name == MODEL or name.endswith(f"/{MODEL}")
+            model_found = model_found or is_current
+            print(f"  {name}{'  <- LLM_MODEL' if is_current else ''}")
+        if not model_found:
             print(f"\n  '{MODEL}' is NOT in that list — set LLM_MODEL in python/.env to one of them.")
+            return 1
     except Exception as exc:  # listing is a convenience; a provider may not support it
         print(f"  (could not list models: {exc})")
+
+    if not make_call:
+        print("\nConfiguration looks right. Re-run with --call to send one test prompt.")
+        return 0
 
     print("\nTest call...")
     try:
@@ -64,4 +73,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

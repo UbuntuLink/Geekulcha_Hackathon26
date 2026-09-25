@@ -51,10 +51,9 @@ Geekulcha_Hackathon26/
 │   │   ├── routers/           # classification.py, pricing.py
 │   │   ├── schemas/           # pydantic request/response models
 │   │   └── services/          # classify_request(), estimate_price() — actual logic
-│   ├── customer_message.py   # thin CLI wrapper around app/services, for local testing
-│   ├── pricing.py            # thin CLI wrapper around app/services, for local testing
+│   ├── check_llm.py          # provider/key/model check — no generation unless --call
 │   ├── prompts/               # system prompts used by the classifier/pricer
-│   └── test_messages/         # sample customer messages for local testing
+│   └── tests/                 # unit tests — every model call is mocked
 └── frontend/                  # React (Vite) → Vercel
     ├── src/
     │   ├── pages/
@@ -159,12 +158,12 @@ Now a real FastAPI service (`python/app/`), not just CLI scripts:
   - The prompt is explicit about misspellings, SMS shorthand, SA/multilingual phrasing, and provider-search wording ("find me the best rated plumber") as opposed to problem descriptions.
 - **`POST /price`** (`app/routers/pricing.py`) — wraps `estimate_price()` (`app/services/pricing_service.py`). Grounded in hardcoded SA market reference rates for plumbing/electrical only; other categories get a wide, explicitly-labeled unverified estimate. Backs the price hint on Figma screen 9.
 - **`GET /health`** — for Render's health check.
-- `customer_message.py` / `pricing.py` at the package root are now thin CLI wrappers around the same `app/services` code (no logic duplication) — still useful for local testing against `test_messages/test_messages.txt`.
+- **The running app is the only thing that generates text.** The `customer_message.py` / `pricing.py` CLI runners and their `test_messages/` samples were deleted: they burned provider quota outside the product and could drift from what the API actually does. `check_llm.py` remains for setup checks and does not generate anything unless run with `--call`; every model call in `tests/` is mocked.
 - Needs `LLM_API_KEY` (local: `.env` via `python-dotenv`; Render: set directly in the service's env vars). `LLM_BASE_URL` / `LLM_MODEL` switch provider, `LLM_REASONING_EFFORT` controls thinking (`none` on Gemini — see KEYS.md §1.4), `LLM_MAX_TOKENS` caps output. `python check_llm.py` verifies the lot.
 
 **Bugs found and fixed while scaffolding:**
 - ~~Both prompt templates were missing a comma before the last JSON field in their example response format~~ — fixed in `job_classification_prompt.txt` and `pricing_system_prompt.txt`.
-- ~~`pricing.py` hardcoded the wrong/stale model id instead of reusing the shared `MODEL` constant~~ — fixed; both routers now go through the single `MODEL` constant in `app/core/llm_client.py`.
+- ~~The pricing CLI hardcoded the wrong/stale model id instead of reusing the shared `MODEL` constant~~ — fixed, and that CLI has since been removed; both routers go through the single `MODEL` constant in `app/core/llm_client.py`.
 
 **Now wired in:** the frontend calls `/classify` and `/price` directly (`DescribeProblem.jsx`, `QuoteRequest.jsx`) — the backend never calls the ML service itself, it just stores whatever classification JSON the frontend already has (`ServiceRequest.aiClassificationRaw`).
 

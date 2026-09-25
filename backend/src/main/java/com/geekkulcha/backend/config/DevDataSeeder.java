@@ -8,6 +8,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import java.time.temporal.ChronoUnit;
 
 /**
@@ -62,6 +64,43 @@ public class DevDataSeeder implements CommandLineRunner {
             {"Handyman", "General home repairs and odd jobs"},
     };
 
+    // Typical ZAR ranges per catalog category, used to fill in offerings that reached the shared
+    // database without any pricing — 51 of 58 of them. A provider card with "R0-R0" reads as
+    // broken, and the "cheapest first" sort has nothing to order by while every row is zero.
+    private static final Map<String, int[]> PRICE_GUIDE = Map.ofEntries(
+            Map.entry("Plumbing", new int[]{450, 1800}),
+            Map.entry("Cleaning", new int[]{300, 900}),
+            Map.entry("Electrical", new int[]{500, 2200}),
+            Map.entry("Gardening", new int[]{250, 900}),
+            Map.entry("Automotive Repair", new int[]{600, 3500}),
+            Map.entry("Tutoring", new int[]{180, 550}),
+            Map.entry("Braiding", new int[]{250, 1200}),
+            Map.entry("Hairdressing", new int[]{150, 700}),
+            Map.entry("Nail Services", new int[]{180, 550}),
+            Map.entry("Makeup Services", new int[]{400, 1500}),
+            Map.entry("Painting", new int[]{800, 5000}),
+            Map.entry("Building & Construction", new int[]{1500, 15000}),
+            Map.entry("Tailoring", new int[]{120, 800}),
+            Map.entry("Photography", new int[]{900, 6000}),
+            Map.entry("Handyman", new int[]{300, 1200})
+    );
+
+    // Trade-neutral on purpose, so the same pool reads naturally under a plumber or a nail tech.
+    private static final String[] REVIEW_COMMENTS = {
+            "Arrived on time and sorted it out the same day.",
+            "Fair price and neat work. Would use again.",
+            "Very professional — explained everything before starting.",
+            "Quick to respond and stuck to the quote, no surprises.",
+            "Knows his stuff. Sorted what two other people couldn't.",
+            "Friendly, and left the place tidy afterwards.",
+            "Good work overall, though arrived a bit later than agreed.",
+            "Reasonable rates and no hidden costs.",
+    };
+
+    private static final String[] REVIEWER_NAMES = {
+            "Naledi", "Sibusiso", "Anele", "Farhana", "Karabo", "Michelle",
+    };
+
     @Override
     public void run(String... args) {
         if (serviceRepository.count() == 0) {
@@ -72,6 +111,171 @@ public class DevDataSeeder implements CommandLineRunner {
         // attach a service offering to the demo provider) definitely exists by this point,
         // whether it was just created or already there.
         seedDemoLoginAccounts();
+        seedShowcaseData();
+    }
+
+    /**
+     * Fills the gaps in whatever provider data already exists, rather than creating providers.
+     *
+     * The shared Supabase database was populated outside this seeder and arrived half-dressed:
+     * no prices, no reviews, and every provider flagged available today. Each step below is
+     * guarded on the specific thing being missing, so this is a no-op from the second run
+     * onwards and never overwrites data somebody entered deliberately.
+     */
+    private void seedShowcaseData() {
+        int pricesFilled = backfillOfferingPrices();
+        int providersReviewed = backfillReviews();
+
+        if (pricesFilled > 0 || providersReviewed > 0) {
+            System.out.printf("DevDataSeeder: priced %d offering(s), reviewed %d provider(s)%n",
+                    pricesFilled, providersReviewed);
+        }
+    }
+
+    private int backfillOfferingPrices() {
+        int filled = 0;
+
+        for (ProviderService offering : providerServiceRepository.findAll()) {
+            if (offering.getMinPrice() > 0 || offering.getMaxPrice() > 0) {
+                continue;
+            }
+
+            int[] guide = PRICE_GUIDE.get(offering.getService().getName());
+            if (guide == null) {
+                continue;
+            }
+
+            // Spread deterministically off the provider id so two plumbers don't quote an
+            // identical range, while a given provider's prices stay stable across restarts.
+            long seed = offering.getProviderProfile().getId();
+            int span = guide[1] - guide[0];
+            int min = guide[0] + (int) (seed % 4) * span / 16;
+            int max = guide[1] - (int) (seed % 3) * span / 12;
+            if (max <= min) {
+                max = min + Math.max(50, span / 4);
+            }
+
+            offering.setMinPrice(roundToNearest(min, 10));
+            offering.setMaxPrice(roundToNearest(max, 10));
+            providerServiceRepository.save(offering);
+            filled++;
+        }
+
+        return filled;
+    }
+
+    /**
+     * Gives every unreviewed provider two real Review rows, through the Booking -> Quote chain
+     * the app actually reads.
+     *
+     * Bumping ProviderProfile.reviewCount on its own would be quicker and would look fine on a
+     * provider card, but the profile screen lists real Review rows: the card would claim two
+     * reviews while the page underneath said there were none.
+     */
+    private int backfillReviews() {
+        List<User> reviewers = ensureReviewerAccounts();
+        int reviewed = 0;
+
+        for (ProviderProfile profile : providerProfileRepository.findAll()) {
+            if (!reviewRepository.findByBooking_Quote_ProviderProfile_Id(profile.getId()).isEmpty()) {
+                continue;
+            }
+
+            List<ProviderService> offerings = providerServiceRepository.findAll().stream()
+                    .filter(offering -> offering.getProviderProfile().getId() == profile.getId())
+                    .toList();
+            if (offerings.isEmpty()) {
+                continue;
+            }
+
+            ProviderService offering = offerings.get(0);
+            long seed = profile.getId();
+
+            // Keep the star ratings consistent with the rating this provider already carries,
+            // instead of recomputing and flattening a curated number.
+            double existing = profile.getRating();
+            int[] stars = existing >= 4.75 ? new int[]{5, 5}
+                    : existing >= 4.5 ? new int[]{5, 4}
+                    : existing >= 4.0 ? new int[]{4, 4}
+                    : existing > 0 ? new int[]{4, 3}
+                    : new int[]{5, 4};
+
+            for (int i = 0; i < stars.length; i++) {
+                User reviewer = reviewers.get((int) ((seed + i) % reviewers.size()));
+                int daysAgo = 3 + (int) ((seed + i * 5L) % 40);
+                writeReview(profile, offering, reviewer, stars[i],
+                        REVIEW_COMMENTS[(int) ((seed * 2 + i) % REVIEW_COMMENTS.length)], daysAgo);
+            }
+
+            if (existing <= 0) {
+                profile.setRating(4.5);
+            }
+            profile.setReviewCount(stars.length);
+            // Not everyone can be free on the same day. While every row said true, the "available
+            // today" filter in the customer search had nothing to filter out.
+            profile.setAvailableToday(seed % 3 != 0);
+            providerProfileRepository.save(profile);
+            reviewed++;
+        }
+
+        return reviewed;
+    }
+
+    private void writeReview(ProviderProfile profile, ProviderService offering, User reviewer,
+                             int stars, String comment, int daysAgo) {
+        Instant when = Instant.now().minus(daysAgo, ChronoUnit.DAYS);
+
+        ServiceRequest request = new ServiceRequest();
+        request.setUser(reviewer);
+        request.setService(offering.getService());
+        request.setDescription("Completed " + offering.getService().getName().toLowerCase() + " job.");
+        request.setStatus(RequestStatus.COMPLETED);
+        request.setCreatedAt(when);
+        serviceRequestRepository.save(request);
+
+        Quote quote = new Quote();
+        quote.setServiceRequest(request);
+        quote.setProviderProfile(profile);
+        quote.setAmount(roundToNearest((offering.getMinPrice() + offering.getMaxPrice()) / 2, 10));
+        quote.setStatus(QuoteStatus.ACCEPTED);
+        quote.setCreatedAt(when);
+        quoteRepository.save(quote);
+
+        Booking booking = new Booking();
+        booking.setQuote(quote);
+        booking.setStatus(BookingStatus.COMPLETED);
+        booking.setCreatedAt(when);
+        bookingRepository.save(booking);
+
+        Review review = new Review();
+        review.setBooking(booking);
+        review.setRating(stars);
+        review.setComment(comment);
+        review.setCreatedAt(when.plus(1, ChronoUnit.DAYS));
+        reviewRepository.save(review);
+    }
+
+    /** Passwordless accounts, like the catalog-filler providers — they exist to author reviews. */
+    private List<User> ensureReviewerAccounts() {
+        List<User> reviewers = new java.util.ArrayList<>();
+
+        for (String firstName : REVIEWER_NAMES) {
+            String email = firstName.toLowerCase() + ".reviews@ubuntulink.local";
+            reviewers.add(userRepository.findByEmail(email).orElseGet(() -> {
+                User user = new User();
+                user.setEmail(email);
+                user.setFirstName(firstName);
+                user.setLastName("M.");
+                user.setCreatedAt(Instant.now());
+                return userRepository.save(user);
+            }));
+        }
+
+        return reviewers;
+    }
+
+    private static double roundToNearest(double value, int step) {
+        return Math.round(value / step) * (double) step;
     }
 
     private void seedCatalogAndDemoProviders() {

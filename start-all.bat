@@ -1,17 +1,21 @@
 @echo off
 
-echo =============================
-echo Starting all services...
-echo =============================
+echo ==========================================
+echo Starting all UbuntuLink services...
+echo ==========================================
 
+echo Starting Spring Boot backend (port 8080)...
+start "Spring Boot Backend" cmd /k "cd /d %~dp0backend && mvnw.cmd spring-boot:run"
 
-start "Springboot backend" cmd /k "cd /d %~dp0backend && mvnw.cmd spring-boot:run"
+echo Starting React frontend (port 5173)...
+start "React Frontend" cmd /k "cd /d %~dp0frontend && npm run dev"
 
-start "React frontend" cmd /k "cd /d %~dp0frontend && npm run dev"
-
-start "ML backend" cmd /k "cd /d %~dp0python && python -m uvicorn app.main:app --reload"
+echo Starting Python ML service (port 8000)...
+start "Python ML Backend" cmd /k "cd /d %~dp0python && python -m uvicorn app.main:app --reload"
 
 echo.
-echo All services have been launched.
-echo You can close this window.
+echo ==========================================
+echo All three services launched in their own windows.
+echo Backend needs backend\.env, ML service needs python\.env.
+echo ==========================================
 pause

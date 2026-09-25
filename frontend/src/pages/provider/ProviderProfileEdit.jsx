@@ -14,9 +14,13 @@ import {
 } from "../../api/services.js";
 import { formatRange } from "../../lib/format.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
+import { useNavigate } from "react-router-dom";
 
 export default function ProviderProfileEdit() {
   const { t } = useLanguage();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [allServices, setAllServices] = useState([]);
   const [form, setForm] = useState(null);
@@ -172,6 +176,22 @@ export default function ProviderProfileEdit() {
           </div>
           <Button variant="outline" className="mt-2" onClick={handleAddService} disabled={!newService.serviceId}>
             {t("provider.addService")}
+          </Button>
+        </Card>
+
+        {/* Customers sign out from their Profile screen; providers had nowhere to, except a
+            header control that was hidden on desktop. */}
+        <Card>
+          <p className="font-semibold text-gray-900">{user?.email}</p>
+          <Button
+            variant="outline"
+            className="mt-3"
+            onClick={() => {
+              logout();
+              navigate("/login");
+            }}
+          >
+            {t("common.signOut")}
           </Button>
         </Card>
       </div>

@@ -123,28 +123,36 @@ export default function Screen({
       <div className="pointer-events-none absolute -left-24 top-64 h-52 w-52 rounded-full bg-white/70 blur-3xl lg:h-80 lg:w-80" />
 
       <div className={`relative mx-auto w-full ${widthClass} px-4 pt-5 sm:px-6 sm:pt-6 lg:px-8 ${withNav && desktopNav !== "hero" ? "lg:pt-28" : "lg:pt-8"} xl:px-10`}>
+        {/* The brand mark is hidden on desktop because the nav bar already shows it — but the
+            controls must not be, or a signed-in user on a laptop has no way to log out. That is
+            what happened when these were folded into one row that was hidden wholesale. */}
         {!title && !showBack && withNav && (
-          <div className="mb-4 flex items-center justify-between gap-3 lg:hidden">
-            <BrandMark compact />
-            {controls}
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="lg:hidden">
+              <BrandMark compact />
+            </div>
+            <div className="ml-auto">{controls}</div>
           </div>
         )}
         {(title || showBack) && (
           <header className="mb-6 animate-fade-up lg:mb-8">
-            <div className={`mb-4 flex items-center justify-between gap-3 ${!showBack && withNav ? "lg:hidden" : ""}`}>
-              {showBack ? (
-                <button
-                  onClick={() => navigate(-1)}
-                  className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-brand/10 bg-white/70 px-3 text-sm font-semibold text-gray-600 shadow-sm backdrop-blur transition-all hover:-translate-y-0.5 hover:border-brand/25 hover:text-brand active:scale-95"
-                  aria-label={t("common.back")}
-                >
-                  <span aria-hidden="true">←</span>
-                  {t("common.back")}
-                </button>
-              ) : (
-                <BrandMark compact />
-              )}
-              {controls}
+            <div className="mb-4 flex items-center justify-between gap-3">
+              {/* Only the left side collapses on desktop — see the comment above. */}
+              <div className={!showBack && withNav ? "lg:hidden" : ""}>
+                {showBack ? (
+                  <button
+                    onClick={() => navigate(-1)}
+                    className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-brand/10 bg-white/70 px-3 text-sm font-semibold text-gray-600 shadow-sm backdrop-blur transition-all hover:-translate-y-0.5 hover:border-brand/25 hover:text-brand active:scale-95"
+                    aria-label={t("common.back")}
+                  >
+                    <span aria-hidden="true">←</span>
+                    {t("common.back")}
+                  </button>
+                ) : (
+                  <BrandMark compact />
+                )}
+              </div>
+              <div className="ml-auto">{controls}</div>
             </div>
 
             {eyebrow && (

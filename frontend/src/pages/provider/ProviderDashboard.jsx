@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Screen from "../../components/layout/Screen.jsx";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 import Card from "../../components/common/Card.jsx";
 import { getMyBookings, getMyProviderProfile, getOpenRequests } from "../../api/services.js";
-import { useLanguage } from "../../context/LanguageContext.jsx";
 
 const ACTIVE_STATUSES = ["REQUEST_SENT", "ACCEPTED", "ON_THE_WAY"];
 
@@ -24,35 +24,51 @@ export default function ProviderDashboard() {
   }, [navigate]);
 
   return (
-    <Screen title={`Hi, ${profile?.providerName?.split(" ")[0] ?? t("common.personFallback")}`} showBack={false} withNav navRole="provider">
-      <div className="grid grid-cols-2 gap-3">
-        <Card className="cursor-pointer" onClick={() => navigate("/provider/requests")}>
-          <p className="text-3xl font-bold text-brand">{openCount ?? "…"}</p>
-          <p className="text-sm text-gray-500">{t("provider.openRequests")}</p>
-        </Card>
-        <Card className="cursor-pointer" onClick={() => navigate("/provider/bookings")}>
-          <p className="text-3xl font-bold text-brand">{activeCount ?? "…"}</p>
-          <p className="text-sm text-gray-500">{t("provider.activeBookings")}</p>
-        </Card>
+    <Screen title={`Hi, ${profile?.providerName?.split(" ")[0] ?? t("common.personFallback")}`} subtitle="Here’s what needs your attention today." showBack={false} withNav navRole="provider" size="wide">
+      <div className="lg:grid lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] lg:items-start lg:gap-6">
+        <div>
+          <div className="grid grid-cols-2 gap-3">
+            <Card className="cursor-pointer lg:p-6" onClick={() => navigate("/provider/requests")}>
+              <p className="text-3xl font-bold text-brand lg:text-5xl">{openCount ?? "…"}</p>
+              <p className="mt-1 text-sm text-gray-500">{t("provider.openRequests")}</p>
+            </Card>
+            <Card className="cursor-pointer lg:p-6" onClick={() => navigate("/provider/bookings")}>
+              <p className="text-3xl font-bold text-brand lg:text-5xl">{activeCount ?? "…"}</p>
+              <p className="mt-1 text-sm text-gray-500">{t("provider.activeBookings")}</p>
+            </Card>
+          </div>
+
+          <button
+            onClick={() => navigate("/provider/requests")}
+            className="group mt-4 w-full rounded-2xl bg-brand p-5 text-left text-white shadow-[0_14px_34px_rgba(31,92,69,0.20)] transition-all hover:-translate-y-0.5 hover:bg-brand-dark hover:shadow-[0_18px_40px_rgba(31,92,69,0.24)] lg:p-7"
+          >
+            <div className="flex items-center justify-between gap-5">
+              <div>
+                <p className="text-lg font-semibold lg:text-xl">{t("provider.browseRequests")}</p>
+                <p className="mt-1 text-sm text-white/80">{t("provider.findJobs")}</p>
+              </div>
+              <span className="text-2xl text-white/70 transition-transform group-hover:translate-x-1">→</span>
+            </div>
+          </button>
+        </div>
+
+        {profile && (
+          <Card className="mt-4 lg:mt-0 lg:p-6">
+            <p className="text-xs font-bold uppercase tracking-[0.15em] text-brand/60">{t("provider.profile")}</p>
+            <p className="mt-3 text-xl font-bold text-gray-900">{profile.providerName}</p>
+            <p className="mt-2 text-sm leading-6 text-gray-500">
+              {profile.services.length} service{profile.services.length === 1 ? "" : "s"} listed ·{" "}
+              {profile.availableToday ? t("provider.availableToday") : t("provider.unavailableToday")}
+            </p>
+            <button
+              onClick={() => navigate("/provider/profile")}
+              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-brand-soft px-4 py-2.5 text-sm font-bold text-brand transition-all hover:bg-brand/15"
+            >
+              Manage profile <span>→</span>
+            </button>
+          </Card>
+        )}
       </div>
-
-      <button
-        onClick={() => navigate("/provider/requests")}
-        className="mt-4 w-full rounded-xl bg-brand p-4 text-left text-white transition-colors hover:bg-brand-dark"
-      >
-        <p className="text-lg font-semibold">{t("provider.browseRequests")}</p>
-        <p className="text-sm text-white/80">{t("provider.findJobs")}</p>
-      </button>
-
-      {profile && (
-        <Card className="mt-4">
-          <p className="text-sm text-gray-500">{t("provider.profile")}</p>
-          <p className="font-medium text-gray-900">{profile.providerName}</p>
-          <p className="text-sm text-gray-500">
-            {profile.services.length} service{profile.services.length === 1 ? "" : "s"} listed · {profile.availableToday ? t("provider.availableToday") : t("provider.unavailableToday")}
-          </p>
-        </Card>
-      )}
     </Screen>
   );
 }

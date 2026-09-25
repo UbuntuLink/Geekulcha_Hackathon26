@@ -1,7 +1,10 @@
 export default function Loading({ label = "Loading..." }) {
   return (
-    <div className="flex items-center gap-2 py-8 text-sm text-gray-500">
-      <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-brand" />
+    <div role="status" aria-live="polite" className="flex items-center gap-3 py-5 text-sm font-medium text-gray-600">
+      <span aria-hidden="true" className="relative h-5 w-5 shrink-0">
+        <span className="absolute inset-0 rounded-full border-2 border-brand/15" />
+        <span className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-brand" />
+      </span>
       {label}
     </div>
   );

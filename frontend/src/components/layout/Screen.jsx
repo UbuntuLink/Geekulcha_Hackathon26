@@ -1,16 +1,40 @@
 import { useEffect, useRef, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import BottomNav from "./BottomNav.jsx";
+import BrandMark from "../common/BrandMark.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { LANGUAGES, useLanguage } from "../../context/LanguageContext.jsx";
-import { CUSTOMER_LINKS, PROVIDER_LINKS } from "./BottomNav.jsx";
 
-/** Shared page shell: title, neat top navigation, and visible language control. */
-export default function Screen({ title, subtitle, showBack = true, withNav = false, navRole, children }) {
+const widthClasses = {
+  compact: "max-w-3xl",
+  normal: "max-w-5xl",
+  wide: "max-w-7xl",
+};
+
+/**
+ * Shared page shell.
+ *
+ * The layout is the restyled one from Leshen/ChatGPT-improved-ui; navigation lives in BottomNav
+ * again rather than a top quick-nav. The language selector and the read-aloud control come from
+ * the multilingual work on extra-features and are kept here, because they are the only way to
+ * reach either feature.
+ */
+export default function Screen({
+  title,
+  subtitle,
+  showBack = true,
+  withNav = false,
+  navRole,
+  desktopNav,
+  eyebrow,
+  size = "compact",
+  children,
+}) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { user, logout } = useAuth();
   const { language, setLanguage, t } = useLanguage();
-  const resolvedRole = navRole || (user?.isProvider ? "provider" : "customer");
-  const quickLinks = resolvedRole === "provider" ? PROVIDER_LINKS : CUSTOMER_LINKS;
+  const widthClass = widthClasses[size] ?? widthClasses.normal;
   const contentRef = useRef(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
 
@@ -61,72 +85,86 @@ export default function Screen({ title, subtitle, showBack = true, withNav = fal
     synth.speak(utterance);
   };
 
+  const controls = user ? (
+    <div className="flex items-center gap-1.5 sm:gap-2">
+      <button
+        type="button"
+        onClick={readPage}
+        className="rounded-xl border border-brand/15 bg-white/70 px-2.5 py-2 text-[10px] font-semibold text-brand shadow-sm backdrop-blur transition-colors hover:bg-brand/10 sm:px-3 sm:text-xs"
+        aria-label={isSpeaking ? t("common.stopReading") : t("common.readPage")}
+      >
+        {isSpeaking ? t("common.stopReading") : t("common.readPage")}
+      </button>
+      <select
+        value={language}
+        onChange={(e) => setLanguage(e.target.value)}
+        className="rounded-xl border border-brand/10 bg-white/70 px-2 py-2 text-[10px] font-medium text-gray-700 shadow-sm outline-none backdrop-blur focus:border-brand sm:text-xs"
+        aria-label={t("common.language")}
+      >
+        {LANGUAGES.map((option) => (
+          <option key={option.code} value={option.code}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        onClick={handleLogout}
+        className="rounded-xl border border-red-200 bg-red-50/80 px-2.5 py-2 text-[10px] font-semibold text-red-600 shadow-sm backdrop-blur transition-colors hover:bg-red-100 sm:px-3 sm:text-xs"
+      >
+        {t("nav.logout")}
+      </button>
+    </div>
+  ) : null;
+
   return (
-    <div className="min-h-screen bg-cream px-2 pt-3 pb-8 sm:px-4 lg:px-6">
-      <div className="mx-auto w-full max-w-5xl">
-        {user && (
-          <div className="mb-4 rounded-2xl border border-gray-200 bg-white p-2 shadow-sm">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0 w-full overflow-x-auto sm:w-auto sm:flex-1">
-                <div className="flex min-w-max items-center gap-1.5 sm:gap-2">
-                  {quickLinks.map((link) => (
-                    <NavLink
-                      key={link.to}
-                      to={link.to}
-                      className={({ isActive }) =>
-                        `rounded-lg px-2 py-2 text-[10px] font-semibold whitespace-nowrap transition-colors sm:px-3 sm:text-xs ${
-                          isActive ? "bg-brand/10 text-brand" : "text-gray-600 hover:bg-gray-100 hover:text-gray-800"
-                        }`
-                      }
-                    >
-                      {t(link.label)}
-                    </NavLink>
-                  ))}
-                </div>
-              </div>
+    <div className={`app-canvas ${withNav ? "has-bottom-nav" : ""} relative min-h-screen overflow-hidden bg-cream lg:min-h-screen ${withNav ? "pb-28 lg:pb-28" : "pb-10 lg:pb-14"}`}>
+      <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-brand/7 blur-3xl lg:h-96 lg:w-96" />
+      <div className="pointer-events-none absolute -left-24 top-64 h-52 w-52 rounded-full bg-white/70 blur-3xl lg:h-80 lg:w-80" />
 
-              <div className="flex items-center justify-between gap-2 sm:justify-end">
-                <button
-                  type="button"
-                  onClick={readPage}
-                  className="rounded-lg border border-brand/20 bg-brand/5 px-2.5 py-2 text-[10px] font-semibold text-brand transition-colors hover:bg-brand/10 sm:px-3 sm:text-xs"
-                  aria-label={isSpeaking ? t("common.stopReading") : t("common.readPage")}
-                >
-                  {isSpeaking ? t("common.stopReading") : t("common.readPage")}
-                </button>
-                <label className="sr-only">{t("common.language")}</label>
-                <select
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  className="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-[10px] font-medium text-gray-700 outline-none focus:border-brand sm:text-xs"
-                  aria-label={t("common.language")}
-                >
-                  {LANGUAGES.map((option) => (
-                    <option key={option.code} value={option.code}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 text-[10px] font-semibold text-red-600 transition-colors hover:bg-red-100 sm:px-3 sm:text-xs"
-                >
-                  {t("nav.logout")}
-                </button>
-              </div>
-            </div>
+      <div className={`relative mx-auto w-full ${widthClass} px-4 pt-5 sm:px-6 sm:pt-6 lg:px-8 ${withNav && desktopNav !== "hero" ? "lg:pt-28" : "lg:pt-8"} xl:px-10`}>
+        {!title && !showBack && withNav && (
+          <div className="mb-4 flex items-center justify-between gap-3 lg:hidden">
+            <BrandMark compact />
+            {controls}
           </div>
         )}
-
         {(title || showBack) && (
-          <div className="mb-4">
-            {title && <h1 className="text-2xl font-bold text-gray-900">{title}</h1>}
-            {subtitle && <p className="mt-1 text-sm text-gray-500">{subtitle}</p>}
-          </div>
+          <header className="mb-6 animate-fade-up lg:mb-8">
+            <div className={`mb-4 flex items-center justify-between gap-3 ${!showBack && withNav ? "lg:hidden" : ""}`}>
+              {showBack ? (
+                <button
+                  onClick={() => navigate(-1)}
+                  className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-brand/10 bg-white/70 px-3 text-sm font-semibold text-gray-600 shadow-sm backdrop-blur transition-all hover:-translate-y-0.5 hover:border-brand/25 hover:text-brand active:scale-95"
+                  aria-label={t("common.back")}
+                >
+                  <span aria-hidden="true">←</span>
+                  {t("common.back")}
+                </button>
+              ) : (
+                <BrandMark compact />
+              )}
+              {controls}
+            </div>
+
+            {eyebrow && (
+              <p className="mb-1.5 text-xs font-bold uppercase tracking-[0.18em] text-brand/70">{eyebrow}</p>
+            )}
+            {title && (
+              <h1 className="max-w-3xl text-[1.72rem] font-extrabold leading-tight tracking-[-0.025em] text-ink sm:text-3xl lg:text-[2.15rem]">
+                {title}
+              </h1>
+            )}
+            {subtitle && <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-500 sm:text-[15px]">{subtitle}</p>}
+          </header>
         )}
-        <div ref={contentRef}>{children}</div>
+
+        <main key={pathname} ref={contentRef} className="page-content relative">
+          {children}
+        </main>
       </div>
+
+      {withNav && <BottomNav role={navRole} desktopVariant={desktopNav} />}
     </div>
   );
 }

@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 
 import Screen from "../../components/layout/Screen.jsx";
 import Button from "../../components/common/Button.jsx";
+import Card from "../../components/common/Card.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import Loading from "../../components/common/Loading.jsx";
+import ProgressSteps from "../../components/common/ProgressSteps.jsx";
 
 import {
   classifyMessage,
@@ -102,6 +104,8 @@ export default function DescribeProblem() {
         return;
       }
 
+      // Do NOT create the service request yet.
+      // First send the user to the review screen.
       navigate("/requests/review", {
         state: {
           originalDescription: description.trim() || customerMessage,
@@ -111,9 +115,8 @@ export default function DescribeProblem() {
       });
     } catch (err) {
       console.error(err);
-
       setError(
-        "Couldn't reach the ML service or backend — make sure both are running locally (see INSTRUCTIONS.md)."
+        "We couldn't process that request right now. Make sure the AI service and backend are running, then try again."
       );
     } finally {
       setLoading(false);
@@ -121,75 +124,121 @@ export default function DescribeProblem() {
   };
 
   return (
-    <Screen title={t("customer.problemTitle")} subtitle={t("customer.problemSubtitle")}>
-      <textarea
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        placeholder={t("customer.problemPreview")}
-        className="min-h-[140px] w-full rounded-xl border border-gray-200 bg-white p-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-      />
+    <Screen
+      title={t("customer.problemTitle")}
+      subtitle={t("customer.problemSubtitle")}
+      eyebrow="Step 1 of 3"
+      size="wide"
+    >
+      <ProgressSteps current={1} className="mb-6 max-w-3xl" />
 
-      <div className="mt-4">
-        <p className="mb-2 text-sm font-medium text-gray-700">{t("customer.photoOptional")}</p>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={handlePhotoSelect}
-        />
-
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white text-2xl text-gray-400 transition-colors hover:border-brand hover:text-brand"
-        >
-          +
-        </button>
-
-        {photoDataUrl && (
-          <div className="mt-3 flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3">
-            <img
-              src={photoDataUrl}
-              alt="Problem preview"
-              className="h-16 w-16 rounded-md object-cover"
-            />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-gray-800">{photoName}</p>
-              <p className="text-xs text-gray-500">{t("customer.readyAttach")}</p>
+      <div className="lg:grid lg:grid-cols-[minmax(0,1.55fr)_minmax(280px,0.65fr)] lg:items-start lg:gap-5 xl:gap-7">
+        <Card className="lg:p-6 xl:p-7">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold text-ink lg:text-base">Describe the problem</p>
+              <p className="mt-0.5 text-xs text-gray-500 lg:text-sm">Include what happened, where it is, and how urgent it feels.</p>
             </div>
-            <button
-              type="button"
-              onClick={clearPhoto}
-              className="text-xs font-medium text-brand hover:text-brand-dark"
-            >
-              {t("common.remove")}
-            </button>
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand lg:h-10 lg:w-10">✦</span>
           </div>
-        )}
+
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            maxLength={1000}
+            placeholder={t("customer.problemPreview")}
+            className="min-h-[190px] w-full resize-y rounded-2xl border border-gray-200 bg-brand-mist/45 p-4 text-sm leading-6 text-gray-900 transition-all placeholder:text-gray-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/15"
+          />
+          <div className="mt-2 flex items-center justify-between text-xs text-gray-400">
+            <span>Plain language is perfect.</span>
+            <span>{description.length}/1000</span>
+          </div>
+        </Card>
+
+        <div className="mt-3 space-y-3 lg:mt-0">
+          <Card className="lg:p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-bold text-ink">{t("customer.photoOptional")}</p>
+                <p className="mt-0.5 text-xs leading-5 text-gray-500">Optional — useful for damage, leaks, or visible faults.</p>
+              </div>
+
+              {/* A real upload, not a placeholder: the image is sent to the classifier alongside
+                  the text, so the model can diagnose from the picture. */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handlePhotoSelect}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-dashed border-brand/30 bg-brand-mist text-xl font-light text-brand transition-all hover:-translate-y-0.5 hover:border-brand/50 hover:bg-brand-soft"
+                aria-label={t("customer.photoOptional")}
+              >
+                +
+              </button>
+            </div>
+
+            {photoDataUrl && (
+              <div className="mt-3 flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3">
+                <img src={photoDataUrl} alt="Problem preview" className="h-14 w-14 rounded-xl object-cover" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-gray-800">{photoName}</p>
+                  <p className="text-xs text-gray-500">{t("customer.readyAttach")}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearPhoto}
+                  className="text-xs font-bold text-brand hover:text-brand-dark"
+                >
+                  {t("common.remove")}
+                </button>
+              </div>
+            )}
+          </Card>
+
+          <Card className="hidden lg:block lg:p-5">
+            <p className="text-xs font-bold uppercase tracking-[0.15em] text-brand/60">What happens next</p>
+            <div className="mt-4 space-y-4">
+              {[
+                ["1", "AI identifies the service", "We classify your problem and create a clearer summary."],
+                ["2", "You review it", "Add extra details before anything is saved."],
+                ["3", "We find providers", "You’ll see matching providers for the service."],
+              ].map(([number, heading, copy]) => (
+                <div key={number} className="flex gap-3">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand-soft text-xs font-extrabold text-brand">{number}</span>
+                  <div>
+                    <p className="text-sm font-semibold text-ink">{heading}</p>
+                    <p className="mt-0.5 text-xs leading-5 text-gray-500">{copy}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
       </div>
 
-      {error && (
-        <div className="mt-4">
-          <ErrorBanner>{error}</ErrorBanner>
-        </div>
-      )}
+      {error && <div className="mt-4"><ErrorBanner>{error}</ErrorBanner></div>}
 
       {loading && (
-        <div className="mt-4 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2">
+        <div className="mt-4 rounded-2xl border border-brand/15 bg-brand-mist px-4">
           <Loading label={t("customer.aiLoading")} />
         </div>
       )}
 
-      <Button
-        onClick={handleSubmit}
-        disabled={loading || (!description.trim() && !photoDataUrl)}
-        className="mt-6"
-      >
-        {loading ? t("customer.aiLoadingShort") : t("customer.findRightService")}
-      </Button>
+      <div className="mt-5 lg:flex lg:justify-end">
+        <Button
+          onClick={handleSubmit}
+          disabled={loading || (!description.trim() && !photoDataUrl)}
+          className="lg:max-w-[320px]"
+        >
+          {loading ? t("customer.aiLoadingShort") : <>{t("customer.findRightService")} <span aria-hidden="true">→</span></>}
+        </Button>
+      </div>
     </Screen>
   );
 }

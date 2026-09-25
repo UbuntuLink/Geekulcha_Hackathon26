@@ -6,9 +6,11 @@ import Loading from "../../components/common/Loading.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import EmptyState from "../../components/common/EmptyState.jsx";
 import { getMyProviderProfile, getOpenRequests } from "../../api/services.js";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 
 export default function RequestsFeed() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [requests, setRequests] = useState(null);
   const [error, setError] = useState("");
   const [myProviderProfileId, setMyProviderProfileId] = useState(null);
@@ -24,7 +26,7 @@ export default function RequestsFeed() {
   }, []);
 
   return (
-    <Screen title="Service requests" subtitle="Open jobs you can quote on." showBack={false} withNav navRole="provider">
+    <Screen title={t("nav.requests")} subtitle={t("customer.providerAvailability")} showBack={false} withNav navRole="provider">
       {error && <ErrorBanner>{error}</ErrorBanner>}
       {requests === null && !error && <Loading />}
       {requests?.length === 0 && <EmptyState>No open requests right now — check back soon.</EmptyState>}

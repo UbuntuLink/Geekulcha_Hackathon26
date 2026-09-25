@@ -6,6 +6,7 @@ import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import EmptyState from "../../components/common/EmptyState.jsx";
 import { getMyBookings, mockCharge, updateBookingStatus } from "../../api/services.js";
 import { formatZAR } from "../../lib/format.js";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 
 const STEPS = ["REQUEST_SENT", "ACCEPTED", "ON_THE_WAY", "COMPLETED"];
 const STEP_LABELS = {
@@ -17,6 +18,7 @@ const STEP_LABELS = {
 
 /** This is where booking status actually advances now — the customer's view is read-only. */
 export default function ProviderBookings() {
+  const { t } = useLanguage();
   const [bookings, setBookings] = useState(null);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
@@ -52,7 +54,7 @@ export default function ProviderBookings() {
   };
 
   return (
-    <Screen title="My bookings" showBack={false} withNav navRole="provider">
+    <Screen title={t("provider.myBookings")} showBack={false} withNav navRole="provider">
       {error && <ErrorBanner>{error}</ErrorBanner>}
       {bookings === null && !error && <Loading />}
       {bookings?.length === 0 && <EmptyState>No bookings yet.</EmptyState>}
@@ -64,8 +66,7 @@ export default function ProviderBookings() {
             <Card key={b.id}>
               <p className="font-semibold text-gray-900">{b.quote.serviceRequest?.description}</p>
               <p className="mt-1 text-sm text-gray-500">
-                {b.quote.serviceRequest?.user?.firstName} {b.quote.serviceRequest?.user?.lastName} ·{" "}
-                {formatZAR(b.quote.amount)}
+                {b.quote.serviceRequest?.user?.firstName} {b.quote.serviceRequest?.user?.lastName} · {formatZAR(b.quote.amount)}
               </p>
               <p className="mt-2 text-sm font-medium text-brand">{STEP_LABELS[b.status]}</p>
               {b.status !== "COMPLETED" && (

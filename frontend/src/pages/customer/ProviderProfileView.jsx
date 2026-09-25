@@ -9,11 +9,13 @@ import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import EmptyState from "../../components/common/EmptyState.jsx";
 import { getProviderProfile } from "../../api/services.js";
 import { formatRange } from "../../lib/format.js";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 
 export default function ProviderProfileView() {
   const { providerId } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState("");
 
@@ -30,7 +32,7 @@ export default function ProviderProfileView() {
 
   if (error) {
     return (
-      <Screen title="Provider profile">
+      <Screen title={t("common.provider")}>
         <ErrorBanner>{error}</ErrorBanner>
       </Screen>
     );
@@ -38,7 +40,7 @@ export default function ProviderProfileView() {
 
   if (!profile) {
     return (
-      <Screen title="Provider profile">
+      <Screen title={t("common.provider")}>
         <Loading />
       </Screen>
     );
@@ -54,20 +56,20 @@ export default function ProviderProfileView() {
         <div className="mt-4 rounded-xl bg-brand p-4 text-white">
           <p className="text-lg font-bold">{mainService.serviceName}</p>
           <p className="text-sm text-white/80">
-            {profile.location} · {profile.availableToday ? "Available today" : "Unavailable today"}
+            {profile.location} · {profile.availableToday ? t("common.availableToday") : t("common.unavailableToday")}
           </p>
           <p className="mt-1 font-medium">{formatRange(mainService.minPrice, mainService.maxPrice)}</p>
         </div>
       )}
 
       <div className="mt-4">
-        <h2 className="font-semibold text-gray-900">About this provider</h2>
+        <h2 className="font-semibold text-gray-900">{t("common.aboutProvider")}</h2>
         <p className="mt-1 text-sm text-gray-600">{profile.bio}</p>
       </div>
 
       <div className="mt-4">
-        <h2 className="mb-2 font-semibold text-gray-900">Recent reviews</h2>
-        {profile.reviews.length === 0 && <EmptyState>No reviews yet.</EmptyState>}
+        <h2 className="mb-2 font-semibold text-gray-900">{t("common.recentReviews")}</h2>
+        {profile.reviews.length === 0 && <EmptyState>{t("common.noReviews")}</EmptyState>}
         {profile.reviews.map((r, i) => (
           <Card key={i} className="mb-2">
             <p className="text-sm italic text-gray-900">"{r.comment}"</p>
@@ -85,13 +87,9 @@ export default function ProviderProfileView() {
         }
         disabled={!state?.serviceRequestId}
       >
-        Request a quote
+        {t("common.requestQuote")}
       </Button>
-      {!state?.serviceRequestId && (
-        <p className="mt-2 text-center text-xs text-gray-500">
-          Start from "Describe your problem" to request a quote.
-        </p>
-      )}
+      {!state?.serviceRequestId && <p className="mt-2 text-center text-xs text-gray-500">{t("common.startFromProblem")}</p>}
     </Screen>
   );
 }

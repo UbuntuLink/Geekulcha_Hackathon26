@@ -22,8 +22,7 @@ router = APIRouter(
 @router.post("", response_model=ClassifyResponse)
 def classify(request: ClassifyRequest) -> ClassifyResponse:
     try:
-        result = classify_request(request.message)
-
+        result = classify_request(request.message, request.photo_data_url)
         return ClassifyResponse(**result)
 
     except Exception as exc:

@@ -2,8 +2,13 @@ import { apiClient } from "./client";
 import { mlClient } from "./mlClient";
 
 // --- ML service (Python/FastAPI) ---
-export const classifyMessage = (message) =>
-  mlClient.post("/classify", { message }).then((res) => res.data);
+export const classifyMessage = (message, photoDataUrl = null) =>
+  mlClient
+    .post("/classify", {
+      message,
+      ...(photoDataUrl ? { photoDataUrl } : {}),
+    })
+    .then((res) => res.data);
 
 export const estimatePrice = (category, message) =>
   mlClient.post("/price", { category, message }).then((res) => res.data);

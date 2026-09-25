@@ -1,35 +1,31 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext.jsx";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 
-const CUSTOMER_LINKS = [
-  { to: "/home", label: "Home" },
-  { to: "/requests/mine", label: "Requests" },
-  { to: "/profile", label: "Profile" },
+export const CUSTOMER_LINKS = [
+  { to: "/home", label: "nav.home" },
+  { to: "/requests/mine", label: "nav.requests" },
+  { to: "/profile", label: "nav.profile" },
 ];
 
-const PROVIDER_LINKS = [
-  { to: "/provider/dashboard", label: "Dashboard" },
-  { to: "/provider/requests", label: "Requests" },
-  { to: "/provider/bookings", label: "Bookings" },
-  { to: "/provider/profile", label: "Profile" },
+export const PROVIDER_LINKS = [
+  { to: "/provider/dashboard", label: "nav.dashboard" },
+  { to: "/provider/requests", label: "nav.requests" },
+  { to: "/provider/bookings", label: "nav.bookings" },
+  { to: "/provider/profile", label: "nav.profile" },
 ];
 
-/** role: "provider" switches to the provider's 4 tabs; anything else is the customer's 3. */
+/** Kept for compatibility; the app now uses the top quick-nav instead of a fixed bottom nav. */
 export default function BottomNav({ role }) {
   const links = role === "provider" ? PROVIDER_LINKS : CUSTOMER_LINKS;
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+  const { t } = useLanguage();
 
-  return (
-    <nav className="fixed bottom-0 left-1/2 flex w-full max-w-[480px] -translate-x-1/2 justify-around border-t border-gray-200 bg-white py-3">
-      {links.map((link) => (
-        <NavLink
-          key={link.to}
-          to={link.to}
-          className={({ isActive }) =>
-            `text-sm font-medium ${isActive ? "text-brand" : "text-gray-400"}`
-          }
-        >
-          {link.label}
-        </NavLink>
-      ))}
-    </nav>
-  );
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
+  return null;
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import Screen from "../../components/layout/Screen.jsx";
@@ -11,39 +11,74 @@ import {
   listServices,
   createUnsupportedServiceRequest,
 } from "../../api/services.js";
-
+import { useLanguage } from "../../context/LanguageContext.jsx";
 
 export default function DescribeProblem() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
+  const fileInputRef = useRef(null);
 
   const [description, setDescription] = useState("");
+  const [photoDataUrl, setPhotoDataUrl] = useState("");
+  const [photoName, setPhotoName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const handlePhotoSelect = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-  const handleSubmit = async () => {
-    if (!description.trim()) {
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file for the photo upload.");
+      event.target.value = "";
       return;
     }
+
+    setError("");
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPhotoDataUrl(String(reader.result || ""));
+      setPhotoName(file.name);
+    };
+    reader.onerror = () => {
+      setError("The selected photo could not be read. Please try another image.");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const clearPhoto = () => {
+    setPhotoDataUrl("");
+    setPhotoName("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!description.trim() && !photoDataUrl) return;
 
     setLoading(true);
     setError("");
 
     try {
-      // Ask the Python/ML service to classify the user's request.
+      const customerMessage =
+        description.trim() ||
+        `Customer uploaded an image for diagnosis${photoName ? ` (${photoName})` : ""}.`;
+
       const classification = await classifyMessage(
-        description.trim()
+        customerMessage,
+        photoDataUrl || null
       );
 
       if (classification.category?.toLowerCase() === "other") {
         await createUnsupportedServiceRequest({
-          description: description.trim(),
+          description: description.trim() || customerMessage,
           advice: classification.advice,
         });
 
         navigate("/requests/not-supported", {
           state: {
-            originalDescription: description.trim(),
+            originalDescription: description.trim() || customerMessage,
             advice: classification.advice,
           },
         });
@@ -51,85 +86,100 @@ export default function DescribeProblem() {
         return;
       }
 
-      // Get the available services from the Spring backend.
       const services = await listServices().catch(() => []);
-
-      // Find the service that matches the AI category.
       const matchedService = services.find(
         (service) =>
           service.name?.toLowerCase() ===
           classification.category?.toLowerCase()
       );
 
-      // Do NOT create the service request yet.
-      // First send the user to the review screen.
       navigate("/requests/review", {
         state: {
-          originalDescription: description.trim(),
+          originalDescription: description.trim() || customerMessage,
           classification,
           serviceId: matchedService?.id ?? null,
         },
       });
-
     } catch (err) {
       console.error(err);
 
       setError(
         "Couldn't reach the ML service or backend — make sure both are running locally (see INSTRUCTIONS.md)."
       );
-
     } finally {
       setLoading(false);
     }
   };
 
-
   return (
-    <Screen
-      title="Describe your problem"
-      subtitle="Tell us what's happening in your own words."
-    >
+    <Screen title={t("customer.problemTitle")} subtitle={t("customer.problemSubtitle")}>
       <textarea
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        placeholder="My kitchen sink is leaking and I need someone to fix it today."
+        placeholder={t("customer.problemPreview")}
         className="min-h-[140px] w-full rounded-xl border border-gray-200 bg-white p-3 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
       />
 
-      <p className="mb-2 mt-4 text-sm font-medium text-gray-700">
-        Add a photo (optional)
-      </p>
+      <div className="mt-4">
+        <p className="mb-2 text-sm font-medium text-gray-700">{t("customer.photoOptional")}</p>
 
-      <button
-        type="button"
-        onClick={() => alert("Photo upload is coming soon.")}
-        className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white text-2xl text-gray-400 transition-colors hover:border-brand hover:text-brand"
-      >
-        +
-      </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handlePhotoSelect}
+        />
+
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white text-2xl text-gray-400 transition-colors hover:border-brand hover:text-brand"
+        >
+          +
+        </button>
+
+        {photoDataUrl && (
+          <div className="mt-3 flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3">
+            <img
+              src={photoDataUrl}
+              alt="Problem preview"
+              className="h-16 w-16 rounded-md object-cover"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-gray-800">{photoName}</p>
+              <p className="text-xs text-gray-500">{t("customer.readyAttach")}</p>
+            </div>
+            <button
+              type="button"
+              onClick={clearPhoto}
+              className="text-xs font-medium text-brand hover:text-brand-dark"
+            >
+              {t("common.remove")}
+            </button>
+          </div>
+        )}
+      </div>
 
       {error && (
         <div className="mt-4">
-          <ErrorBanner>
-            {error}
-          </ErrorBanner>
+          <ErrorBanner>{error}</ErrorBanner>
         </div>
       )}
 
       {loading && (
         <div className="mt-4 rounded-lg border border-brand/30 bg-brand/5 px-3 py-2">
-          <Loading label="🤖 Asking AI to read your problem and identify the right service..." />
+          <Loading label={t("customer.aiLoading")} />
         </div>
       )}
 
       <Button
         onClick={handleSubmit}
-        disabled={loading || !description.trim()}
+        disabled={loading || (!description.trim() && !photoDataUrl)}
         className="mt-6"
       >
-        {loading
-          ? "Asking AI..."
-          : "Find the right service"}
+        {loading ? t("customer.aiLoadingShort") : t("customer.findRightService")}
       </Button>
     </Screen>
   );

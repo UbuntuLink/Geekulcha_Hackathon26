@@ -1,5 +1,10 @@
 import AppRoutes from "./routes/AppRoutes.jsx";
+import { LanguageProvider } from "./context/LanguageContext.jsx";
 
 export default function App() {
-  return <AppRoutes />;
+  return (
+    <LanguageProvider>
+      <AppRoutes />
+    </LanguageProvider>
+  );
 }

@@ -7,11 +7,13 @@ import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import EmptyState from "../../components/common/EmptyState.jsx";
 import { getMatchingProviders, getServiceRequest } from "../../api/services.js";
 import { getOnboarding } from "../../lib/preferences.js";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 
 export default function MatchingProviders() {
   const { id } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [providers, setProviders] = useState(null);
   const [error, setError] = useState("");
 
@@ -41,14 +43,12 @@ export default function MatchingProviders() {
 
   return (
     <Screen
-      title={providers ? `${providers.length} providers found` : "Finding providers..."}
-      subtitle="Providers available near you"
+      title={providers ? `${providers.length} ${t("customer.providersFound")}` : t("customer.providersLoading")}
+      subtitle={t("customer.providerAvailability")}
     >
       <ErrorBanner>{error}</ErrorBanner>
-      {providers === null && !error && <Loading label="Finding providers near you..." />}
-      {providers?.length === 0 && (
-        <EmptyState>No providers offer this service yet — check back soon.</EmptyState>
-      )}
+      {providers === null && !error && <Loading label={t("customer.findingProviders")} />}
+      {providers?.length === 0 && <EmptyState>{t("customer.noServiceProviders")}</EmptyState>}
 
       <div className="space-y-3">
         {providers?.map((p) => (
@@ -65,7 +65,7 @@ export default function MatchingProviders() {
           onClick={() => navigate(`/requests/${id}/compare`, { state: { providers: providers.slice(0, 3) } })}
           className="mt-4 w-full rounded-lg border border-brand py-2.5 text-sm font-medium text-brand transition-colors hover:bg-brand/5"
         >
-          Compare providers
+          {t("customer.compareProviders")}
         </button>
       )}
     </Screen>

@@ -7,11 +7,13 @@ import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import EmptyState from "../../components/common/EmptyState.jsx";
 import { acceptQuote, getQuotesForRequest, rejectQuote } from "../../api/services.js";
 import { formatZAR } from "../../lib/format.js";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 
 /** Real "View Quotes / Accept/Reject Quote" (PROJECT.md §4) — replaces the old auto-accept shortcut. */
 export default function RequestQuotes() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [quotes, setQuotes] = useState(null);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
@@ -56,12 +58,10 @@ export default function RequestQuotes() {
   };
 
   return (
-    <Screen title="Quotes received" subtitle="Providers who've responded to your job.">
+    <Screen title={t("customer.quotesReceived")} subtitle={t("customer.quotesReceivedSubtitle")}>
       {error && <ErrorBanner>{error}</ErrorBanner>}
-      {quotes === null && !error && <Loading label="Checking for quotes..." />}
-      {quotes?.length === 0 && (
-        <EmptyState>No quotes yet — check back soon, or refresh this page.</EmptyState>
-      )}
+      {quotes === null && !error && <Loading label={t("customer.checkingQuotes")} />}
+      {quotes?.length === 0 && <EmptyState>{t("customer.noQuotes")}</EmptyState>}
 
       <div className="space-y-3">
         {quotes?.map((q) => (
@@ -85,14 +85,14 @@ export default function RequestQuotes() {
                   disabled={busyId === q.id}
                   className="flex-1 rounded-lg bg-brand py-2 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
                 >
-                  Accept
+                  {t("customer.accept")}
                 </button>
                 <button
                   onClick={() => handleReject(q.id)}
                   disabled={busyId === q.id}
                   className="flex-1 rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
                 >
-                  Decline
+                  {t("customer.decline")}
                 </button>
               </div>
             )}

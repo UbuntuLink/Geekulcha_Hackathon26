@@ -6,10 +6,12 @@ import Button from "../../components/common/Button.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import { Field, TextArea, TextInput } from "../../components/common/Field.jsx";
 import { addMyProviderService, listServices, updateMyProviderProfile } from "../../api/services.js";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 
 /** Shown once, right after a provider's first login (see ProviderDashboard's redirect check). */
 export default function ProviderOnboarding() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [allServices, setAllServices] = useState([]);
   const [bio, setBio] = useState("");
   const [location, setLocation] = useState("");
@@ -45,23 +47,23 @@ export default function ProviderOnboarding() {
   };
 
   return (
-    <Screen title="Set up your provider profile" subtitle="Customers will see this when they browse providers." showBack={false}>
+    <Screen title={t("provider.setup")} subtitle={t("provider.subtitle")} showBack={false}>
       <Card>
         <div className="space-y-4">
-          <Field label="Bio">
-            <TextArea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell customers about your experience..." />
+          <Field label={t("form.bio")}>
+            <TextArea value={bio} onChange={(e) => setBio(e.target.value)} placeholder={t("provider.bioPlaceholder")} />
           </Field>
-          <Field label="Location">
-            <TextInput value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Pretoria, Gauteng" />
+          <Field label={t("form.location")}>
+            <TextInput value={location} onChange={(e) => setLocation(e.target.value)} placeholder={t("provider.locationPlaceholder")} />
           </Field>
           <div>
-            <p className="mb-1 text-sm font-medium text-gray-700">A service you offer (optional, add more later)</p>
+            <p className="mb-1 text-sm font-medium text-gray-700">{t("provider.optional")}</p>
             <select
               value={serviceId}
               onChange={(e) => setServiceId(e.target.value)}
               className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             >
-              <option value="">Choose a service...</option>
+              <option value="">{t("provider.choose")}</option>
               {allServices.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -81,7 +83,7 @@ export default function ProviderOnboarding() {
       {error && <div className="mt-4"><ErrorBanner>{error}</ErrorBanner></div>}
 
       <Button className="mt-6" onClick={handleSubmit} disabled={submitting || !bio || !location}>
-        {submitting ? "Saving..." : "Finish setup"}
+        {submitting ? t("provider.saving") : t("provider.finish")}
       </Button>
     </Screen>
   );

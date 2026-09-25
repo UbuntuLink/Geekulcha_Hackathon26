@@ -1,9 +1,12 @@
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ClassifyRequest(BaseModel):
     message: str
+    photo_data_url: Optional[str] = Field(default=None, alias="photoDataUrl")
+
+    model_config = {"populate_by_name": True}
 
 
 class ClassifyResponse(BaseModel):

@@ -42,7 +42,11 @@ export default function MatchingProviders() {
           setProviders([]);
           return;
         }
-        let list = await getMatchingProviders(serviceId);
+        // The customer's coordinates come from onboarding. Sending them is what turns this from
+        // "who offers this service" into "who offers it near me" — before geolocation the
+        // customer's location never reached this endpoint at all.
+        const { latitude, longitude } = getOnboarding();
+        let list = await getMatchingProviders(serviceId, latitude ?? null, longitude ?? null);
 
         // Now that any user can be a provider, someone browsing as a customer could be offered
         // their own profile to quote on. Drop it.

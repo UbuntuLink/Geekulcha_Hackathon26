@@ -1,5 +1,6 @@
 package com.geekkulcha.backend.service;
 
+import java.util.Comparator;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -13,12 +14,15 @@ import com.geekkulcha.backend.exception.ResourceNotFoundException;
 import com.geekkulcha.backend.repository.ProviderProfileRepository;
 import com.geekkulcha.backend.repository.ProviderServiceRepository;
 import com.geekkulcha.backend.repository.ReviewRepository;
+import com.geekkulcha.backend.util.GeoUtils;
 
 import lombok.RequiredArgsConstructor;
 
 /**
- * Backs Figma screens 6-8 (Matching / Compare / Provider Profile). No real geo/distance —
- * see PROJECT.md §9b — so results are just "who offers this service", not "who's nearby".
+ * Backs Figma screens 6-8 (Matching / Compare / Provider Profile).
+ *
+ * Results are "who offers this service, nearest first" once the customer's coordinates are
+ * known, and fall back to plain "who offers this service" when they are not.
  */
 @Service
 @RequiredArgsConstructor
@@ -28,11 +32,34 @@ public class ProviderMatchService {
     private final ProviderProfileRepository providerProfileRepository;
     private final ReviewRepository reviewRepository;
 
+    /** Every validated provider offering this service, unsorted and unfiltered by distance. */
     public List<ProviderMatchResponse> findProvidersForService(long serviceId) {
+        return findProvidersForService(serviceId, null, null);
+    }
+
+    /**
+     * Providers offering this service, narrowed and ordered by where the customer is.
+     *
+     * With the customer's coordinates, a provider is dropped when the job falls outside the
+     * serviceRadiusKm they set during onboarding — which until now was stored and never read —
+     * and the rest come back nearest first.
+     *
+     * A provider with no coordinates is never dropped. Most rows in the shared database predate
+     * the location picker, and silently hiding them would turn a missing column into an empty
+     * results screen. They sort after everyone whose distance is known.
+     */
+    public List<ProviderMatchResponse> findProvidersForService(long serviceId, Double latitude, Double longitude) {
+        boolean customerLocated = GeoUtils.isUsable(latitude, longitude);
+
         return providerServiceRepository.findByServiceId(serviceId).stream()
         .filter(ps -> ps.getProviderProfile().isIdValidated())
         .map(ps -> {
             ProviderProfile p = ps.getProviderProfile();
+            Double distanceKm = null;
+
+            if (customerLocated && GeoUtils.isUsable(p.getLatitude(), p.getLongitude())) {
+                distanceKm = GeoUtils.distanceKm(latitude, longitude, p.getLatitude(), p.getLongitude());
+            }
 
             return new ProviderMatchResponse(
                     p.getId(),
@@ -44,10 +71,23 @@ public class ProviderMatchService {
                     p.isAvailableToday(),
                     p.isIdValidated(),
                     ps.getMinPrice(),
-                    ps.getMaxPrice()
+                    ps.getMaxPrice(),
+                    distanceKm
             );
         })
+        .filter(match -> match.distanceKm() == null || match.distanceKm() <= radiusFor(match.providerProfileId()))
+        .sorted(Comparator
+                .comparing(ProviderMatchResponse::distanceKm, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(Comparator.comparingDouble(ProviderMatchResponse::rating).reversed()))
         .toList();
+    }
+
+    /** The provider's own service radius, defaulting generously when they never set one. */
+    private int radiusFor(long providerProfileId) {
+        return providerProfileRepository.findById(providerProfileId)
+                .map(ProviderProfile::getServiceRadiusKm)
+                .filter(radius -> radius > 0)
+                .orElse(Integer.MAX_VALUE);
     }
 
     public ProviderProfileResponse getProfile(long providerProfileId) {

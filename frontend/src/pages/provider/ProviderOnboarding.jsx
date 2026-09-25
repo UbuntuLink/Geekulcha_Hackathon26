@@ -5,6 +5,7 @@ import Card from "../../components/common/Card.jsx";
 import Button from "../../components/common/Button.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import { Field, TextArea, TextInput } from "../../components/common/Field.jsx";
+import LocationPicker from "../../components/common/LocationPicker.jsx";
 import { addMyProviderService, listServices, updateMyProviderProfile } from "../../api/services.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
@@ -14,7 +15,7 @@ export default function ProviderOnboarding() {
   const { t } = useLanguage();
   const [allServices, setAllServices] = useState([]);
   const [bio, setBio] = useState("");
-  const [location, setLocation] = useState("");
+  const [place, setPlace] = useState({ label: "", latitude: null, longitude: null });
   const [serviceId, setServiceId] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
@@ -29,7 +30,16 @@ export default function ProviderOnboarding() {
     setSubmitting(true);
     setError("");
     try {
-      await updateMyProviderProfile({ bio, location, serviceRadiusKm: 15, availableToday: true });
+      // serviceRadiusKm finally does something: with coordinates on both sides, matching drops
+      // this provider for jobs further away than this.
+      await updateMyProviderProfile({
+        bio,
+        location: place.label,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        serviceRadiusKm: 15,
+        availableToday: true,
+      });
       if (serviceId) {
         await addMyProviderService({
           serviceId: Number(serviceId),
@@ -53,9 +63,12 @@ export default function ProviderOnboarding() {
           <Field label={t("form.bio")}>
             <TextArea value={bio} onChange={(e) => setBio(e.target.value)} placeholder={t("provider.bioPlaceholder")} />
           </Field>
-          <Field label={t("form.location")}>
-            <TextInput value={location} onChange={(e) => setLocation(e.target.value)} placeholder={t("provider.locationPlaceholder")} />
-          </Field>
+          <LocationPicker
+            label={t("form.location")}
+            hint="Pin where you work from — customers within your service radius will see you."
+            value={place}
+            onChange={setPlace}
+          />
           <div>
             <p className="mb-1 text-sm font-medium text-gray-700">{t("provider.optional")}</p>
             <select

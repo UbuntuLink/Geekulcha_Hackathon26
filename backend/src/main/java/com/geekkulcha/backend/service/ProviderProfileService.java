@@ -43,6 +43,12 @@ public class ProviderProfileService {
         ProviderProfile profile = getOwnProfile(userId);
         profile.setBio(request.bio());
         profile.setLocation(request.location());
+        // Only overwrite coordinates when the caller actually sent a pair, so an older client
+        // editing a bio cannot silently erase a provider's pin.
+        if (request.latitude() != null && request.longitude() != null) {
+            profile.setLatitude(request.latitude());
+            profile.setLongitude(request.longitude());
+        }
         profile.setServiceRadiusKm(request.serviceRadiusKm());
         profile.setAvailableToday(request.availableToday());
         providerProfileRepository.save(profile);
@@ -104,6 +110,8 @@ public class ProviderProfileService {
         profile.setUser(user);
         profile.setBio(dto.getBio());
         profile.setLocation(dto.getLocation());
+        profile.setLatitude(dto.getLatitude());
+        profile.setLongitude(dto.getLongitude());
 
         profile.setServiceRadiusKm(
                 dto.getServiceRadiusKm() == null

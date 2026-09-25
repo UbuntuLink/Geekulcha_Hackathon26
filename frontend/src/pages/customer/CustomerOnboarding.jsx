@@ -5,6 +5,7 @@ import { useLanguage } from "../../context/LanguageContext.jsx";
 import Button from "../../components/common/Button.jsx";
 import Card from "../../components/common/Card.jsx";
 import { Field, TextInput } from "../../components/common/Field.jsx";
+import LocationPicker from "../../components/common/LocationPicker.jsx";
 import { setOnboarding, getOnboarding } from "../../lib/preferences.js";
 
 export default function CustomerOnboarding() {
@@ -12,11 +13,23 @@ export default function CustomerOnboarding() {
   const { t } = useLanguage();
   const existing = getOnboarding();
   const [name, setName] = useState(existing.name || "");
-  const [location, setLocation] = useState(existing.location || "");
+  const [place, setPlace] = useState({
+    label: existing.location || "",
+    latitude: existing.latitude ?? null,
+    longitude: existing.longitude ?? null,
+  });
   const [priority, setPriority] = useState(existing.priority || "price");
 
   const handleContinue = () => {
-    setOnboarding({ name, location, priority });
+    // `location` stays the display label every screen already shows; the coordinates ride
+    // alongside it and are what matching measures distance with.
+    setOnboarding({
+      name,
+      location: place.label,
+      latitude: place.latitude,
+      longitude: place.longitude,
+      priority,
+    });
     navigate("/home");
   };
 
@@ -38,9 +51,12 @@ export default function CustomerOnboarding() {
           <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Your first name" />
         </Field>
 
-        <Field label={t("form.location")} hint="A suburb or city is enough for now.">
-          <TextInput value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Durban, KwaZulu-Natal" />
-        </Field>
+        <LocationPicker
+          label={t("form.location")}
+          hint="Search a suburb or tap Use my location, so we can sort providers by distance."
+          value={place}
+          onChange={setPlace}
+        />
 
         <div>
           <p className="mb-2 text-sm font-semibold text-gray-700">{t("form.whatMatters")}</p>
@@ -68,7 +84,7 @@ export default function CustomerOnboarding() {
         </div>
       </Card>
 
-      <Button onClick={handleContinue} disabled={!name.trim() || !location.trim()} className="mt-5">
+      <Button onClick={handleContinue} disabled={!name.trim() || !place.label.trim()} className="mt-5">
         {t("action.continue")} <span aria-hidden="true">→</span>
       </Button>
     </Screen>

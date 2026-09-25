@@ -40,6 +40,8 @@ class ServiceRequestServiceTest {
                 new ServiceRequestCreateRequest(
                         "Sink is leaking",
                         "Pretoria",
+                        -25.7479,
+                        28.2293,
                         LocalDate.now(),
                         "{\"category\":\"plumbing\"}",
                         null,
@@ -50,6 +52,10 @@ class ServiceRequestServiceTest {
 
         assertEquals("data:image/png;base64,abc123", created.getPhotoDataUrl());
         assertEquals("leak.png", created.getPhotoName());
+        // Coordinates from the location picker have to reach the row, or matching has nothing
+        // to measure distance against.
+        assertEquals(-25.7479, created.getLatitude());
+        assertEquals(28.2293, created.getLongitude());
         verify(serviceRequestRepository).save(any(ServiceRequest.class));
     }
 }

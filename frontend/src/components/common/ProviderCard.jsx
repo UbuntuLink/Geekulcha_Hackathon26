@@ -26,6 +26,10 @@ export default function ProviderCard({ provider, onClick }) {
           </div>
           <div className="provider-location text-right">
             {provider.availableToday && <p className="text-[11px] font-bold text-emerald-700">Available today</p>}
+            {/* Only shown when both sides have coordinates — never the provider's raw lat/lng. */}
+            {provider.distanceKm != null && (
+              <p className="mt-0.5 text-[11px] font-bold text-brand">≈ {Math.round(provider.distanceKm)} km away</p>
+            )}
             <p className="mt-0.5 max-w-[145px] break-words text-xs text-gray-500">{provider.location || "Location not specified"}</p>
           </div>
         </div>

@@ -7,6 +7,7 @@ import Loading from "../../components/common/Loading.jsx";
 import EmptyState from "../../components/common/EmptyState.jsx";
 import { getMatchingProviders, getMyProviderProfile, getServiceRequest } from "../../api/services.js";
 import { formatRange } from "../../lib/format.js";
+import { getOnboarding } from "../../lib/preferences.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function CompareProviders() {
@@ -26,7 +27,9 @@ export default function CompareProviders() {
           setProviders([]);
           return;
         }
-        list = await getMatchingProviders(request.service.id).catch(() => []);
+        const { latitude, longitude } = getOnboarding();
+        list = await getMatchingProviders(request.service.id, latitude ?? null, longitude ?? null)
+          .catch(() => []);
       }
 
       if (user?.isProvider) {

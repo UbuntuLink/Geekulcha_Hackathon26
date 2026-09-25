@@ -32,6 +32,8 @@ public class ServiceRequestService {
         serviceRequest.setUser(customer);
         serviceRequest.setDescription(request.description());
         serviceRequest.setLocation(request.location());
+        serviceRequest.setLatitude(request.latitude());
+        serviceRequest.setLongitude(request.longitude());
         serviceRequest.setPreferredDate(request.preferredDate());
         serviceRequest.setAiClassificationRaw(request.aiClassificationRaw());
         serviceRequest.setPhotoDataUrl(request.photoDataUrl());

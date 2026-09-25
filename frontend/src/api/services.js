@@ -57,8 +57,12 @@ export const getQuotesForRequest = (requestId) =>
 export const getOpenRequests = () => apiClient.get("/api/service-requests/open").then((res) => res.data);
 
 // --- Backend: matching / public provider profile (browsing, no auth needed to view) ---
-export const getMatchingProviders = (serviceId) =>
-  apiClient.get(`/api/services/${serviceId}/providers`).then((res) => res.data);
+// Coordinates are optional: with them the backend drops providers whose service radius doesn't
+// reach the job and returns the rest nearest-first, with a distanceKm on each row.
+export const getMatchingProviders = (serviceId, latitude = null, longitude = null) => {
+  const params = latitude != null && longitude != null ? { latitude, longitude } : undefined;
+  return apiClient.get(`/api/services/${serviceId}/providers`, { params }).then((res) => res.data);
+};
 
 export const getProviderProfile = (providerProfileId) =>
   apiClient.get(`/api/provider-profiles/${providerProfileId}`).then((res) => res.data);

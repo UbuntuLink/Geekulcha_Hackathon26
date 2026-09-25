@@ -43,6 +43,13 @@ public class ProviderProfile {
     // TODO(9b): plain text for MVP; real "nearby" matching needs lat/long, see PROJECT.md §9b
     private String location;
 
+    // Nullable wrappers, not primitives: null means "this row predates the location picker", and
+    // every distance calculation falls back to today's behaviour rather than pretending the
+    // provider sits at 0,0 off the coast of Africa. ddl-auto=update adds the columns on boot.
+    private Double latitude;
+
+    private Double longitude;
+
     @ColumnDefault("0")
     private int serviceRadiusKm;
 

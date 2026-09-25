@@ -47,6 +47,11 @@ public class ServiceRequest {
 
     private String location;
 
+    // Where the job is. Nullable for the same reason as on ProviderProfile — see that comment.
+    private Double latitude;
+
+    private Double longitude;
+
     private LocalDate preferredDate;
 
     @Enumerated(EnumType.STRING)

@@ -11,6 +11,8 @@ public record ProviderMatchResponse(
         boolean availableToday,
         boolean idValidated,
         double minPrice,
-        double maxPrice
+        double maxPrice,
+        /** Kilometres from the customer, or null when either side has no coordinates. */
+        Double distanceKm
 ) {
 }

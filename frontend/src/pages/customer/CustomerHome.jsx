@@ -79,7 +79,7 @@ export default function CustomerHome() {
     let active = true;
     setProvidersLoading(true);
     setProvidersError("");
-    getMatchingProviders(selectedCategory.id)
+    getMatchingProviders(selectedCategory.id, getOnboarding().latitude ?? null, getOnboarding().longitude ?? null)
       .then((items) => {
         if (active) setProviders([...items].sort((a, b) => (b.rating || 0) - (a.rating || 0)));
       })
@@ -125,7 +125,8 @@ export default function CustomerHome() {
         return;
       }
 
-      const list = await getMatchingProviders(match.service.id);
+      const { latitude, longitude } = getOnboarding();
+      const list = await getMatchingProviders(match.service.id, latitude ?? null, longitude ?? null);
       const { sort, urgent } = detectIntent(query, classification?.sort_preference);
 
       let ranked = [...list];

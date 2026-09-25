@@ -15,9 +15,16 @@ public class ProviderMatchController {
 
     private final ProviderMatchService providerMatchService;
 
+    /**
+     * Coordinates are optional query params, so every existing caller keeps working unchanged:
+     * without them the response is exactly what it was before geolocation.
+     */
     @GetMapping("/api/services/{serviceId}/providers")
-    public List<ProviderMatchResponse> providersForService(@PathVariable long serviceId) {
-        return providerMatchService.findProvidersForService(serviceId);
+    public List<ProviderMatchResponse> providersForService(
+            @PathVariable long serviceId,
+            @RequestParam(required = false) Double latitude,
+            @RequestParam(required = false) Double longitude) {
+        return providerMatchService.findProvidersForService(serviceId, latitude, longitude);
     }
 
     @GetMapping("/api/provider-profiles/{id}")

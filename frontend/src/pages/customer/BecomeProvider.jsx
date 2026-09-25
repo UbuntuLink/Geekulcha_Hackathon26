@@ -6,6 +6,7 @@ import Button from "../../components/common/Button.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import Loading from "../../components/common/Loading.jsx";
 import { Field, TextArea, TextInput } from "../../components/common/Field.jsx";
+import LocationPicker from "../../components/common/LocationPicker.jsx";
 import { getCurrentUser } from "../../api/auth.js";
 import { addMyProviderService, createMyProviderProfile, listServices } from "../../api/services.js";
 import { getOnboarding } from "../../lib/preferences.js";
@@ -26,6 +27,10 @@ export default function BecomeProvider() {
     idNumber: "",
     bio: "",
     location: onboarding.location || "",
+    // Prefilled from customer onboarding: someone who already pinned their home is usually
+    // working from the same place.
+    latitude: onboarding.latitude ?? null,
+    longitude: onboarding.longitude ?? null,
     serviceRadiusKm: 15,
     availableToday: true,
     serviceId: "",
@@ -101,6 +106,8 @@ export default function BecomeProvider() {
         idNumber: form.idNumber,
         bio: form.bio.trim(),
         location: form.location.trim(),
+        latitude: form.latitude,
+        longitude: form.longitude,
         serviceRadiusKm: Number(form.serviceRadiusKm) || 15,
         availableToday: form.availableToday,
       });
@@ -182,13 +189,19 @@ export default function BecomeProvider() {
                 />
               </Field>
 
-              <Field label={t("provider.location")}>
-                <TextInput
-                  value={form.location}
-                  onChange={update("location")}
-                  placeholder={t("provider.locationPlaceholder")}
-                />
-              </Field>
+              <LocationPicker
+                label={t("provider.location")}
+                hint="Pin where you work from — jobs inside your service radius will reach you."
+                value={{ label: form.location, latitude: form.latitude, longitude: form.longitude }}
+                onChange={(place) =>
+                  setForm((current) => ({
+                    ...current,
+                    location: place.label,
+                    latitude: place.latitude,
+                    longitude: place.longitude,
+                  }))
+                }
+              />
 
               <Field label={t("provider.serviceRadius")}>
                 <TextInput

@@ -11,7 +11,7 @@ echo Starting React frontend (port 5173)...
 start "React Frontend" cmd /k "cd /d %~dp0frontend && npm run dev"
 
 echo Starting Python ML service (port 8000)...
-start "Python ML Backend" cmd /k "cd /d %~dp0python && python -m uvicorn app.main:app --reload"
+start "Python ML Backend" cmd /k "cd /d %~dp0python && python -m uvicorn app.main:app --reload --port 8000"
 
 echo.
 echo ==========================================

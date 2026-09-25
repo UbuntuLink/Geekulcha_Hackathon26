@@ -8,11 +8,15 @@ is and where it goes, [KEYS.md](KEYS.md).
 
 From the repo root:
 
-```
-start-all.bat
+```powershell
+.\start-all.bat
 ```
 
 That opens all three services in their own windows. Then go to **http://localhost:5173**.
+
+The leading `.\` is required in PowerShell — it refuses to run a program from the current
+directory unless you say so explicitly, and reports `The term 'start-all.bat' is not recognized`
+if you leave it off. In `cmd.exe` plain `start-all.bat` works.
 
 To run them by hand, one terminal each:
 

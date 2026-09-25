@@ -23,7 +23,14 @@ export default function Register() {
     setError("");
     try {
       await register(form);
-      navigate("/login");
+
+      // Registration always creates a customer: the backend has no isProvider field any more,
+      // because becoming a provider now requires the SA ID check that /become-provider runs.
+      // Ticking the box used to do nothing at all — the flag was silently dropped and you landed
+      // on the customer home wondering why. Now it carries you to provider setup after sign-in.
+      navigate("/login", {
+        state: form.isProvider ? { next: "/become-provider" } : undefined,
+      });
     } catch (err) {
       setError("Couldn't register — that email or phone number may already be in use.");
       console.error(err);
@@ -46,7 +53,9 @@ export default function Register() {
         <label className={`flex cursor-pointer items-center justify-between rounded-2xl border p-3.5 transition-all ${form.isProvider ? "border-brand/30 bg-brand-mist" : "border-gray-200 bg-white"}`}>
           <span>
             <span className="block text-sm font-semibold text-gray-800">{t("provider.account")}</span>
-            <span className="mt-0.5 block text-xs text-gray-500">Create a profile and receive job requests.</span>
+            <span className="mt-0.5 block text-xs text-gray-500">
+              We'll take you to provider setup after you sign in — you'll need your SA ID number.
+            </span>
           </span>
           <input className="h-4 w-4 accent-[#1F5C45]" type="checkbox" checked={form.isProvider} onChange={update("isProvider")} />
         </label>

@@ -26,7 +26,9 @@ export default function Login() {
       await login(email, password);
       const currentUser = await getCurrentUser();
       setUser(currentUser);
-      navigate(currentUser.isProvider ? "/provider/dashboard" : "/home");
+      // `next` comes from registering with "I'm a service provider" ticked, so that choice
+      // survives the trip through the login screen instead of being forgotten.
+      navigate(state?.next ?? (currentUser.isProvider ? "/provider/dashboard" : "/home"));
     } catch (err) {
       setError("Invalid email or password.");
       console.error(err);

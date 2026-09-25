@@ -5,27 +5,42 @@ import Card from "../../components/common/Card.jsx";
 import Button from "../../components/common/Button.jsx";
 import Loading from "../../components/common/Loading.jsx";
 import EmptyState from "../../components/common/EmptyState.jsx";
-import { getMatchingProviders, getServiceRequest } from "../../api/services.js";
+import { getMatchingProviders, getMyProviderProfile, getServiceRequest } from "../../api/services.js";
 import { formatRange } from "../../lib/format.js";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function CompareProviders() {
   const { id } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [providers, setProviders] = useState(state?.providers || null);
 
   useEffect(() => {
-    if (providers) return;
     (async () => {
-      const request = await getServiceRequest(id).catch(() => null);
-      if (!request?.service?.id) {
-        setProviders([]);
-        return;
+      let list = providers;
+
+      if (!list) {
+        const request = await getServiceRequest(id).catch(() => null);
+        if (!request?.service?.id) {
+          setProviders([]);
+          return;
+        }
+        list = await getMatchingProviders(request.service.id).catch(() => []);
       }
-      const list = await getMatchingProviders(request.service.id).catch(() => []);
+
+      if (user?.isProvider) {
+        const ownProfile = await getMyProviderProfile().catch(() => null);
+        if (ownProfile?.providerProfileId != null) {
+          list = list.filter((provider) => provider.providerProfileId !== ownProfile.providerProfileId);
+        }
+      }
+
       setProviders(list.slice(0, 3));
     })();
-  }, [id, providers]);
+    // Only re-run when the request or signed-in role changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, user?.isProvider]);
 
   if (!providers) {
     return (

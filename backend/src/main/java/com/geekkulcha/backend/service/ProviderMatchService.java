@@ -1,5 +1,9 @@
 package com.geekkulcha.backend.service;
 
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
 import com.geekkulcha.backend.dto.response.ProviderMatchResponse;
 import com.geekkulcha.backend.dto.response.ProviderProfileResponse;
 import com.geekkulcha.backend.dto.response.ReviewResponse;
@@ -9,10 +13,8 @@ import com.geekkulcha.backend.exception.ResourceNotFoundException;
 import com.geekkulcha.backend.repository.ProviderProfileRepository;
 import com.geekkulcha.backend.repository.ProviderServiceRepository;
 import com.geekkulcha.backend.repository.ReviewRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Backs Figma screens 6-8 (Matching / Compare / Provider Profile). No real geo/distance —
@@ -28,21 +30,24 @@ public class ProviderMatchService {
 
     public List<ProviderMatchResponse> findProvidersForService(long serviceId) {
         return providerServiceRepository.findByServiceId(serviceId).stream()
-                .map(ps -> {
-                    ProviderProfile p = ps.getProviderProfile();
-                    return new ProviderMatchResponse(
-                            p.getId(),
-                            providerName(p),
-                            p.getBio(),
-                            p.getLocation(),
-                            p.getRating(),
-                            p.getReviewCount(),
-                            p.isAvailableToday(),
-                            ps.getMinPrice(),
-                            ps.getMaxPrice()
-                    );
-                })
-                .toList();
+        .filter(ps -> ps.getProviderProfile().isIdValidated())
+        .map(ps -> {
+            ProviderProfile p = ps.getProviderProfile();
+
+            return new ProviderMatchResponse(
+                    p.getId(),
+                    providerName(p),
+                    p.getBio(),
+                    p.getLocation(),
+                    p.getRating(),
+                    p.getReviewCount(),
+                    p.isAvailableToday(),
+                    p.isIdValidated(),
+                    ps.getMinPrice(),
+                    ps.getMaxPrice()
+            );
+        })
+        .toList();
     }
 
     public ProviderProfileResponse getProfile(long providerProfileId) {
@@ -58,7 +63,7 @@ public class ProviderMatchService {
                 .toList();
 
         return new ProviderProfileResponse(p.getId(), providerName(p), p.getBio(), p.getLocation(),
-                p.getRating(), p.getReviewCount(), p.isAvailableToday(), services, reviews);
+                p.getRating(), p.getReviewCount(), p.isAvailableToday(), p.isIdValidated(), services, reviews);
     }
 
     // Business name = first + last name on the underlying User (e.g. "Thabo" + "Plumbing" ->

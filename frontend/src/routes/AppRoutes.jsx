@@ -23,6 +23,7 @@ import BookingTracking from "../pages/customer/BookingTracking.jsx";
 import ReviewProvider from "../pages/customer/ReviewProvider.jsx";
 import MyRequests from "../pages/customer/MyRequests.jsx";
 import Profile from "../pages/customer/Profile.jsx";
+import BecomeProvider from "../pages/customer/BecomeProvider.jsx";
 
 import ProviderOnboarding from "../pages/provider/ProviderOnboarding.jsx";
 import ProviderDashboard from "../pages/provider/ProviderDashboard.jsx";
@@ -35,7 +36,7 @@ import NotFound from "../pages/NotFound.jsx";
 
 // Auth is now enforced by the backend on every route except /auth/** (PROJECT.md §8), so
 // routes are gated here too — a logged-out visit anywhere below redirects to /login, and
-// ProtectedRoute's `role` prop keeps customers and providers out of each other's screens.
+// role-specific dashboards stay separated, while request/quote/booking pages are shared by any authenticated user.
 export default function AppRoutes() {
   return (
     <AuthProvider>
@@ -48,20 +49,21 @@ export default function AppRoutes() {
 
         {/* Customer journey — Figma screens 3-12, PROJECT.md §5 */}
         <Route path="/home" element={<ProtectedRoute role="customer"><CustomerHome /></ProtectedRoute>} />
-        <Route path="/requests/new" element={<ProtectedRoute role="customer"><DescribeProblem /></ProtectedRoute>} />
-        <Route path="/requests/:id/classification" element={<ProtectedRoute role="customer"><AIServiceIdentification /></ProtectedRoute>} />
-        <Route path="/requests/:id/matches" element={<ProtectedRoute role="customer"><MatchingProviders /></ProtectedRoute>} />
-        <Route path="/requests/:id/compare" element={<ProtectedRoute role="customer"><CompareProviders /></ProtectedRoute>} />
-        <Route path="/providers/:providerId" element={<ProtectedRoute role="customer"><ProviderProfileView /></ProtectedRoute>} />
-        <Route path="/requests/:id/quote" element={<ProtectedRoute role="customer"><QuoteRequest /></ProtectedRoute>} />
-        <Route path="/requests/:id/quotes" element={<ProtectedRoute role="customer"><RequestQuotes /></ProtectedRoute>} />
-        <Route path="/bookings/:bookingId/confirmation" element={<ProtectedRoute role="customer"><BookingConfirmation /></ProtectedRoute>} />
-        <Route path="/bookings/:bookingId" element={<ProtectedRoute role="customer"><BookingTracking /></ProtectedRoute>} />
-        <Route path="/bookings/:bookingId/review" element={<ProtectedRoute role="customer"><ReviewProvider /></ProtectedRoute>} />
-        <Route path="/requests/mine" element={<ProtectedRoute role="customer"><MyRequests /></ProtectedRoute>} />
+        <Route path="/requests/new" element={<ProtectedRoute><DescribeProblem /></ProtectedRoute>} />
+        <Route path="/requests/:id/classification" element={<ProtectedRoute><AIServiceIdentification /></ProtectedRoute>} />
+        <Route path="/requests/:id/matches" element={<ProtectedRoute><MatchingProviders /></ProtectedRoute>} />
+        <Route path="/requests/:id/compare" element={<ProtectedRoute><CompareProviders /></ProtectedRoute>} />
+        <Route path="/providers/:providerId" element={<ProtectedRoute><ProviderProfileView /></ProtectedRoute>} />
+        <Route path="/requests/:id/quote" element={<ProtectedRoute><QuoteRequest /></ProtectedRoute>} />
+        <Route path="/requests/:id/quotes" element={<ProtectedRoute><RequestQuotes /></ProtectedRoute>} />
+        <Route path="/bookings/:bookingId/confirmation" element={<ProtectedRoute><BookingConfirmation /></ProtectedRoute>} />
+        <Route path="/bookings/:bookingId" element={<ProtectedRoute><BookingTracking /></ProtectedRoute>} />
+        <Route path="/bookings/:bookingId/review" element={<ProtectedRoute><ReviewProvider /></ProtectedRoute>} />
+        <Route path="/requests/mine" element={<ProtectedRoute><MyRequests /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute role="customer"><Profile /></ProtectedRoute>} />
-        <Route path="/requests/review" element={<ReviewRequest />}/>
-        <Route path="/requests/not-supported" element={<ServiceNotSupported />}/>
+        <Route path="/become-provider" element={<ProtectedRoute role="customer"><BecomeProvider /></ProtectedRoute>} />
+        <Route path="/requests/review" element={<ProtectedRoute><ReviewRequest /></ProtectedRoute>} />
+        <Route path="/requests/not-supported" element={<ProtectedRoute><ServiceNotSupported /></ProtectedRoute>} />
 
         {/* Provider side — freely designed, no Figma (PROJECT.md §9a) */}
         <Route path="/provider/onboarding" element={<ProtectedRoute role="provider"><ProviderOnboarding /></ProtectedRoute>} />

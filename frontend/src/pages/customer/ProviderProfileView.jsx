@@ -7,17 +7,20 @@ import Button from "../../components/common/Button.jsx";
 import Loading from "../../components/common/Loading.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import EmptyState from "../../components/common/EmptyState.jsx";
-import { getProviderProfile } from "../../api/services.js";
+import { getMyProviderProfile, getProviderProfile } from "../../api/services.js";
 import { formatRange } from "../../lib/format.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function ProviderProfileView() {
   const { providerId } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState("");
+  const [ownProviderProfileId, setOwnProviderProfileId] = useState(null);
 
   useEffect(() => {
     setProfile(null);
@@ -28,7 +31,15 @@ export default function ProviderProfileView() {
         setError("Couldn't load this provider — is the backend running?");
         console.error(err);
       });
-  }, [providerId]);
+
+    if (user?.isProvider) {
+      getMyProviderProfile()
+        .then((ownProfile) => setOwnProviderProfileId(ownProfile.providerProfileId))
+        .catch(() => setOwnProviderProfileId(null));
+    } else {
+      setOwnProviderProfileId(null);
+    }
+  }, [providerId, user?.isProvider]);
 
   if (error) {
     return (
@@ -47,6 +58,7 @@ export default function ProviderProfileView() {
   }
 
   const mainService = profile.services[0];
+  const isOwnProviderProfile = Number(providerId) === Number(ownProviderProfileId);
 
   return (
     <Screen title={profile.providerName}>
@@ -85,11 +97,14 @@ export default function ProviderProfileView() {
             state: { provider: { ...profile, providerProfileId: Number(providerId) } },
           })
         }
-        disabled={!state?.serviceRequestId}
+        disabled={!state?.serviceRequestId || isOwnProviderProfile}
       >
         {t("common.requestQuote")}
       </Button>
       {!state?.serviceRequestId && <p className="mt-2 text-center text-xs text-gray-500">{t("common.startFromProblem")}</p>}
+      {isOwnProviderProfile && state?.serviceRequestId && (
+        <p className="mt-2 text-center text-xs text-gray-500">You cannot request a quote from yourself.</p>
+      )}
     </Screen>
   );
 }

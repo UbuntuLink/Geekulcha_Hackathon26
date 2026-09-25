@@ -11,6 +11,7 @@ export const CUSTOMER_LINKS = [
 export const PROVIDER_LINKS = [
   { to: "/provider/dashboard", label: "nav.dashboard" },
   { to: "/provider/requests", label: "nav.requests" },
+  { to: "/requests/mine", label: "nav.myRequests" },
   { to: "/provider/bookings", label: "nav.bookings" },
   { to: "/provider/profile", label: "nav.profile" },
 ];

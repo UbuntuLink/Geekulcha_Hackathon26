@@ -9,6 +9,7 @@ public record ProviderMatchResponse(
         double rating,
         int reviewCount,
         boolean availableToday,
+        boolean idValidated,
         double minPrice,
         double maxPrice
 ) {

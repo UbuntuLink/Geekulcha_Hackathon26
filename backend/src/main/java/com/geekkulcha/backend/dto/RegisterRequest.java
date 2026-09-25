@@ -6,7 +6,6 @@ public class RegisterRequest {
     private String lastName;
     private String password;
     private String phoneNumber;
-    private boolean isProvider;
 
     public void setEmail(String email) {
         this.email = email;
@@ -28,10 +27,6 @@ public class RegisterRequest {
         this.phoneNumber = phoneNumber;
     }
 
-    public void setIsProvider(boolean isProvider) {
-        this.isProvider = isProvider;
-    }
-
     public String getEmail() {
         return email;
     }
@@ -50,9 +45,5 @@ public class RegisterRequest {
 
     public String getPhoneNumber() {
         return phoneNumber;
-    }
-
-    public boolean isIsProvider() {
-        return isProvider;
     }
 }

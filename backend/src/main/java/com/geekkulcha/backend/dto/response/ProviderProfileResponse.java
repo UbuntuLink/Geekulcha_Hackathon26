@@ -11,6 +11,7 @@ public record ProviderProfileResponse(
         double rating,
         int reviewCount,
         boolean availableToday,
+        boolean isValidated,
         List<ServicePriceResponse> services,
         List<ReviewResponse> reviews
 ) {

@@ -5,15 +5,17 @@ import ProviderCard from "../../components/common/ProviderCard.jsx";
 import Loading from "../../components/common/Loading.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import EmptyState from "../../components/common/EmptyState.jsx";
-import { getMatchingProviders, getServiceRequest } from "../../api/services.js";
+import { getMatchingProviders, getMyProviderProfile, getServiceRequest } from "../../api/services.js";
 import { getOnboarding } from "../../lib/preferences.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function MatchingProviders() {
   const { id } = useParams();
   const { state } = useLocation();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [providers, setProviders] = useState(null);
   const [error, setError] = useState("");
 
@@ -30,6 +32,14 @@ export default function MatchingProviders() {
           return;
         }
         let list = await getMatchingProviders(serviceId);
+
+        if (user?.isProvider) {
+          const ownProfile = await getMyProviderProfile().catch(() => null);
+          if (ownProfile?.providerProfileId != null) {
+            list = list.filter((provider) => provider.providerProfileId !== ownProfile.providerProfileId);
+          }
+        }
+
         const priority = getOnboarding().priority;
         if (priority === "price") list = [...list].sort((a, b) => a.minPrice - b.minPrice);
         if (priority === "ratings") list = [...list].sort((a, b) => b.rating - a.rating);
@@ -39,7 +49,7 @@ export default function MatchingProviders() {
         console.error(err);
       }
     })();
-  }, [id, state]);
+  }, [id, state, user?.isProvider]);
 
   return (
     <Screen

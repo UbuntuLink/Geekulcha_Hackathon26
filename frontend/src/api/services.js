@@ -59,6 +59,11 @@ export const getProviderProfile = (providerProfileId) =>
 // --- Backend: self-service provider profile ---
 export const getMyProviderProfile = () => apiClient.get("/api/provider-profiles/me").then((res) => res.data);
 
+// Creates a provider profile for an existing customer account. The backend should link
+// the new profile to the authenticated user and then /api/users/me should return isProvider=true.
+export const createMyProviderProfile = (payload) =>
+  apiClient.post("/api/provider-profiles/me", payload).then((res) => res.data);
+
 export const updateMyProviderProfile = (payload) =>
   apiClient.patch("/api/provider-profiles/me", payload).then((res) => res.data);
 

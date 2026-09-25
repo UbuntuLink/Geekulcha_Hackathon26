@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import com.geekkulcha.backend.dto.LoginRequest;
 import com.geekkulcha.backend.dto.RegisterRequest;
 import com.geekkulcha.backend.dto.ResetPasswordRequest;
-import com.geekkulcha.backend.entity.ProviderProfile;
 import com.geekkulcha.backend.entity.User;
 import com.geekkulcha.backend.repository.ProviderProfileRepository;
 import com.geekkulcha.backend.repository.UserRepository;
@@ -18,7 +17,6 @@ import com.geekkulcha.backend.repository.UserRepository;
 @Service
 public class AuthService {
     private UserRepository userRepository;
-    private ProviderProfileRepository providerProfileRepository;
     private PasswordEncoder passwordEncoder;
     private JwtService jwtService;
 
@@ -29,7 +27,6 @@ public class AuthService {
         JwtService jwtService
     ) {
         this.userRepository = userRepository;
-        this.providerProfileRepository = providerProfileRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
     }
@@ -81,14 +78,6 @@ public class AuthService {
         newUser.setCreatedAt(now);
 
         User savedUser = userRepository.save(newUser);
-
-        if (request.isIsProvider()) {
-            ProviderProfile profile = new ProviderProfile();
-            profile.setUser(savedUser);
-            profile.setBio("");
-            profile.setLocation("");
-            providerProfileRepository.save(profile);
-        }
 
         return true;
 

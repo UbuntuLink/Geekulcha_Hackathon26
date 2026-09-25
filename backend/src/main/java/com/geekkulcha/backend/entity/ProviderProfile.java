@@ -1,10 +1,17 @@
 package com.geekkulcha.backend.entity;
 
-import jakarta.persistence.*;
+import org.hibernate.annotations.ColumnDefault;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.ColumnDefault;
 
 /**
  * The provider-facing extension of a {@link User}. Existing = "this user is a provider".
@@ -27,6 +34,9 @@ public class ProviderProfile {
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
+
+    @ColumnDefault("false")
+    private boolean idValidated = false;
 
     private String bio;
 

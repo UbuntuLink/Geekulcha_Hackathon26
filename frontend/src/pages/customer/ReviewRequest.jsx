@@ -9,14 +9,17 @@ import Loading from "../../components/common/Loading.jsx";
 import {
   refineDescription,
   createServiceRequest,
+  getMyProviderProfile,
 } from "../../api/services.js";
 
 import { getOnboarding } from "../../lib/preferences.js";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 
 export default function ReviewRequest() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
 
   const {
     originalDescription,
@@ -123,11 +126,16 @@ export default function ReviewRequest() {
           jobDescription,
       };
 
+      let requestLocation = getOnboarding().location || null;
+      if (!requestLocation && user?.isProvider) {
+        const providerProfile = await getMyProviderProfile().catch(() => null);
+        requestLocation = providerProfile?.location || null;
+      }
+
       const created = await createServiceRequest({
         description: jobDescription,
 
-        location:
-          getOnboarding().location || null,
+        location: requestLocation,
 
         preferredDate: null,
 

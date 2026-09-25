@@ -5,7 +5,7 @@ import Card from "../../components/common/Card.jsx";
 import Loading from "../../components/common/Loading.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import EmptyState from "../../components/common/EmptyState.jsx";
-import { getMyProviderProfile, getOpenRequests } from "../../api/services.js";
+import { getMyProviderProfile, getMyServiceRequests, getOpenRequests } from "../../api/services.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
 export default function RequestsFeed() {
@@ -17,8 +17,11 @@ export default function RequestsFeed() {
 
   useEffect(() => {
     getMyProviderProfile().then((p) => setMyProviderProfileId(p.providerProfileId));
-    getOpenRequests()
-      .then(setRequests)
+    Promise.all([getOpenRequests(), getMyServiceRequests().catch(() => [])])
+      .then(([openRequests, ownRequests]) => {
+        const ownRequestIds = new Set(ownRequests.map((request) => Number(request.id)));
+        setRequests(openRequests.filter((request) => !ownRequestIds.has(Number(request.id))));
+      })
       .catch((err) => {
         setError("Couldn't load requests — is the backend running?");
         console.error(err);

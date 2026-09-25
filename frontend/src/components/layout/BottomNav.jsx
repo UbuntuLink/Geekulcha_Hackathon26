@@ -1,6 +1,7 @@
 import { useLayoutEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import BrandMark from "../common/BrandMark.jsx";
+import AccountControls from "./AccountControls.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
 function Icon({ name }) {
@@ -127,11 +128,8 @@ export default function BottomNav({ role, desktopVariant }) {
           ))}
         </div>
 
-        {provider && (
-          <span className="rounded-full border border-brand/10 bg-brand-soft px-3 py-2 text-xs font-bold text-brand">
-            Provider workspace
-          </span>
-        )}
+        {/* Account controls live in the bar, so there is no second bar above the page title. */}
+        <AccountControls compact />
       </nav>
       )}
     </>

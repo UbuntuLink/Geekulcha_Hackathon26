@@ -4,11 +4,14 @@ import Card from "../../components/common/Card.jsx";
 import Button from "../../components/common/Button.jsx";
 import { getOnboarding } from "../../lib/preferences.js";
 import { useAuth } from "../../context/AuthContext.jsx";
+import AccountControls from "../../components/layout/AccountControls.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
 export default function Profile() {
   const { name, location, priority } = getOnboarding();
   const { user, logout } = useAuth();
+  // On a phone the nav is an icon dock with no room for language or read-aloud, so this screen
+  // is where they live — reachable from the nav on every page.
   const { t } = useLanguage();
   const navigate = useNavigate();
 
@@ -43,9 +46,12 @@ export default function Profile() {
         {user ? (
           <>
             <p className="font-medium text-gray-900">{user.email}</p>
+            <div className="mt-3 lg:hidden">
+              <AccountControls />
+            </div>
             <Button
               variant="outline"
-              className="mt-3"
+              className="mt-3 lg:mt-3"
               onClick={() => {
                 logout();
                 navigate("/login");

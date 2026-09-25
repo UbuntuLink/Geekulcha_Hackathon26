@@ -16,7 +16,7 @@ This document describes the state of the project as of **2026-09-19**, based on 
 |---|---|---|
 | Backend API | Java 23, Spring Boot 4.1.1 (`web`, `data-jpa`, `validation`, `security`, `oauth2-client`) | Render (Docker) |
 | Database | PostgreSQL (hosted on Supabase) | Supabase |
-| ML / AI service | Python, FastAPI + Uvicorn, calling Claude directly via the Anthropic SDK (`claude-haiku-4-5`) | Render |
+| ML / AI service | Python, FastAPI + Uvicorn, calling any OpenAI-compatible provider — Gemini (`gemini-2.5-flash`) by default | Render |
 | Frontend | React 18 + Vite + Tailwind + React Router | Vercel |
 | Auth | Email/password + JWT (Argon2 hashing) — see §8 | — |
 | Payments | Mock only for MVP — see §10 | — |
@@ -154,13 +154,13 @@ Two more screens exist for bottom-nav completeness with **no Figma design** (kep
 
 Now a real FastAPI service (`python/app/`), not just CLI scripts:
 
-- **`POST /classify`** (`app/routers/classification.py`) — wraps `classify_request()` (`app/services/classification_service.py`). Sends the raw customer message to `claude-haiku-4-5` through the Anthropic SDK using `prompts/job_classification_prompt.txt`. Returns `category`, `confidence`, `reasoning`, `clarifying_question`, `advice`, `urgency`, `sort_preference` (`cheapest`/`best_rated`/`soonest`/`none`), `job_description`. Backs Figma screen 5.
+- **`POST /classify`** (`app/routers/classification.py`) — wraps `classify_request()` (`app/services/classification_service.py`). Sends the raw customer message to the configured model (`gemini-2.5-flash` by default) using `prompts/job_classification_prompt.txt`. Returns `category`, `confidence`, `reasoning`, `clarifying_question`, `advice`, `urgency`, `sort_preference` (`cheapest`/`best_rated`/`soonest`/`none`), `job_description`. Backs Figma screen 5.
   - **The category vocabulary comes from the caller.** The request takes an optional `categories` list, and the frontend passes the live `GET /api/services` names, so the model can only answer in names that exist as rows. The prompt file's own list is a fallback for direct/CLI calls. This replaced a fixed 10-word list ("mechanic", "beauty", "other") that the 15-row catalog did not contain — 8 of 15 categories were unreachable, because the frontend compared the two with `===`.
   - The prompt is explicit about misspellings, SMS shorthand, SA/multilingual phrasing, and provider-search wording ("find me the best rated plumber") as opposed to problem descriptions.
 - **`POST /price`** (`app/routers/pricing.py`) — wraps `estimate_price()` (`app/services/pricing_service.py`). Grounded in hardcoded SA market reference rates for plumbing/electrical only; other categories get a wide, explicitly-labeled unverified estimate. Backs the price hint on Figma screen 9.
 - **`GET /health`** — for Render's health check.
 - `customer_message.py` / `pricing.py` at the package root are now thin CLI wrappers around the same `app/services` code (no logic duplication) — still useful for local testing against `test_messages/test_messages.txt`.
-- Needs `ANTHROPIC_API_KEY` (local: `.env` via `python-dotenv`; Render: set directly in the service's env vars). `CLAUDE_MODEL` overrides the model, `LLM_MAX_TOKENS` caps output tokens.
+- Needs `LLM_API_KEY` (local: `.env` via `python-dotenv`; Render: set directly in the service's env vars). `LLM_BASE_URL` / `LLM_MODEL` switch provider, `LLM_REASONING_EFFORT` controls thinking (`none` on Gemini — see KEYS.md §1.4), `LLM_MAX_TOKENS` caps output. `python check_llm.py` verifies the lot.
 
 **Bugs found and fixed while scaffolding:**
 - ~~Both prompt templates were missing a comma before the last JSON field in their example response format~~ — fixed in `job_classification_prompt.txt` and `pricing_system_prompt.txt`.
@@ -251,7 +251,7 @@ Decisions made to keep this shippable as a hackathon MVP:
 - **Frontend → Vercel.** `frontend/vercel.json` sets the build command (`npm run build`), output dir (`dist`), and a SPA rewrite so React Router's client-side routes don't 404 on refresh. Needs `VITE_API_BASE_URL` (backend Render URL) and `VITE_ML_API_BASE_URL` (ML service Render URL) set as Vercel env vars — see `frontend/.env.example`.
 - **Backend + ML service → Render**, both defined in the root `render.yaml` blueprint:
   - `ubuntulink-backend` — Docker runtime, builds from `backend/Dockerfile`. Needs `SUPABASE_DB_URL`, `JWT_SECRET`, `FRONTEND_URL` set in Render's dashboard (marked `sync: false` in the blueprint — secrets aren't committed).
-  - `ubuntulink-ml-service` — Python runtime, `uvicorn app.main:app`. Needs `ANTHROPIC_API_KEY`, `FRONTEND_URL`.
+  - `ubuntulink-ml-service` — Python runtime, `uvicorn app.main:app`. Needs `LLM_API_KEY`, `FRONTEND_URL`.
   - Fixed a real deploy blocker while wiring this up: `application.properties`'s `spring.config.import` for the local `.env` file wasn't marked `optional:`, which would have crashed backend startup on Render (no `.env` file is deployed there — real config comes from Render's env vars instead).
 - **Payments are mocked for the MVP, not real.** `Payment` entity + `MockPaymentService` always returns `MOCK_PAID` — there's no Stripe/PayFast/escrow integration, and none is planned before the hackathon deadline. `POST /api/bookings/{id}/payment/mock-charge` is the only payment endpoint. Real payment integration is a deliberate post-MVP cut (§9c).
 - **Also deliberately cut from MVP scope** (don't build these unless asked): real geolocation/distance matching (§9b), provider verification/vetting (§9a), disputes/cancellations/messaging (§9d), provider→customer reviews (§9e), `service_task_size` price tiers.

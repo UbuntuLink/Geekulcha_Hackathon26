@@ -12,7 +12,7 @@ Get these first — everything below assumes you already have them.
 
 | # | What | Where to get it | Used for |
 |---|---|---|---|
-| 1 | **Anthropic API key** | https://console.anthropic.com → Settings → API keys → Create key | ML service calls to `claude-haiku-4-5` (job classification + pricing) |
+| 1 | **Gemini API key** | https://aistudio.google.com/apikey → Create API key (free tier) | ML service calls to `gemini-2.5-flash` (job classification + pricing). Any OpenAI-compatible provider works — see KEYS.md §1.4 |
 | 2 | **Supabase project + connection string** | https://supabase.com → New project → Project Settings → Database → Connection string (URI, "Transaction" pooler mode recommended) | The Postgres database the backend writes to |
 | 3 | **Render account** | https://render.com → sign up (GitHub login is easiest) | Hosting the backend + ML service |
 | 4 | **Vercel account** | https://vercel.com → sign up (GitHub login is easiest) | Hosting the frontend |
@@ -55,7 +55,7 @@ pip install -r requirements.txt
 
 Create `python/.env`:
 ```
-ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxxxxx
+LLM_API_KEY=your-gemini-api-key
 ```
 
 Run:
@@ -155,7 +155,7 @@ For each, Render will ask you to fill in the env vars marked `sync: false` in th
 **`ubuntulink-ml-service`**
 | Env var | Value |
 |---|---|
-| `ANTHROPIC_API_KEY` | Same key as your local `python/.env` |
+| `LLM_API_KEY` | Same key as your local `python/.env` |
 | `FRONTEND_URL` | Same Vercel URL |
 
 Render builds the backend from `backend/Dockerfile` (Maven → JRE image) and the ML service via `pip install -r requirements.txt` + `uvicorn`. First deploy of the backend will also run `DevDataSeeder` against whatever `SUPABASE_DB_URL` you gave it — if that's the same Supabase project you used locally, it's a no-op (already seeded); if it's a fresh one, you get the same demo data there too.

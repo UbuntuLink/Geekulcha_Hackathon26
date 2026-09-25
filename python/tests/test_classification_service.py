@@ -6,12 +6,11 @@ from app.services.classification_service import classify_request
 
 
 def _reply(json_text: str):
-    """An Anthropic response: content is a list of blocks, not choices[].message."""
-    return SimpleNamespace(content=[SimpleNamespace(type="text", text=json_text)])
+    return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=json_text))])
 
 
 class ClassificationServiceTests(unittest.TestCase):
-    @patch("app.core.llm_client.client.messages.create")
+    @patch("app.core.llm_client.client.chat.completions.create")
     def test_classify_request_includes_photo_in_multimodal_request(self, mock_create):
         mock_create.return_value = _reply(
             '{'
@@ -33,14 +32,13 @@ class ClassificationServiceTests(unittest.TestCase):
         )
 
         self.assertEqual(result["category"], "plumbing")
-        user_content = mock_create.call_args.kwargs["messages"][0]["content"]
-        images = [part for part in user_content if isinstance(part, dict) and part.get("type") == "image"]
+        # messages[0] is the system prompt the client folds in; the user turn follows it.
+        user_content = mock_create.call_args.kwargs["messages"][1]["content"]
+        images = [p for p in user_content if isinstance(p, dict) and p.get("type") == "image_url"]
         self.assertEqual(len(images), 1)
-        # Anthropic wants the media type and payload split out of the data URL.
-        self.assertEqual(images[0]["source"]["media_type"], "image/jpeg")
-        self.assertEqual(images[0]["source"]["data"], "abc123")
+        self.assertEqual(images[0]["image_url"]["url"], "data:image/jpeg;base64,abc123")
 
-    @patch("app.core.llm_client.client.messages.create")
+    @patch("app.core.llm_client.client.chat.completions.create")
     def test_classify_request_uses_the_callers_catalog(self, mock_create):
         mock_create.return_value = _reply(
             '{"category": "Automotive Repair", "confidence": "high", '
@@ -53,13 +51,13 @@ class ClassificationServiceTests(unittest.TestCase):
         result = classify_request("my bakkie wont start", ["Plumbing", "Automotive Repair"])
 
         self.assertEqual(result["category"], "Automotive Repair")
-        system_prompt = mock_create.call_args.kwargs["system"]
+        system_prompt = mock_create.call_args.kwargs["messages"][0]["content"]
         # The live catalog has to reach the model, or it answers in its own vocabulary and the
         # frontend finds no matching service row.
         self.assertIn("Automotive Repair", system_prompt)
         self.assertIn("Plumbing", system_prompt)
 
-    @patch("app.core.llm_client.client.messages.create")
+    @patch("app.core.llm_client.client.chat.completions.create")
     def test_classify_request_without_a_catalog_uses_the_prompt_file(self, mock_create):
         mock_create.return_value = _reply(
             '{"category": "other", "confidence": "high", "reasoning": "Out of scope.", '
@@ -70,7 +68,7 @@ class ClassificationServiceTests(unittest.TestCase):
 
         classify_request("i want to buy a laptop")
 
-        system_prompt = mock_create.call_args.kwargs["system"]
+        system_prompt = mock_create.call_args.kwargs["messages"][0]["content"]
         self.assertNotIn("this list replaces the one above", system_prompt)
 
 

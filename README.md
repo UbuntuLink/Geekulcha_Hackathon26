@@ -44,7 +44,7 @@ flowchart TD
 
     subgraph external ["External"]
         DB[("PostgreSQL<br/>Supabase")]
-        LLM["Anthropic API<br/>claude-haiku-4-5"]
+        LLM["Gemini API<br/>gemini-2.5-flash"]
     end
 
     FE -->|"REST + Bearer JWT<br/>/auth, /api/*"| API
@@ -133,7 +133,7 @@ classDiagram
 | Frontend | React 18, Vite, Tailwind, React Router |
 | Backend | Java 23, Spring Boot 4.1.1 (web, data-jpa, security, validation) |
 | Database | PostgreSQL on Supabase, schema managed by Hibernate `ddl-auto=update` |
-| ML service | Python, FastAPI, Uvicorn, Anthropic SDK (claude-haiku-4-5) |
+| ML service | Python, FastAPI, Uvicorn, Gemini via the OpenAI-compatible protocol (gemini-2.5-flash) |
 | Auth | Email and password, Argon2 hashing, JWT (HS256) |
 | Hosting | Vercel (frontend), Render (backend and ML service) |
 

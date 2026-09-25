@@ -2,7 +2,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-import anthropic
+from openai import APIStatusError, AuthenticationError, NotFoundError, RateLimitError
 
 from app.core.llm_client import LlmUnavailable, chat, image_block
 
@@ -16,78 +16,89 @@ def _status_error(cls, message: str, status_code: int):
     return exc
 
 
-def _reply(text: str):
-    return SimpleNamespace(content=[SimpleNamespace(type="text", text=text)])
+def _reply(text):
+    return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=text))])
 
 
 class ChatTests(unittest.TestCase):
-    @patch("app.core.llm_client.client.messages.create")
-    def test_sends_the_system_prompt_as_its_own_argument(self, mock_create):
+    @patch("app.core.llm_client.client.chat.completions.create")
+    def test_folds_the_system_prompt_in_as_the_leading_message(self, mock_create):
         mock_create.return_value = _reply("ok")
 
         result = chat(system="be terse", messages=[{"role": "user", "content": "hi"}])
 
         self.assertEqual(result, "ok")
-        kwargs = mock_create.call_args.kwargs
-        # Anthropic takes the system prompt top-level; a role:"system" message would be rejected.
-        self.assertEqual(kwargs["system"], "be terse")
-        self.assertEqual([m["role"] for m in kwargs["messages"]], ["user"])
+        sent = mock_create.call_args.kwargs["messages"]
+        # Callers pass `system` separately; this protocol wants it as the first message.
+        self.assertEqual(sent[0], {"role": "system", "content": "be terse"})
+        self.assertEqual(sent[1]["role"], "user")
 
-    @patch("app.core.llm_client.client.messages.create")
-    def test_joins_only_the_text_blocks(self, mock_create):
-        mock_create.return_value = SimpleNamespace(content=[
-            SimpleNamespace(type="thinking", thinking="ignored"),
-            SimpleNamespace(type="text", text='{"category":'),
-            SimpleNamespace(type="text", text=' "Plumbing"}'),
-        ])
+    @patch("app.core.llm_client.client.chat.completions.create")
+    def test_turns_off_thinking_so_the_budget_reaches_the_answer(self, mock_create):
+        mock_create.return_value = _reply("ok")
 
-        self.assertEqual(chat("s", [{"role": "user", "content": "hi"}]), '{"category": "Plumbing"}')
+        chat("s", [{"role": "user", "content": "hi"}])
 
-    @patch("app.core.llm_client.client.messages.create")
-    def test_reports_an_exhausted_account_readably(self, mock_create):
+        # Without this, Gemini 2.5 spends max_tokens reasoning and the JSON comes back
+        # truncated or empty. Measured: "Africa" instead of "South Africa" at 400 tokens.
+        self.assertEqual(mock_create.call_args.kwargs.get("reasoning_effort"), "none")
+
+    @patch("app.core.llm_client.client.chat.completions.create")
+    def test_reports_an_unknown_model_with_the_fix(self, mock_create):
         mock_create.side_effect = _status_error(
-            anthropic.BadRequestError,
-            "Error code: 400 - your credit balance is too low to access the API",
-            400,
+            NotFoundError, "Error code: 404 - model not found", 404
         )
 
         with self.assertRaises(LlmUnavailable) as caught:
             chat("s", [{"role": "user", "content": "hi"}])
 
-        self.assertIn("out of credit", str(caught.exception))
-        self.assertIn("console.anthropic.com", str(caught.exception))
+        self.assertIn("check_llm.py", str(caught.exception))
+        self.assertIn("LLM_MODEL", str(caught.exception))
 
-    @patch("app.core.llm_client.client.messages.create")
+    @patch("app.core.llm_client.client.chat.completions.create")
     def test_reports_a_bad_key_readably(self, mock_create):
         mock_create.side_effect = _status_error(
-            anthropic.AuthenticationError, "Error code: 401 - invalid x-api-key", 401
+            AuthenticationError, "Error code: 401 - invalid key", 401
         )
 
         with self.assertRaises(LlmUnavailable) as caught:
             chat("s", [{"role": "user", "content": "hi"}])
 
-        self.assertIn("ANTHROPIC_API_KEY", str(caught.exception))
+        self.assertIn("LLM_API_KEY", str(caught.exception))
+
+    @patch("app.core.llm_client.client.chat.completions.create")
+    def test_reports_an_exhausted_quota_readably(self, mock_create):
+        mock_create.side_effect = _status_error(
+            RateLimitError, "Error code: 429 - RESOURCE_EXHAUSTED", 429
+        )
+
+        with self.assertRaises(LlmUnavailable) as caught:
+            chat("s", [{"role": "user", "content": "hi"}])
+
+        self.assertIn("quota", str(caught.exception))
+
+    @patch("app.core.llm_client.client.chat.completions.create")
+    def test_treats_an_empty_reply_as_a_failure(self, mock_create):
+        mock_create.return_value = _reply(None)
+
+        with self.assertRaises(LlmUnavailable):
+            chat("s", [{"role": "user", "content": "hi"}])
+
+    @patch("app.core.llm_client.client.chat.completions.create")
+    def test_wraps_other_status_errors(self, mock_create):
+        mock_create.side_effect = _status_error(APIStatusError, "Error code: 500 - boom", 500)
+
+        with self.assertRaises(LlmUnavailable):
+            chat("s", [{"role": "user", "content": "hi"}])
 
 
 class ImageBlockTests(unittest.TestCase):
-    def test_splits_a_browser_data_url(self):
+    def test_passes_the_data_url_through_whole(self):
         block = image_block("data:image/png;base64,AAAA")
 
-        self.assertEqual(block["type"], "image")
-        self.assertEqual(block["source"]["media_type"], "image/png")
-        # The payload must not keep the data-URL header, unlike the OpenAI-shaped API.
-        self.assertEqual(block["source"]["data"], "AAAA")
-
-    def test_accepts_bare_base64(self):
-        block = image_block("AAAA")
-
-        self.assertEqual(block["source"]["data"], "AAAA")
-        self.assertEqual(block["source"]["media_type"], "image/jpeg")
-
-    def test_falls_back_for_a_media_type_anthropic_will_not_take(self):
-        block = image_block("data:image/bmp;base64,AAAA")
-
-        self.assertEqual(block["source"]["media_type"], "image/jpeg")
+        self.assertEqual(
+            block, {"type": "image_url", "image_url": {"url": "data:image/png;base64,AAAA"}}
+        )
 
 
 if __name__ == "__main__":

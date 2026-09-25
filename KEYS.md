@@ -35,7 +35,7 @@ and it usually fails *silently*:
 | `SUPABASE_DB_URL` | Render → backend | Yes | [1.1](#11-supabase_db_url) |
 | `JWT_SECRET` | Render → backend | Yes | [1.2](#12-jwt_secret) |
 | `FRONTEND_URL` | Render → backend **and** ML service | Optional | [1.3](#13-frontend_url) |
-| `ANTHROPIC_API_KEY` | Render → ML service | Yes | [1.4](#14-anthropic_api_key) |
+| `LLM_API_KEY` | Render → ML service | Yes | [1.4](#14-llm_api_key-the-model-provider) |
 | `VITE_API_BASE_URL` | Vercel → project | Yes | [2.1](#21-the-two-vite-urls) |
 | `VITE_ML_API_BASE_URL` | Vercel → project | Yes | [2.1](#21-the-two-vite-urls) |
 | `RENDER_BACKEND_DEPLOY_HOOK` | GitHub → **Secrets** | Yes, for CD | [3.1](#31-render-deploy-hooks) |
@@ -125,22 +125,39 @@ controller. The code now filters blanks out, but an empty variable is still a li
 No scheme-less values (`ubuntulink.vercel.app` ✗), no trailing slash (`https://x.vercel.app/` ✗).
 An origin is scheme + host + port, nothing else.
 
-## 1.4 `ANTHROPIC_API_KEY`
+## 1.4 `LLM_API_KEY` (the model provider)
 
 **Service:** `ubuntulink-ml-service`
 
-<https://console.anthropic.com> → **Settings → API keys** → **Create Key** → name it
-`ubuntulink-prod` → copy. Starts with `sk-ant-`. Shown once.
+The ML service talks to any OpenAI-compatible provider, and defaults to **Gemini** on Google's
+free tier. Get a key at <https://aistudio.google.com/apikey>.
 
-Set a spend limit on the key while you're there — it's a spend-capable credential, and this is
-the only one in the project where a leak costs money directly.
+| Variable | Default | Notes |
+|---|---|---|
+| `LLM_API_KEY` | — | Required. `GEMINI_API_KEY` / `GEMINI_KEY` / `GOOGLE_API_KEY` also work, matched ignoring case and underscores. |
+| `LLM_BASE_URL` | `https://generativelanguage.googleapis.com/v1beta/openai/` | Swap providers here, not in code. |
+| `LLM_MODEL` | `gemini-2.5-flash` | Run `python check_llm.py` to list what your key can see. |
+| `LLM_REASONING_EFFORT` | `none` on Gemini | See the warning below before changing it. |
+| `LLM_MAX_TOKENS` | — | Caps output tokens for a whole run. |
 
-The model is `claude-haiku-4-5` ($1 per million input tokens, $5 per million output). Set
-`CLAUDE_MODEL` to `claude-sonnet-5` or `claude-opus-5` to trade cost for capability without a
-code change, and `LLM_MAX_TOKENS` to cap output tokens for a whole run.
+Other providers, same code:
 
-> This replaced an OpenRouter key. If `OPEN_ROUTER_API_KEY` is still set anywhere it is now
-> ignored — delete it so nobody wonders which one is live.
+| Provider | `LLM_BASE_URL` | `LLM_MODEL` |
+|---|---|---|
+| OpenRouter | `https://openrouter.ai/api/v1` | `anthropic/claude-haiku-4.5` |
+| Groq | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` |
+| Anthropic | not OpenAI-compatible — needs the `anthropic` SDK | — |
+
+> **Don't turn Gemini's thinking back on without raising `LLM_MAX_TOKENS`.** On Gemini 2.5,
+> reasoning tokens count against `max_tokens`, so the JSON answer gets truncated or lost. Measured
+> on this project: "Which country is Johannesburg in?" answered **"Africa"** at 400 tokens and
+> returned **nothing** at 20. `LLM_REASONING_EFFORT=none` gives the whole budget to the answer.
+
+> **After changing any of these, run `python check_llm.py`** — it prints the provider, which
+> variable the key came from, the models the key can see, and the result of one test call.
+
+> Set a spend limit on the key where the provider allows it. This is the only credential in the
+> project that can cost money directly.
 
 > Read by [python/app/core/config.py](python/app/core/config.py). Without it the AI
 > classification and pricing endpoints fail at call time, not at startup.
@@ -296,7 +313,7 @@ JWT_SECRET=any-random-32-plus-character-string-for-dev
 
 **`python/.env`**
 ```properties
-ANTHROPIC_API_KEY=sk-ant-...
+LLM_API_KEY=your-gemini-key
 ```
 
 **`frontend/.env.local`** (copy [frontend/.env.example](frontend/.env.example))
@@ -318,7 +335,7 @@ Do it in this order; each step needs a URL produced by the one before.
 
 - [ ] Render: create both services (blueprint from `render.yaml`, or by hand — see DEPLOYMENT.md)
 - [ ] Render backend: set `SUPABASE_DB_URL` (§1.1) and `JWT_SECRET` (§1.2)
-- [ ] Render ML: set `ANTHROPIC_API_KEY` (§1.4)
+- [ ] Render ML: set `LLM_API_KEY` (§1.4)
 - [ ] Render: **delete** `FRONTEND_URL` on both unless you have a custom domain (§1.3)
 - [ ] Note both Render service URLs
 - [ ] Vercel: create the project, root directory `frontend`
@@ -384,7 +401,7 @@ Rotate first, investigate after. All of these are replaceable in under two minut
 
 | Key | How to rotate |
 |---|---|
-| `ANTHROPIC_API_KEY` | console.anthropic.com → Settings → API keys → delete → create → update Render. **Do this one first** — it can spend money. |
+| `LLM_API_KEY` | Your provider's console (Gemini: <https://aistudio.google.com/apikey>) → delete → create → update Render. **Do this one first** — it can spend money. |
 | `JWT_SECRET` | Generate a new one, update Render. Signs everyone out; nothing else breaks. |
 | `SUPABASE_DB_URL` | Supabase → Settings → Database → reset password, rebuild the JDBC URL, update Render. |
 | Deploy hooks | Render → service → Settings → Deploy Hook → **Regenerate**, update the GitHub secret. |

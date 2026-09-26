@@ -8,7 +8,13 @@ import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import EmptyState from "../../components/common/EmptyState.jsx";
 import Button from "../../components/common/Button.jsx";
 import ProgressSteps from "../../components/common/ProgressSteps.jsx";
-import { getMatchingProviders, getMyProviderProfile, getServiceRequest, getQuantumMatch } from "../../api/services.js";
+import {
+  getFurtherProviders,
+  getMyProviderProfile,
+  getNearbyProviders,
+  getQuantumMatch,
+  getServiceRequest,
+} from "../../api/services.js";
 import { getOnboarding } from "../../lib/preferences.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 
@@ -30,6 +36,12 @@ export default function MatchingProviders() {
   const [error, setError] = useState("");
   const [quantumProviderId, setQuantumProviderId] = useState(null);
   const [quantumStatus, setQuantumStatus] = useState("");
+  // Providers beyond their own service radius: counted up front, loaded only on "View more".
+  const [furtherCount, setFurtherCount] = useState(0);
+  const [furtherProviders, setFurtherProviders] = useState(null);
+  const [furtherStatus, setFurtherStatus] = useState("idle"); // idle | loading | error
+  // What the "View more" fetch needs, captured from the first load.
+  const [search, setSearch] = useState(null); // { serviceId, latitude, longitude, ownProfileId }
   const preferredPriority = getOnboarding().priority;
   const [sortMode, setSortMode] = useState(preferredPriority === "ratings" ? "ratings" : "recommended");
 
@@ -39,6 +51,10 @@ export default function MatchingProviders() {
     setQuantumStatus("");
     setProviders(null);
     setError("");
+    setFurtherCount(0);
+    setFurtherProviders(null);
+    setFurtherStatus("idle");
+    setSearch(null);
     (async () => {
       try {
         let serviceId = state?.serviceId;
@@ -51,24 +67,24 @@ export default function MatchingProviders() {
           return;
         }
         // The customer's coordinates come from onboarding. Sending them is what turns this from
-        // "who offers this service" into "who offers it near me" — before geolocation the
-        // customer's location never reached this endpoint at all.
+        // "who offers this service" into "who offers it near me".
         const { latitude, longitude } = getOnboarding();
-        let list = await getMatchingProviders(serviceId, latitude ?? null, longitude ?? null);
-
-        // Now that any user can be a provider, someone browsing as a customer could be offered
-        // their own profile to quote on. Drop it.
-        if (user?.isProvider) {
-          const ownProfile = await getMyProviderProfile().catch(() => null);
-          if (ownProfile?.providerProfileId != null) {
-            list = list.filter((provider) => provider.providerProfileId !== ownProfile.providerProfileId);
-          }
-        }
-        // No pre-sort by onboarding priority here: sortedProviders below already applies it,
-        // together with the sort chips, so sorting twice would only be overwritten.
+        const [{ providers: nearby, furtherCount: further }, ownProfile] = await Promise.all([
+          getNearbyProviders(serviceId, latitude ?? null, longitude ?? null),
+          // Now that any user can be a provider, someone browsing as a customer could be offered
+          // their own profile to quote on. It's dropped from both lists.
+          user?.isProvider ? getMyProviderProfile().catch(() => null) : Promise.resolve(null),
+        ]);
         if (controller.signal.aborted) return;
 
-        // Optional recommendation: sorting only changes when the user chooses Quantum.
+        const ownProfileId = ownProfile?.providerProfileId ?? null;
+        const list = nearby.filter((provider) => provider.providerProfileId !== ownProfileId);
+
+        // Show the providers straight away; the quantum recommendation arrives on its own below.
+        setProviders(list);
+        setFurtherCount(further);
+        setSearch({ serviceId, latitude: latitude ?? null, longitude: longitude ?? null, ownProfileId });
+
         if (list.length > 0) {
           setQuantumStatus("Finding a quantum recommendation…");
           try {
@@ -85,8 +101,6 @@ export default function MatchingProviders() {
             }
           }
         }
-        // Reveal the list and recommendation together, including the fallback on failure.
-        if (!controller.signal.aborted) setProviders(list);
       } catch (err) {
         if (controller.signal.aborted) return;
         setError("Couldn't load providers — is the backend running?");
@@ -96,9 +110,9 @@ export default function MatchingProviders() {
     return () => controller.abort();
   }, [id, state, user?.isProvider]);
 
-  const sortedProviders = useMemo(() => {
-    if (!providers) return providers;
-    const list = [...providers];
+  const sortProviders = (providerList) => {
+    if (!providerList) return providerList;
+    const list = [...providerList];
 
     if (sortMode === "price") return list.sort((a, b) => (a.minPrice ?? Infinity) - (b.minPrice ?? Infinity));
     if (sortMode === "ratings") return list.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
@@ -115,7 +129,39 @@ export default function MatchingProviders() {
       list.sort((a, b) => Number(b.providerProfileId === quantumProviderId) - Number(a.providerProfileId === quantumProviderId));
     }
     return list;
-  }, [providers, sortMode, preferredPriority, quantumProviderId]);
+  };
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const sortedProviders = useMemo(() => sortProviders(providers), [providers, sortMode, preferredPriority, quantumProviderId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const sortedFurther = useMemo(() => sortProviders(furtherProviders), [furtherProviders, sortMode, preferredPriority, quantumProviderId]);
+
+  const loadFurther = async () => {
+    if (!search || furtherStatus === "loading") return;
+    setFurtherStatus("loading");
+    try {
+      const list = await getFurtherProviders(search.serviceId, search.latitude, search.longitude);
+      setFurtherProviders(list.filter((provider) => provider.providerProfileId !== search.ownProfileId));
+      setFurtherStatus("idle");
+    } catch (err) {
+      console.error(err);
+      setFurtherStatus("error");
+    }
+  };
+
+  const renderCards = (list) => (
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {list.map((p, index) => (
+        <div key={p.providerProfileId} className="animate-fade-up" style={{ animationDelay: `${Math.min(index * 55, 220)}ms` }}>
+          <ProviderCard
+            provider={p}
+            quantumRecommended={quantumProviderId != null && p.providerProfileId === quantumProviderId}
+            onClick={() => navigate(`/providers/${p.providerProfileId}`, { state: { serviceRequestId: id } })}
+          />
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <Screen
@@ -130,10 +176,16 @@ export default function MatchingProviders() {
       {error && <ErrorBanner>{error}</ErrorBanner>}
       {providers === null && !error && (
         <div className="rounded-2xl border border-brand/15 bg-brand-mist px-4">
-          <Loading label={quantumStatus || t("customer.findingProviders")} />
+          <Loading label={t("customer.findingProviders")} />
         </div>
       )}
-      {providers?.length === 0 && <EmptyState>{t("customer.noServiceProviders")}</EmptyState>}
+      {providers?.length === 0 && (
+        <EmptyState>
+          {furtherCount > 0
+            ? "No providers cover your area yet — but some further away offer this service."
+            : t("customer.noServiceProviders")}
+        </EmptyState>
+      )}
 
       {providers?.length > 0 && (
         <div className="mb-5 rounded-3xl border border-white/80 bg-white/68 p-3 shadow-sm backdrop-blur sm:p-4 lg:flex lg:items-center lg:justify-between lg:gap-4">
@@ -168,17 +220,36 @@ export default function MatchingProviders() {
 
       {providers !== null && quantumStatus && <p role="status" className="mb-3 text-xs text-gray-500">{quantumStatus}</p>}
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {sortedProviders?.map((p, index) => (
-          <div key={p.providerProfileId} className="animate-fade-up" style={{ animationDelay: `${Math.min(index * 55, 220)}ms` }}>
-            <ProviderCard
-              provider={p}
-              quantumRecommended={quantumProviderId != null && p.providerProfileId === quantumProviderId}
-              onClick={() => navigate(`/providers/${p.providerProfileId}`, { state: { serviceRequestId: id } })}
-            />
-          </div>
-        ))}
-      </div>
+      {sortedProviders?.length > 0 && renderCards(sortedProviders)}
+
+      {/* Providers beyond their own service radius, fetched only when asked for. */}
+      {furtherCount > 0 && furtherProviders === null && (
+        <div className="mt-5 text-center">
+          <button
+            type="button"
+            onClick={loadFurther}
+            disabled={furtherStatus === "loading"}
+            className="w-full rounded-2xl border border-brand/25 bg-white px-4 py-3 text-sm font-bold text-brand shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand/5 disabled:cursor-wait disabled:opacity-70 sm:w-auto sm:px-6"
+          >
+            {furtherStatus === "loading"
+              ? "Loading more providers…"
+              : `View ${furtherCount} more provider${furtherCount === 1 ? "" : "s"} further away`}
+          </button>
+          {furtherStatus === "error" && (
+            <p role="alert" className="mt-2 text-xs text-red-600">Couldn't load more providers. Please try again.</p>
+          )}
+        </div>
+      )}
+
+      {sortedFurther && (
+        <section className="mt-7" aria-labelledby="further-heading">
+          <h2 id="further-heading" className="text-sm font-extrabold text-ink">Further away</h2>
+          <p className="mb-3 mt-0.5 text-xs text-gray-500">
+            These providers are outside their usual service area. They may charge for travel, or not be able to come.
+          </p>
+          {sortedFurther.length > 0 ? renderCards(sortedFurther) : <EmptyState>No other providers found.</EmptyState>}
+        </section>
+      )}
 
       {providers?.length > 1 && (
         <div className="mt-6 rounded-3xl bg-brand-mist/65 p-4 sm:flex sm:items-center sm:justify-between sm:gap-4 lg:p-5">

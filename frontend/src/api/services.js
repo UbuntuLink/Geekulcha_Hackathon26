@@ -71,6 +71,22 @@ export const getMatchingProviders = (serviceId, latitude = null, longitude = nul
   return apiClient.get(`/api/services/${serviceId}/providers`, { params }).then((res) => res.data);
 };
 
+// The matches page's first load: providers whose service radius reaches the customer, plus how
+// many more are further away (from the X-Further-Away-Count header), without fetching those yet.
+export const getNearbyProviders = (serviceId, latitude = null, longitude = null) => {
+  const params = latitude != null && longitude != null ? { latitude, longitude } : undefined;
+  return apiClient.get(`/api/services/${serviceId}/providers`, { params }).then((res) => ({
+    providers: res.data,
+    furtherCount: Number(res.headers["x-further-away-count"] ?? 0) || 0,
+  }));
+};
+
+// Loaded only when the customer taps "View more": providers outside their own service radius.
+export const getFurtherProviders = (serviceId, latitude = null, longitude = null) => {
+  const params = { scope: "further", ...(latitude != null && longitude != null ? { latitude, longitude } : {}) };
+  return apiClient.get(`/api/services/${serviceId}/providers`, { params }).then((res) => res.data);
+};
+
 export const getProviderProfile = (providerProfileId) =>
   apiClient.get(`/api/provider-profiles/${providerProfileId}`).then((res) => res.data);
 

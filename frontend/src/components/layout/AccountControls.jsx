@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { LANGUAGES, useLanguage } from "../../context/LanguageContext.jsx";
+import DisplaySettings from "../common/DisplaySettings.jsx";
 
 /**
  * Language, read-aloud and sign-out.
@@ -56,10 +57,12 @@ export default function AccountControls({ compact = false }) {
     synth.speak(utterance);
   };
 
-  const size = compact ? "px-2.5 py-1.5 text-[11px]" : "px-3 py-2 text-xs";
+  const size = compact ? "px-2.5 py-1.5 text-xs" : "px-3 py-2 text-xs";
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5">
+      {/* In the nav bar the display settings open as a menu; on Profile they're shown in full. */}
+      {compact && <DisplaySettings compact />}
       <button
         type="button"
         onClick={readPage}

@@ -17,7 +17,7 @@ export default function ServiceNotSupported() {
       <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-3xl bg-brand-soft text-2xl text-brand">↗</div>
 
       <Card>
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-400">Your request</p>
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-500">Your request</p>
         <p className="mt-2 text-sm font-semibold leading-6 text-ink">{originalDescription || "Unsupported service request"}</p>
       </Card>
 

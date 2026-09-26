@@ -1,8 +1,30 @@
 # Accessibility — where to adjust what
 
 A map for making UbuntuLink work for people with disabilities: colour blindness, low vision, blindness, motor
-and hearing impairments, and low literacy. For each need it says what the app already does, what's missing,
-and **the exact file to change**. Nothing here has been changed yet.
+and hearing impairments, and low literacy. For each need it says what the app does and **the exact file to
+change**.
+
+## Status: implemented
+
+| Feature | Where the user finds it | Code |
+|---|---|---|
+| **Display settings**: Standard / Colour-blind friendly / High contrast colours, Larger text, Reduce motion | "Aa Display" in the desktop nav bar and on the sign-in pages; the "Display" card on Profile (customers) and Edit profile (providers) on phones. Saved per device. | `components/common/DisplaySettings.jsx`, `lib/a11y.js` |
+| Themeable colours (every Tailwind colour is a CSS variable) | — | `styles/theme.css` (generated), `tailwind.config.js` |
+| System "reduce motion" respected everywhere | Automatic | `styles/index.css` (end) |
+| Minimum text size 12px; darker hint text (grey-500) | Everywhere | all pages |
+| Symbols beside status colours (⏳ ✓ → ⚒ ✕) | Tracker, bookings, My requests, Quotes | `lib/bookingSteps.js` (`STEP_ICONS`), `Quotes.jsx` |
+| Screen-reader announcements for new messages and tracker status changes | Automatic | `BottomNav.jsx`, `BookingTracking.jsx` |
+| Larger tap targets (photo ✕, "Skip to", sort chips) | — | `ReviewProvider.jsx`, `BookingTracking.jsx`, `MatchingProviders.jsx` |
+| Newer screens' text routed through translations | Tracker, Quotes, Messages, My requests | `context/LanguageContext.jsx` (`status.*`, `tracker.*`, `quotes.*`, `messages.*`) |
+
+**Still to do:**
+- The new translation keys are **English only**; isiZulu, Setswana and Afrikaans fall back to English until a
+  native speaker adds them in `LanguageContext.jsx`.
+- Most of the landing page (`Welcome.jsx`) is styled with fixed colours in `index.css`, so the colour-blind
+  theme changes its buttons and badges but not all of its decorative colours. High contrast removes the
+  frosted-glass surfaces app-wide.
+
+The sections below are the original audit and remain the reference for where each thing lives.
 
 ---
 

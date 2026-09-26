@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 import { useNavigate } from "react-router-dom";
 import Screen from "../../components/layout/Screen.jsx";
 import Card from "../../components/common/Card.jsx";
@@ -7,7 +8,7 @@ import Loading from "../../components/common/Loading.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { getCustomerBookings, getMyQuotes, getMyServiceRequests, deleteServiceRequest } from "../../api/services.js";
-import { STEP_LABELS } from "../../lib/bookingSteps.js";
+import { STEP_ICONS } from "../../lib/bookingSteps.js";
 
 // A service request doesn't carry its booking, so bookings are looked up separately and matched
 // by request id; a booked request opens its work tracker.
@@ -19,6 +20,7 @@ function requestRoute(req, booking) {
 export default function MyRequests() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [requests, setRequests] = useState(null);
   const [error, setError] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -71,7 +73,7 @@ export default function MyRequests() {
   const totalPending = Object.values(pendingQuotes).reduce((sum, count) => sum + count, 0);
 
   return (
-    <Screen title="Your requests" showBack={false} withNav navRole={user?.isProvider ? "provider" : "customer"}>
+    <Screen title={t("requests.title")} showBack={false} withNav navRole={user?.isProvider ? "provider" : "customer"}>
       {requests === null && !error && <Loading label="Loading your requests…" />}
       {error && <ErrorBanner>{error}</ErrorBanner>}
       {requests?.length === 0 && <EmptyState>No requests yet.</EmptyState>}
@@ -99,7 +101,7 @@ export default function MyRequests() {
             <p className="font-medium text-gray-900">{req.description}</p>
             <p className="text-sm capitalize text-gray-500">
               {bookingsByRequest[req.id]
-                ? `${STEP_LABELS[bookingsByRequest[req.id].status] ?? bookingsByRequest[req.id].status} · track job →`
+                ? `${STEP_ICONS[bookingsByRequest[req.id].status] ?? ""} ${t(`status.${bookingsByRequest[req.id].status}`)} · track job →`
                 : req.status?.toLowerCase().replace("_", " ")}
               {pendingQuotes[req.id] > 0 && (
                 <span className="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold normal-case text-amber-700">

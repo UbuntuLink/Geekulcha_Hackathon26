@@ -16,6 +16,7 @@ import { formatRange } from "../../lib/format.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useNavigate } from "react-router-dom";
+import DisplaySettings from "../../components/common/DisplaySettings.jsx";
 
 export default function ProviderProfileEdit() {
   const { t } = useLanguage();
@@ -195,6 +196,7 @@ export default function ProviderProfileEdit() {
           </Button>
         </Card>
       </div>
+      <DisplaySettings className="mt-4" />
     </Screen>
   );
 }

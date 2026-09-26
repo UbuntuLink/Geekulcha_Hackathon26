@@ -1,3 +1,5 @@
+@import "./theme.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -3068,3 +3070,39 @@ html { scroll-padding-block: 110px; }
   .hero-desktop-nav.is-pinned .hero-nav-link:not([aria-current="page"]):hover { background: #1f5c4510; color: #1f5c45; }
 }
 @supports not (backdrop-filter: blur(1px)) { .hero-nav-frost { background: linear-gradient(#f5f1e4 70%, #f5f1e400); } }
+
+/* ===== Accessibility settings (see ACCESSIBILITY.md and lib/a11y.js) ===== */
+
+/* Larger text: everything is sized in rem, so raising the root size scales the whole app. */
+html.text-large { font-size: 118.75%; }
+
+/* High contrast: solid surfaces instead of frosted glass, visible borders, heavier focus ring. */
+html.theme-contrast body { background: #ffffff; }
+html.theme-contrast body::before { display: none; }
+html.theme-contrast .glass-surface,
+html.theme-contrast .glass-nav,
+html.theme-contrast .hero-glass {
+  background: #ffffff !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  border: 2px solid #111827 !important;
+}
+html.theme-contrast .hero-glass { background: rgb(var(--c-brand)) !important; }
+html.theme-contrast :focus-visible { outline: 3px solid #000000 !important; outline-offset: 3px !important; }
+html.theme-contrast a { text-decoration: underline; }
+
+/* Reduce motion: honour the system setting, and the in-app switch (html.reduce-motion). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 import { useNavigate } from "react-router-dom";
 import Screen from "../../components/layout/Screen.jsx";
 import Loading from "../../components/common/Loading.jsx";
@@ -12,6 +13,7 @@ import { formatChatTime, initialsOf } from "../../lib/chat.js";
 export default function Messages() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [conversations, setConversations] = useState(null);
   const [error, setError] = useState("");
 
@@ -34,12 +36,12 @@ export default function Messages() {
   }, [load]);
 
   return (
-    <Screen title="Messages" showBack={false} withNav navRole={user?.isProvider ? "provider" : "customer"}>
+    <Screen title={t("messages.title")} showBack={false} withNav navRole={user?.isProvider ? "provider" : "customer"}>
       {error && <div className="mb-3"><ErrorBanner>{error}</ErrorBanner></div>}
       {conversations === null && !error && <Loading label="Loading messages…" />}
       {conversations?.length === 0 && (
         <EmptyState>
-          No messages yet. Start a chat from a provider's profile, a quote or a booking.
+          {t("messages.empty")}
         </EmptyState>
       )}
 
@@ -58,18 +60,18 @@ export default function Messages() {
                 <span className="flex items-baseline justify-between gap-2">
                   <span className={`truncate text-sm ${c.unreadCount ? "font-extrabold text-ink" : "font-semibold text-gray-800"}`}>
                     {c.otherPartyName}
-                    <span className="ml-1.5 text-xs font-normal text-gray-400">
+                    <span className="ml-1.5 text-xs font-normal text-gray-500">
                       {c.otherPartyRole === "PROVIDER" ? "Provider" : "Customer"}
                     </span>
                   </span>
-                  <span className="shrink-0 text-xs text-gray-400">{formatChatTime(c.lastMessageAt)}</span>
+                  <span className="shrink-0 text-xs text-gray-500">{formatChatTime(c.lastMessageAt)}</span>
                 </span>
                 <span className="mt-0.5 flex items-center justify-between gap-2">
                   <span className={`truncate text-sm ${c.unreadCount ? "font-semibold text-gray-800" : "text-gray-500"}`}>
                     {c.lastMessagePreview || "No messages yet"}
                   </span>
                   {c.unreadCount > 0 && (
-                    <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-brand px-1.5 text-[11px] font-bold text-white">
+                    <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-brand px-1.5 text-xs font-bold text-white">
                       {c.unreadCount}
                     </span>
                   )}

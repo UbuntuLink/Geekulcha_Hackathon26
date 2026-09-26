@@ -13,17 +13,17 @@ export default function ProgressSteps({ current = 1, steps = DEFAULT_STEPS, clas
             <div key={label} className="flex min-w-0 flex-1 items-center gap-2">
               <div className="flex min-w-0 items-center gap-2">
                 <span
-                  className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-[11px] font-extrabold transition-all duration-300 sm:h-8 sm:w-8 ${
+                  className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-xs font-extrabold transition-all duration-300 sm:h-8 sm:w-8 ${
                     complete
                       ? "border-brand bg-brand text-white"
                       : active
                         ? "border-brand bg-white text-brand shadow-[0_0_0_5px_rgba(31,92,69,0.08)]"
-                        : "border-brand/15 bg-white/70 text-gray-400"
+                        : "border-brand/15 bg-white/70 text-gray-500"
                   }`}
                 >
                   {complete ? "✓" : step}
                 </span>
-                <span className={`hidden truncate text-xs font-bold sm:block ${active || complete ? "text-brand" : "text-gray-400"}`}>
+                <span className={`hidden truncate text-xs font-bold sm:block ${active || complete ? "text-brand" : "text-gray-500"}`}>
                   {label}
                 </span>
               </div>

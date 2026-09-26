@@ -165,7 +165,7 @@ export default function LocationPicker({ value, onChange, label = "Where are you
         </button>
       </div>
 
-      {searching && <p className="mt-2 text-xs text-gray-400">Searching…</p>}
+      {searching && <p className="mt-2 text-xs text-gray-500">Searching…</p>}
       {notice && <p className="mt-2 text-xs text-amber-700">{notice}</p>}
 
       {results.length > 0 && (
@@ -196,7 +196,7 @@ export default function LocationPicker({ value, onChange, label = "Where are you
       )}
 
       {!chosen && query.trim().length > 0 && (
-        <p className="mt-2 text-xs text-gray-400">
+        <p className="mt-2 text-xs text-gray-500">
           Pick a result above, or use your location, so providers can be sorted by distance.
         </p>
       )}

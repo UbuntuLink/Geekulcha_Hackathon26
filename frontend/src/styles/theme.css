@@ -1,0 +1,139 @@
+/* ===== Themeable colours (generated: see ACCESSIBILITY.md). Tailwind reads these through
+   tailwind.config.js, so switching a class on <html> recolours the whole app. ===== */
+
+/* Standard */
+:root {
+  --c-brand: 31 92 69;
+  --c-brand-dark: 22 70 52;
+  --c-brand-light: 44 122 90;
+  --c-brand-soft: 230 240 234;
+  --c-brand-mist: 242 247 244;
+  --c-cream: 245 241 228;
+  --c-sand: 232 225 207;
+  --c-ink: 23 35 30;
+  --c-red-50: 254 242 242;
+  --c-red-100: 254 226 226;
+  --c-red-200: 254 202 202;
+  --c-red-300: 252 165 165;
+  --c-red-400: 248 113 113;
+  --c-red-500: 239 68 68;
+  --c-red-600: 220 38 38;
+  --c-red-700: 185 28 28;
+  --c-red-800: 153 27 27;
+  --c-red-900: 127 29 29;
+  --c-green-50: 240 253 244;
+  --c-green-100: 220 252 231;
+  --c-green-200: 187 247 208;
+  --c-green-300: 134 239 172;
+  --c-green-400: 74 222 128;
+  --c-green-500: 34 197 94;
+  --c-green-600: 22 163 74;
+  --c-green-700: 21 128 61;
+  --c-green-800: 22 101 52;
+  --c-green-900: 20 83 45;
+  --c-emerald-50: 236 253 245;
+  --c-emerald-100: 209 250 229;
+  --c-emerald-200: 167 243 208;
+  --c-emerald-300: 110 231 183;
+  --c-emerald-400: 52 211 153;
+  --c-emerald-500: 16 185 129;
+  --c-emerald-600: 5 150 105;
+  --c-emerald-700: 4 120 87;
+  --c-emerald-800: 6 95 70;
+  --c-emerald-900: 6 78 59;
+  --c-amber-50: 255 251 235;
+  --c-amber-100: 254 243 199;
+  --c-amber-200: 253 230 138;
+  --c-amber-300: 252 211 77;
+  --c-amber-400: 251 191 36;
+  --c-amber-500: 245 158 11;
+  --c-amber-600: 217 119 6;
+  --c-amber-700: 180 83 9;
+  --c-amber-800: 146 64 14;
+  --c-amber-900: 120 53 15;
+  --c-gray-50: 249 250 251;
+  --c-gray-100: 243 244 246;
+  --c-gray-200: 229 231 235;
+  --c-gray-300: 209 213 219;
+  --c-gray-400: 156 163 175;
+  --c-gray-500: 107 114 128;
+  --c-gray-600: 75 85 99;
+  --c-gray-700: 55 65 81;
+  --c-gray-800: 31 41 55;
+  --c-gray-900: 17 24 39;
+}
+
+/* Colour-blind friendly: blue for good, orange for bad, yellow for waiting */
+html.theme-colorblind {
+  --c-green-50: 239 246 255;
+  --c-green-100: 219 234 254;
+  --c-green-200: 191 219 254;
+  --c-green-300: 147 197 253;
+  --c-green-400: 96 165 250;
+  --c-green-500: 59 130 246;
+  --c-green-600: 37 99 235;
+  --c-green-700: 29 78 216;
+  --c-green-800: 30 64 175;
+  --c-green-900: 30 58 138;
+  --c-emerald-50: 239 246 255;
+  --c-emerald-100: 219 234 254;
+  --c-emerald-200: 191 219 254;
+  --c-emerald-300: 147 197 253;
+  --c-emerald-400: 96 165 250;
+  --c-emerald-500: 59 130 246;
+  --c-emerald-600: 37 99 235;
+  --c-emerald-700: 29 78 216;
+  --c-emerald-800: 30 64 175;
+  --c-emerald-900: 30 58 138;
+  --c-red-50: 255 247 237;
+  --c-red-100: 255 237 213;
+  --c-red-200: 254 215 170;
+  --c-red-300: 253 186 116;
+  --c-red-400: 251 146 60;
+  --c-red-500: 249 115 22;
+  --c-red-600: 234 88 12;
+  --c-red-700: 194 65 12;
+  --c-red-800: 154 52 18;
+  --c-red-900: 124 45 18;
+  --c-amber-50: 254 252 232;
+  --c-amber-100: 254 249 195;
+  --c-amber-200: 254 240 138;
+  --c-amber-300: 253 224 71;
+  --c-amber-400: 250 204 21;
+  --c-amber-500: 234 179 8;
+  --c-amber-600: 202 138 4;
+  --c-amber-700: 161 98 7;
+  --c-amber-800: 133 77 14;
+  --c-amber-900: 113 63 18;
+  --c-brand: 11 79 138;
+  --c-brand-dark: 8 59 104;
+  --c-brand-light: 21 101 168;
+  --c-brand-soft: 220 234 246;
+  --c-brand-mist: 239 245 251;
+}
+
+/* High contrast */
+html.theme-contrast {
+  --c-ink: 0 0 0;
+  --c-brand: 15 61 44;
+  --c-brand-dark: 8 42 30;
+  --c-brand-light: 20 82 56;
+  --c-brand-soft: 213 230 219;
+  --c-brand-mist: 255 255 255;
+  --c-cream: 255 255 255;
+  --c-sand: 217 217 217;
+  --c-gray-200: 107 114 128;
+  --c-gray-300: 75 85 99;
+  --c-gray-400: 55 65 81;
+  --c-gray-500: 31 41 55;
+  --c-gray-600: 17 24 39;
+  --c-gray-700: 0 0 0;
+  --c-gray-800: 0 0 0;
+  --c-gray-900: 0 0 0;
+  --c-red-600: 153 27 27;
+  --c-red-700: 127 29 29;
+  --c-emerald-700: 6 78 59;
+  --c-green-700: 20 83 45;
+  --c-amber-700: 120 53 15;
+  --c-amber-800: 92 42 10;
+}

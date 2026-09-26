@@ -9,7 +9,7 @@ export default function ProviderCard({ provider, onClick, quantumRecommended = f
       <div className="h-1.5 bg-gradient-to-r from-brand via-brand-light to-emerald-300/80 opacity-75 transition-opacity group-hover:opacity-100" />
       <div className="p-4 lg:p-5">
         {quantumRecommended && (
-          <p className="mb-3 inline-flex rounded-full bg-brand-soft px-2.5 py-1 text-[11px] font-bold text-brand">
+          <p className="mb-3 inline-flex rounded-full bg-brand-soft px-2.5 py-1 text-xs font-bold text-brand">
             <span aria-hidden="true" className="mr-1">⚛</span> Quantum recommended
           </p>
         )}
@@ -26,14 +26,14 @@ export default function ProviderCard({ provider, onClick, quantumRecommended = f
         </div>
         <div className="provider-details mt-4 flex flex-wrap items-end justify-between gap-3 border-t border-brand/10 pt-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-500">Estimated range</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-500">Estimated range</p>
             <p className="mt-0.5 font-extrabold text-brand">{formatRange(provider.minPrice, provider.maxPrice)}</p>
           </div>
           <div className="provider-location text-right">
-            {provider.availableToday && <p className="text-[11px] font-bold text-emerald-700">Available today</p>}
+            {provider.availableToday && <p className="text-xs font-bold text-emerald-700">Available today</p>}
             {/* Only shown when both sides have coordinates — never the provider's raw lat/lng. */}
             {provider.distanceKm != null && (
-              <p className="mt-0.5 text-[11px] font-bold text-brand">≈ {Math.round(provider.distanceKm)} km away</p>
+              <p className="mt-0.5 text-xs font-bold text-brand">≈ {Math.round(provider.distanceKm)} km away</p>
             )}
             <p className="mt-0.5 max-w-[145px] break-words text-xs text-gray-500">{provider.location || "Location not specified"}</p>
           </div>

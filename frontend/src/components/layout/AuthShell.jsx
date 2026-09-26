@@ -1,4 +1,5 @@
 import BrandMark from "../common/BrandMark.jsx";
+import DisplaySettings from "../common/DisplaySettings.jsx";
 
 export default function AuthShell({ title, subtitle, children }) {
   return (
@@ -20,7 +21,7 @@ export default function AuthShell({ title, subtitle, children }) {
             <div className="space-y-2">
               {["Local providers", "Smart provider matching", "Simple booking"].map((item) => (
                 <div key={item} className="flex items-center gap-2 text-xs font-semibold text-gray-600">
-                  <span className="grid h-5 w-5 place-items-center rounded-full bg-brand-soft text-[10px] text-brand">✓</span>
+                  <span className="grid h-5 w-5 place-items-center rounded-full bg-brand-soft text-xs text-brand">✓</span>
                   {item}
                 </div>
               ))}
@@ -29,6 +30,10 @@ export default function AuthShell({ title, subtitle, children }) {
         </div>
 
         <div className="glass-surface mt-7 rounded-3xl p-5 sm:p-6 lg:mt-0 lg:p-8">
+          {/* Before sign-in too: someone who needs larger text or other colours needs them to log in. */}
+          <div className="mb-3 flex justify-end">
+            <DisplaySettings compact />
+          </div>
           {children}
         </div>
       </div>

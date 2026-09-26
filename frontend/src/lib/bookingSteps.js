@@ -11,6 +11,17 @@ export const STEP_LABELS = {
   CANCELLED: "Cancelled",
 };
 
+// A symbol for each status, shown beside its colour so status never depends on colour alone
+// (colour blindness). Decorative for screen readers: the label says the same thing.
+export const STEP_ICONS = {
+  REQUEST_SENT: "⏳",
+  ACCEPTED: "✓",
+  ON_THE_WAY: "→",
+  IN_PROGRESS: "⚒",
+  COMPLETED: "✓",
+  CANCELLED: "✕",
+};
+
 // What the provider taps to move a job to each step.
 export const STEP_ACTIONS = {
   ACCEPTED: "Accept job",

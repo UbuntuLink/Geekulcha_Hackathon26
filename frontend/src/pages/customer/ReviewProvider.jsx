@@ -181,14 +181,14 @@ export default function ReviewProvider() {
         maxLength={2000}
         placeholder={t("customer.reviewPlaceholder")}
       />
-      <p className="mt-1.5 flex justify-between gap-3 text-xs text-gray-400">
+      <p className="mt-1.5 flex justify-between gap-3 text-xs text-gray-500">
         <span>Your first name, rating, comment and photos will appear on the provider's profile.</span>
         <span className="shrink-0">{comment.length}/2000</span>
       </p>
 
       <div className="mt-5">
         <p className="text-sm font-semibold text-gray-800">
-          Photos of the work <span className="font-normal text-gray-400">(optional, up to {MAX_PHOTOS})</span>
+          Photos of the work <span className="font-normal text-gray-500">(optional, up to {MAX_PHOTOS})</span>
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
           {photos.map((src, index) => (
@@ -198,7 +198,7 @@ export default function ReviewProvider() {
                 type="button"
                 onClick={() => removePhoto(index)}
                 aria-label={`Remove photo ${index + 1}`}
-                className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-black/60 text-xs font-bold text-white hover:bg-black/80"
+                className="absolute right-1 top-1 grid h-8 w-8 place-items-center rounded-full bg-black/60 text-xs font-bold text-white hover:bg-black/80"
               >
                 ✕
               </button>

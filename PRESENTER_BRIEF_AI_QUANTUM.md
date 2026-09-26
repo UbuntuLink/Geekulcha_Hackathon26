@@ -25,6 +25,35 @@ The short version for whoever is on stage. Each section has a **one-liner**, **t
 - *Does it see personal data?* — Only what the customer types or uploads to describe the job, and never their
   ID number. (See SECURITY_PRIVACY_PLAN.md.)
 
+#### "How do you stop the AI making things up (hallucinating)?"
+
+**Short answer to say:**
+> "We don't let the AI make anything up that matters. It can only pick from services that really exist on our
+> platform, it never sets a price or books anything, and the customer checks its work before anything is sent."
+
+**If they want more — five layers:**
+
+1. **It can only choose from a fixed list.** The AI is given our live list of services and must answer with
+   one of those exact names, or "other". It can't invent a service like "Geyser Wizard". Even if it did,
+   our own (non-AI) matching step would find no such service and treat it as "not supported" — never a dead
+   end.
+2. **It never produces facts we show as true.** Prices, provider names, ratings, distances and availability
+   all come from our database, not the AI. The AI only suggests a category and tidies up the customer's own
+   words.
+3. **The customer checks its work.** Before a request is sent, the customer sees the AI's summary and can
+   add or change details. Voice transcripts appear in the text box, where they can be corrected.
+4. **Strict instructions and a fixed answer format.** The AI is told not to invent details, not to change the
+   meaning, and to keep every specific detail the customer gave. It must reply in a fixed format, which we
+   check before using. When it's unsure, it says so ("low confidence") and suggests a question instead of
+   guessing. It's also told to ignore instructions hidden in a customer's message.
+5. **Consistency settings.** It's set to always give its single most likely answer (temperature 0), so it
+   doesn't "get creative", and the same message gets the same result every time.
+
+**If they push** ("So it can never be wrong?"):
+> "It can still misread an unclear message — any AI can. But the worst case is a suggestion the customer can
+> see and correct, never a wrong price, a fake provider or a booking made on its own."
+
+
 ---
 
 ## 2. Quantum in one breath

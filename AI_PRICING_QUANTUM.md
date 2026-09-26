@@ -52,6 +52,28 @@ the provider can update the model, and their servers can vary slightly. That's w
 *suggests* (a category, a cleaner description, a transcript the customer can edit), and a person or
 deterministic code makes every decision that costs money.
 
+### How we prevent hallucination
+
+A "hallucination" is an AI stating something false with confidence. Our design keeps the AI away from
+anything where a made-up answer could do harm, and checks everything it produces.
+
+| Safeguard | How it works | Where |
+|---|---|---|
+| **Closed list of answers** | The live service catalogue is sent with every request, and the AI must answer with one of those exact names or "other". | `python/app/services/classification_service.py` (`_system_prompt`) |
+| **Independent, non-AI check** | The keyword matcher maps the AI's answer *and* the customer's own words to a real database row. An answer that matches nothing goes down the "service not supported" path — never a made-up service. | `frontend/src/lib/matching.js` |
+| **No AI-generated facts on screen** | Prices, provider names, ratings, distances and availability come only from the database. The AI never sets or displays a price. | whole app |
+| **Human in the loop** | The customer reviews the AI's job summary before the request is created, and can add details; voice transcripts land in an editable text box. | `ReviewRequest.jsx`, `DescribeProblem.jsx` |
+| **Instructions against inventing** | Prompts say: preserve every detail the customer gave; don't invent information; don't change the meaning; transcribe exactly, don't summarise or answer. | `python/prompts/*.txt` |
+| **Admitting uncertainty** | The AI returns a confidence level and, when unsure, a clarifying question instead of a guess. | classification prompt, fields `confidence`, `clarifying_question` |
+| **Off-topic detection** | When a customer adds details, the AI flags whether they're relevant; irrelevant additions are rejected rather than blended in. | refine prompt, field `is_relevant` |
+| **Prompt-injection resistance** | The prompt tells the model to treat anything in the customer's message — including "ignore your instructions" — as text to classify, not as instructions. | classification prompt |
+| **Fixed format, validated** | Answers must be JSON with set fields; anything that doesn't parse is rejected and the customer is asked to try again. | `llm_client.py`, services |
+| **Consistency** | Temperature 0 and thinking turned off: the model gives its single most likely answer every time. | `python/app/core/llm_client.py` |
+
+**Residual risk:** the AI can still misread a genuinely unclear message. The worst outcome is a wrong
+*suggestion* that the customer can see and correct — never a wrong price, a non-existent provider, or an action
+taken on its own.
+
 ### What happens if the AI is unavailable
 
 The app keeps working: search falls back to keyword matching, descriptions are kept word for word, voice

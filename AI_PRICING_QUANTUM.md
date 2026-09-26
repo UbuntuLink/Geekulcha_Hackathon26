@@ -7,6 +7,8 @@ A plain explanation of three questions judges and new team members ask:
 3. **Why use quantum technology for optimisation, and where exactly is it used?**
 
 For the technical detail of every AI feature (endpoints, prompts, fallbacks) see [ML.md](ML.md).
+For a short, presenter-level version — including the Freemium revenue model (text free, photos and voice
+Premium) — see [PRESENTER_BRIEF_AI_QUANTUM.md](PRESENTER_BRIEF_AI_QUANTUM.md).
 
 ---
 

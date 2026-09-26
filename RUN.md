@@ -4,29 +4,57 @@ The one-page version: three services, three terminals, three ports. For first-ti
 accounts, installing Java/Node/Python) see [INSTRUCTIONS.md](INSTRUCTIONS.md); for what every key
 is and where it goes, [KEYS.md](KEYS.md).
 
-## The short version
+## Running it by hand
 
-From the repo root:
+Open three terminals, one per service, and start them in this order. Commands are for PowerShell
+from the repo root; each one `cd`s into its own service folder first.
+
+**1. Backend (Spring Boot, port 8080)**
 
 ```powershell
-.\start-all.bat
+cd backend
+.\mvnw.cmd spring-boot:run
 ```
 
-That opens all three services in their own windows. Then go to **http://localhost:5173**.
+Ready when the log says `Started BackendApplication` (about 20 s).
 
-The leading `.\` is required in PowerShell — it refuses to run a program from the current
-directory unless you say so explicitly, and reports `The term 'start-all.bat' is not recognized`
-if you leave it off. In `cmd.exe` plain `start-all.bat` works.
+**2. ML service (FastAPI, port 8000)**
 
-To run them by hand, one terminal each:
+```powershell
+cd python
+py -3.13 -m pip install -r requirements.txt   # first run, or after requirements.txt changes
+py -3.13 -m uvicorn app.main:app --reload --port 8000
+```
+
+Ready when the log says `Application startup complete`.
+
+Use `py -3.13` rather than `python`. Plain `python` can resolve to a 32-bit install, and
+scipy/qiskit (the quantum match) have no 32-bit Windows builds, so the install fails there. Check
+with `py -0p` — you want the entry *without* `-32`. On a 32-bit Python the service still starts,
+but the quantum recommendation is unavailable.
+
+**3. Frontend (Vite, port 5173)**
+
+```powershell
+cd frontend
+npm install     # first run, or after package.json changes
+npm run dev
+```
+
+Then open **http://localhost:5173**.
 
 | Service | Terminal starts in | Command | Port |
 |---|---|---|---|
-| Backend (Spring Boot) | `backend/` | `mvnw.cmd spring-boot:run` | 8080 |
-| ML service (FastAPI) | `python/` | `python -m uvicorn app.main:app --reload --port 8000` | 8000 |
+| Backend (Spring Boot) | `backend/` | `.\mvnw.cmd spring-boot:run` | 8080 |
+| ML service (FastAPI) | `python/` | `py -3.13 -m uvicorn app.main:app --reload --port 8000` | 8000 |
 | Frontend (Vite) | `frontend/` | `npm run dev` | 5173 |
 
-On macOS or Linux the backend command is `./mvnw spring-boot:run`.
+The leading `.\` is required in PowerShell — it won't run a program from the current directory
+without it. On macOS or Linux the backend command is `./mvnw spring-boot:run` and the ML service
+uses `python3`.
+
+`start-all.bat` in the repo root still opens all three in their own windows if you'd rather not
+run them by hand, but it uses plain `python`, so read the note under step 2.
 
 ---
 
@@ -57,14 +85,23 @@ markers that say "this folder is a package" — there is nothing to run in them.
 | ML service | `python/.env` | `LLM_API_KEY` (or `GEMINI_API_KEY` / `Gemini_key`) |
 | Frontend | `frontend/.env.local` | `VITE_API_BASE_URL=http://localhost:8080`, `VITE_ML_API_BASE_URL=http://localhost:8000` |
 
-All three exist on this machine already. None of them are committed — a fresh clone needs them
-created by hand.
+None of them are committed — a fresh clone needs them created by hand. Never commit them, or
+copies of them (`.env.bak` and the like).
 
-First run only, in `frontend/`:
+**Use Supabase's transaction pooler for `SUPABASE_DB_URL`** — port **6543**, with
+`&prepareThreshold=0` on the end:
 
 ```
-npm install
+SUPABASE_DB_URL=jdbc:postgresql://aws-0-eu-central-1.pooler.supabase.com:6543/postgres?user=postgres.<project>&password=<password>&prepareThreshold=0
 ```
+
+The session pooler on port 5432 allows only 15 connections for the whole project, shared by every
+teammate's local backend and the deployed one, so once a few are running the next backend fails
+with `max clients reached`. The transaction pooler has no such cap. `prepareThreshold=0` is
+required with it, because it doesn't keep server-side prepared statements between transactions.
+
+Optional: `ML_SERVICE_URL` (backend) says where the ML service is for the quantum match. It
+defaults to `http://localhost:8000`, so you only set it when deploying.
 
 ---
 
@@ -118,7 +155,7 @@ Add `--call` to also send one short test prompt.
 
 ## Stopping
 
-Ctrl-C in each window. If you started something in the background and Ctrl-C isn't available,
+Ctrl-C in each terminal. If you started something in the background and Ctrl-C isn't available,
 the Maven wrapper and `uvicorn --reload` both fork a child that survives — kill it by port:
 
 ```
@@ -135,6 +172,11 @@ Same for 8000 and 5173.
 | What you see | What it means |
 |---|---|
 | `Could not resolve placeholder 'SUPABASE_DB_URL'` or `'JWT_SECRET'` | `backend/.env` missing or incomplete. It must be at `backend/.env`. |
+| Backend: `EMAXCONNSESSION: max clients reached`, then `Unable to determine Dialect` | `SUPABASE_DB_URL` uses the session pooler (port 5432) and the project's 15 slots are taken. Switch to port 6543 with `&prepareThreshold=0` (see above). |
+| Backend: `UnknownHostException: …pooler.supabase.com` | A network or DNS blip. Check your connection and start it again. |
+| ML install: `Unknown compiler(s)` / `metadata-generation-failed` while building scipy | You're on 32-bit Python. Use `py -3.13` (see step 2). |
+| "Quantum recommendation is unavailable" on the matches page | The ML service isn't running, or is on a Python without qiskit. Everything else on the page still works. |
+| AI classification fails, `check_llm.py` says no key found | `python/.env` has no key for the provider in use. The default is Gemini, which reads `LLM_API_KEY`/`GEMINI_API_KEY` and deliberately ignores a leftover `OPEN_ROUTER_API_KEY`. |
 | `ModuleNotFoundError: No module named 'app'` | You're inside `python/app/`. Go up to `python/`. |
 | Backend: `HikariPool-1 - Connection is not available` after the laptop slept | The pooled database connections died while the JVM was suspended. Restart the backend; nothing is corrupted. |
 | Backend: `Port 8080 was already in use` | An earlier run is still alive — kill it by port (above). |

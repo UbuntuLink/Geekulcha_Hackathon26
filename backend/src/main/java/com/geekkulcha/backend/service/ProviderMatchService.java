@@ -14,6 +14,9 @@ import com.geekkulcha.backend.dto.response.QuantumOptimisationResponse;
 import com.geekkulcha.backend.dto.response.ReviewResponse;
 import com.geekkulcha.backend.dto.response.ServicePriceResponse;
 import com.geekkulcha.backend.entity.ProviderProfile;
+import com.geekkulcha.backend.entity.Review;
+import com.geekkulcha.backend.entity.ServiceRequest;
+import com.geekkulcha.backend.entity.User;
 import com.geekkulcha.backend.exception.ResourceNotFoundException;
 import com.geekkulcha.backend.repository.ProviderProfileRepository;
 import com.geekkulcha.backend.repository.ProviderServiceRepository;
@@ -104,11 +107,27 @@ public class ProviderMatchService {
                 .toList();
 
         List<ReviewResponse> reviews = reviewRepository.findByBooking_Quote_ProviderProfile_Id(providerProfileId).stream()
-                .map(r -> new ReviewResponse(r.getRating(), r.getComment(), r.getCreatedAt()))
+                .sorted(Comparator.comparing(Review::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(this::toReviewResponse)
                 .toList();
 
         return new ProviderProfileResponse(p.getId(), providerName(p), p.getBio(), p.getLocation(),
                 p.getRating(), p.getReviewCount(), p.isAvailableToday(), p.isIdValidated(), services, reviews);
+    }
+
+    private ReviewResponse toReviewResponse(Review r) {
+        ServiceRequest request = r.getBooking().getQuote().getServiceRequest();
+        String serviceName = request.getService() != null ? request.getService().getName() : null;
+        return new ReviewResponse(r.getRating(), r.getComment(), r.getCreatedAt(),
+                reviewerName(request.getUser()), serviceName);
+    }
+
+    /** "Thandi Mokoena" -> "Thandi M." */
+    private String reviewerName(User user) {
+        String first = user.getFirstName() == null ? "" : user.getFirstName().trim();
+        String last = user.getLastName() == null ? "" : user.getLastName().trim();
+        String name = (first + (last.isEmpty() ? "" : " " + last.charAt(0) + ".")).trim();
+        return name.isEmpty() ? "Customer" : name;
     }
 
     // Business name = first + last name on the underlying User (e.g. "Thabo" + "Plumbing" ->

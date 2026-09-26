@@ -11,6 +11,7 @@ import { getMyProviderProfile, getProviderProfile } from "../../api/services.js"
 import { formatRange } from "../../lib/format.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { API_BASE_URL } from "../../api/client.js";
 
 export default function ProviderProfileView() {
   const { providerId } = useParams();
@@ -62,6 +63,7 @@ export default function ProviderProfileView() {
 
   return (
     <Screen title={profile.providerName}>
+      {profile.profileImageUrl && <img src={`${API_BASE_URL}${profile.profileImageUrl}`} alt={`${profile.providerName} profile`} className="mb-4 h-24 w-24 rounded-full object-cover ring-4 ring-brand/10" />}
       <StarRating rating={profile.rating} reviewCount={profile.reviewCount} />
 
       {mainService && (

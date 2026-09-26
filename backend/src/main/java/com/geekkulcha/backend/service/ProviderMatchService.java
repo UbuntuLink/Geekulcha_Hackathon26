@@ -107,9 +107,17 @@ public class ProviderMatchService {
                 .map(r -> new ReviewResponse(r.getRating(), r.getComment(), r.getCreatedAt()))
                 .toList();
 
-        return new ProviderProfileResponse(p.getId(), providerName(p), p.getBio(), p.getLocation(),
+        String profileImageUrl = p.getProfileImage() == null || p.getProfileImage().length == 0
+                ? null
+                : "/api/provider-profiles/" + p.getId() + "/image";
+        return new ProviderProfileResponse(p.getId(), providerName(p), profileImageUrl, p.getBio(), p.getLocation(),
                 p.getRating(), p.getReviewCount(), p.isAvailableToday(), p.isIdValidated(), services, reviews);
     }
+
+        public ProviderProfile getProviderProfile(long providerProfileId) {
+                return providerProfileRepository.findById(providerProfileId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Provider " + providerProfileId + " not found"));
+        }
 
     // Business name = first + last name on the underlying User (e.g. "Thabo" + "Plumbing" ->
     // "Thabo Plumbing") — no separate business-name field for MVP.

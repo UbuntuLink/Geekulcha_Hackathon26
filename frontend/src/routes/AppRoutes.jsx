@@ -20,6 +20,7 @@ import QuoteRequest from "../pages/customer/QuoteRequest.jsx";
 import RequestQuotes from "../pages/customer/RequestQuotes.jsx";
 import BookingConfirmation from "../pages/customer/BookingConfirmation.jsx";
 import BookingTracking from "../pages/customer/BookingTracking.jsx";
+import BookingMessages from "../pages/customer/BookingMessages.jsx";
 import ReviewProvider from "../pages/customer/ReviewProvider.jsx";
 import MyRequests from "../pages/customer/MyRequests.jsx";
 import Profile from "../pages/customer/Profile.jsx";
@@ -58,6 +59,7 @@ export default function AppRoutes() {
         <Route path="/requests/:id/quotes" element={<ProtectedRoute><RequestQuotes /></ProtectedRoute>} />
         <Route path="/bookings/:bookingId/confirmation" element={<ProtectedRoute><BookingConfirmation /></ProtectedRoute>} />
         <Route path="/bookings/:bookingId" element={<ProtectedRoute><BookingTracking /></ProtectedRoute>} />
+        <Route path="/bookings/:bookingId/messages" element={<ProtectedRoute><BookingMessages /></ProtectedRoute>} />
         <Route path="/bookings/:bookingId/review" element={<ProtectedRoute><ReviewProvider /></ProtectedRoute>} />
         <Route path="/requests/mine" element={<ProtectedRoute><MyRequests /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute role="customer"><Profile /></ProtectedRoute>} />

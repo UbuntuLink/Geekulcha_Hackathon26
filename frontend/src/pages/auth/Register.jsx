@@ -6,6 +6,7 @@ import { Field, TextInput } from "../../components/common/Field.jsx";
 import AuthShell from "../../components/layout/AuthShell.jsx";
 import { register } from "../../api/auth.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
+import ImageCaptureInput from "../../components/common/ImageCaptureInput.jsx";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -13,16 +14,22 @@ export default function Register() {
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "", phoneNumber: "", isProvider: false });
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [profileImage, setProfileImage] = useState(null);
+  const [idImage, setIdImage] = useState(null);
 
   const update = (field) => (e) =>
     setForm((f) => ({ ...f, [field]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (form.isProvider && (!profileImage || !idImage)) {
+      setError("Provider registration requires both a profile photo and an ID photo.");
+      return;
+    }
     setSubmitting(true);
     setError("");
     try {
-      await register(form);
+      await register({ ...form, profileImage, idImage });
 
       // Registration always creates a customer: the backend has no isProvider field any more,
       // because becoming a provider now requires the SA ID check that /become-provider runs.
@@ -59,6 +66,15 @@ export default function Register() {
           </span>
           <input className="h-4 w-4 accent-[#1F5C45]" type="checkbox" checked={form.isProvider} onChange={update("isProvider")} />
         </label>
+
+        {form.isProvider && (
+          <div className="space-y-4 rounded-2xl border border-brand/20 bg-brand-mist p-4">
+            <ImageCaptureInput label="Profile photo" hint="Upload a clear photo of yourself, or take a selfie with your camera." value={profileImage} onChange={setProfileImage} required />
+            <Field label="South African ID photo" hint="Upload a clear photo of your ID document. This is required for provider verification.">
+              <TextInput type="file" accept="image/*" required onChange={(e) => setIdImage(e.target.files?.[0] ?? null)} />
+            </Field>
+          </div>
+        )}
 
         {error && <ErrorBanner>{error}</ErrorBanner>}
         <Button type="submit" disabled={submitting}>{submitting ? "Creating account..." : t("action.register")}</Button>

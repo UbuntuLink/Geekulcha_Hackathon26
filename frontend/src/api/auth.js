@@ -13,9 +13,20 @@ export function login(email, password) {
   });
 }
 
-export function register({ firstName, lastName, email, password, phoneNumber, isProvider }) {
+export function register({ firstName, lastName, email, password, phoneNumber, isProvider, profileImage, idImage }) {
+  if (isProvider) {
+    const body = new FormData();
+    body.append("firstName", firstName);
+    body.append("lastName", lastName);
+    body.append("email", email);
+    body.append("password", password);
+    body.append("phoneNumber", phoneNumber);
+    body.append("profileImage", profileImage);
+    body.append("idImage", idImage);
+    return apiClient.post("/auth/register", body).then((res) => res.data);
+  }
   return apiClient
-    .post("/auth/register", { firstName, lastName, email, password, phoneNumber, isProvider })
+    .post("/auth/register", { firstName, lastName, email, password, phoneNumber })
     .then((res) => res.data);
 }
 

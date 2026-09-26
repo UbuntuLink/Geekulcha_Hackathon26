@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Screen from "../../components/layout/Screen.jsx";
 import Card from "../../components/common/Card.jsx";
 import Loading from "../../components/common/Loading.jsx";
@@ -18,6 +19,7 @@ const STEP_LABELS = {
 
 /** This is where booking status actually advances now — the customer's view is read-only. */
 export default function ProviderBookings() {
+  const navigate = useNavigate();
   const { t } = useLanguage();
   const [bookings, setBookings] = useState(null);
   const [error, setError] = useState("");
@@ -69,6 +71,12 @@ export default function ProviderBookings() {
                 {b.quote.serviceRequest?.user?.firstName} {b.quote.serviceRequest?.user?.lastName} · {formatZAR(b.quote.amount)}
               </p>
               <p className="mt-2 text-sm font-medium text-brand">{STEP_LABELS[b.status]}</p>
+              <button
+                onClick={() => navigate(`/bookings/${b.id}/messages`)}
+                className="mt-3 w-full rounded-lg border border-gray-300 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+              >
+                Message customer
+              </button>
               {b.status !== "COMPLETED" && (
                 <button
                   onClick={() => advance(b)}

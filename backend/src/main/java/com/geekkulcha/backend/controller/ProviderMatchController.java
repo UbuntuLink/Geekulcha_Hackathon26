@@ -5,6 +5,8 @@ import com.geekkulcha.backend.dto.response.ProviderProfileResponse;
 import com.geekkulcha.backend.service.ProviderMatchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 
@@ -30,5 +32,16 @@ public class ProviderMatchController {
     @GetMapping("/api/provider-profiles/{id}")
     public ProviderProfileResponse profile(@PathVariable long id) {
         return providerMatchService.getProfile(id);
+    }
+
+    @GetMapping("/api/provider-profiles/{id}/image")
+    public ResponseEntity<byte[]> image(@PathVariable long id) {
+        var profile = providerMatchService.getProviderProfile(id);
+        if (profile.getProfileImage() == null || profile.getProfileImage().length == 0) {
+            return ResponseEntity.notFound().build();
+        }
+        MediaType mediaType = MediaType.parseMediaType(
+                profile.getProfileImageContentType() == null ? "image/jpeg" : profile.getProfileImageContentType());
+        return ResponseEntity.ok().contentType(mediaType).body(profile.getProfileImage());
     }
 }

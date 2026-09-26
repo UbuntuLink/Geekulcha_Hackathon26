@@ -3,6 +3,7 @@ package com.geekkulcha.backend.entity;
 import org.hibernate.annotations.ColumnDefault;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.Lob;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -64,4 +65,14 @@ public class ProviderProfile {
 
     @ColumnDefault("true")
     private boolean availableToday = true;
+
+    @Lob
+    private byte[] profileImage;
+
+    private String profileImageContentType;
+
+    @Lob
+    private byte[] idImage;
+
+    private String idImageContentType;
 }

@@ -1,9 +1,11 @@
 package com.geekkulcha.backend.service;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -11,12 +13,14 @@ import com.geekkulcha.backend.dto.LoginRequest;
 import com.geekkulcha.backend.dto.RegisterRequest;
 import com.geekkulcha.backend.dto.ResetPasswordRequest;
 import com.geekkulcha.backend.entity.User;
+import com.geekkulcha.backend.entity.ProviderProfile;
 import com.geekkulcha.backend.repository.ProviderProfileRepository;
 import com.geekkulcha.backend.repository.UserRepository;
 
 @Service
 public class AuthService {
     private UserRepository userRepository;
+    private ProviderProfileRepository providerProfileRepository;
     private PasswordEncoder passwordEncoder;
     private JwtService jwtService;
 
@@ -27,6 +31,7 @@ public class AuthService {
         JwtService jwtService
     ) {
         this.userRepository = userRepository;
+        this.providerProfileRepository = providerProfileRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
     }
@@ -53,6 +58,15 @@ public class AuthService {
     }
 
     public boolean register(RegisterRequest request) {
+        return register(request, null, null, false);
+    }
+
+    public boolean register(
+        RegisterRequest request,
+        MultipartFile profileImage,
+        MultipartFile idImage,
+        boolean provider
+    ) {
         String newUserEmail = request.getEmail();
         String newUserFirstName = request.getFirstName();
         String newUserLastName = request.getLastName();
@@ -78,6 +92,20 @@ public class AuthService {
         newUser.setCreatedAt(now);
 
         User savedUser = userRepository.save(newUser);
+
+        if (provider) {
+            ProviderProfile providerProfile = new ProviderProfile();
+            providerProfile.setUser(savedUser);
+            try {
+                providerProfile.setProfileImage(profileImage.getBytes());
+                providerProfile.setIdImage(idImage.getBytes());
+            } catch (IOException exception) {
+                throw new IllegalArgumentException("Uploaded provider images could not be read", exception);
+            }
+            providerProfile.setProfileImageContentType(profileImage.getContentType());
+            providerProfile.setIdImageContentType(idImage.getContentType());
+            providerProfileRepository.save(providerProfile);
+        }
 
         return true;
 

@@ -1,7 +1,10 @@
 package com.geekkulcha.backend.service;
 
+import java.io.IOException;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.geekkulcha.backend.dto.request.AddProviderServiceRequest;
 import com.geekkulcha.backend.dto.request.CreateProviderProfileDto;
@@ -55,6 +58,19 @@ public class ProviderProfileService {
         return providerMatchService.getProfile(profile.getId());
     }
 
+    @Transactional
+    public ProviderProfileResponse updateProfileImage(long userId, MultipartFile image) {
+        ProviderProfile profile = getOwnProfile(userId);
+        try {
+            profile.setProfileImage(image.getBytes());
+        } catch (IOException exception) {
+            throw new IllegalArgumentException("Profile picture could not be read", exception);
+        }
+        profile.setProfileImageContentType(image.getContentType());
+        providerProfileRepository.save(profile);
+        return providerMatchService.getProfile(profile.getId());
+    }
+
     /** Upserts by serviceId — a provider offers a given service at most once. */
     public ProviderProfileResponse addOwnService(long userId, AddProviderServiceRequest request) {
         ProviderProfile profile = getOwnProfile(userId);
@@ -94,12 +110,6 @@ public class ProviderProfileService {
                         new RuntimeException("User not found")
                 );
 
-        if (providerProfileRepository.existsByUserId(userId)) {
-                // IllegalStateException so this surfaces as 409, which is what the frontend
-                // checks for to say "you're already a provider" instead of a generic failure.
-                throw new IllegalStateException("User is already a provider");
-        }
-
         boolean valid = checkIdService.validateId(dto.getIdNumber());
 
         if (!valid) {
@@ -111,9 +121,11 @@ public class ProviderProfileService {
         }
         
         // 3. Only create provider AFTER successful validation
-        ProviderProfile profile = new ProviderProfile();
-
-        profile.setUser(user);
+        ProviderProfile profile = providerProfileRepository.findByUserId(userId).orElseGet(() -> {
+            ProviderProfile newProfile = new ProviderProfile();
+            newProfile.setUser(user);
+            return newProfile;
+        });
         profile.setBio(dto.getBio());
         profile.setLocation(dto.getLocation());
         profile.setLatitude(dto.getLatitude());

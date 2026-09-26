@@ -97,6 +97,12 @@ export const createMyProviderProfile = (payload) =>
 export const updateMyProviderProfile = (payload) =>
   apiClient.patch("/api/provider-profiles/me", payload).then((res) => res.data);
 
+export const updateMyProviderImage = (image) => {
+  const body = new FormData();
+  body.append("profileImage", image);
+  return apiClient.patch("/api/provider-profiles/me/image", body).then((res) => res.data);
+};
+
 export const addMyProviderService = (payload) =>
   apiClient.put("/api/provider-profiles/me/services", payload).then((res) => res.data);
 
@@ -118,6 +124,12 @@ export const acceptQuote = (quoteId, payload) =>
 
 export const getBooking = (bookingId) =>
   apiClient.get(`/api/bookings/${bookingId}`).then((res) => res.data);
+
+export const getBookingMessages = (bookingId) =>
+  apiClient.get(`/api/bookings/${bookingId}/messages`).then((res) => res.data);
+
+export const sendBookingMessage = (bookingId, content) =>
+  apiClient.post(`/api/bookings/${bookingId}/messages`, { content }).then((res) => res.data);
 
 export const submitReview = (bookingId, payload) =>
   apiClient.post(`/api/bookings/${bookingId}/review`, payload).then((res) => res.data);

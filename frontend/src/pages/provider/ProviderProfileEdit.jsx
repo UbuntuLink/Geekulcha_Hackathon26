@@ -10,12 +10,15 @@ import {
   getMyProviderProfile,
   listServices,
   removeMyProviderService,
+  updateMyProviderImage,
   updateMyProviderProfile,
 } from "../../api/services.js";
 import { formatRange } from "../../lib/format.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useNavigate } from "react-router-dom";
+import ImageCaptureInput from "../../components/common/ImageCaptureInput.jsx";
+import { API_BASE_URL } from "../../api/client.js";
 
 export default function ProviderProfileEdit() {
   const { t } = useLanguage();
@@ -27,6 +30,8 @@ export default function ProviderProfileEdit() {
   const [newService, setNewService] = useState({ serviceId: "", minPrice: "", maxPrice: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [profileImage, setProfileImage] = useState(null);
+  const [imageVersion, setImageVersion] = useState(Date.now());
 
   const load = () =>
     getMyProviderProfile().then((p) => {
@@ -49,6 +54,11 @@ export default function ProviderProfileEdit() {
     setError("");
     try {
       await updateMyProviderProfile(form);
+      if (profileImage) {
+        await updateMyProviderImage(profileImage);
+        setProfileImage(null);
+        setImageVersion(Date.now());
+      }
       await load();
     } catch (err) {
       setError("Couldn't save your profile — is the backend running?");
@@ -97,6 +107,8 @@ export default function ProviderProfileEdit() {
     <Screen title={t("provider.profile")} showBack={false} withNav navRole="provider">
       <Card>
         <div className="space-y-4">
+          {profile.profileImageUrl && <img src={`${API_BASE_URL}${profile.profileImageUrl}?v=${imageVersion}`} alt="Your provider profile" className="h-24 w-24 rounded-full object-cover ring-4 ring-brand/10" />}
+          <ImageCaptureInput label="Profile picture" hint="Upload a new picture or take a fresh selfie." value={profileImage} onChange={setProfileImage} />
           <Field label={t("provider.bio")}>
             <TextArea value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
           </Field>

@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.geekkulcha.backend.dto.request.AddProviderServiceRequest;
 import com.geekkulcha.backend.dto.request.CreateProviderProfileDto;
@@ -42,6 +44,19 @@ public class ProviderProfileController {
     @PatchMapping
     public ProviderProfileResponse update(@AuthenticationPrincipal Jwt jwt, @RequestBody UpdateProviderProfileRequest request) {
         return providerProfileService.updateOwnProfile(userService.getCurrentUser(jwt).getId(), request);
+    }
+
+    @PatchMapping(path = "/image", consumes = "multipart/form-data")
+    public ProviderProfileResponse updateImage(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestPart MultipartFile profileImage
+    ) {
+        if (profileImage.isEmpty() || profileImage.getContentType() == null
+                || !profileImage.getContentType().startsWith("image/")) {
+            throw new IllegalArgumentException("Profile picture must be a valid image file");
+        }
+        return providerProfileService.updateProfileImage(
+                userService.getCurrentUser(jwt).getId(), profileImage);
     }
 
     @PutMapping("/services")

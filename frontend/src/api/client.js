@@ -1,8 +1,10 @@
 import axios from "axios";
 
 // Spring Boot backend (Render) — auth, users, requests, quotes, bookings, reviews, mock payments
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8080",
+  baseURL: API_BASE_URL,
 });
 
 // Attach the JWT from login/register (see api/auth.js) as a Bearer token. Note: the backend

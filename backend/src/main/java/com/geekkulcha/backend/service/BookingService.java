@@ -1,19 +1,26 @@
 package com.geekkulcha.backend.service;
 
-import com.geekkulcha.backend.entity.*;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.geekkulcha.backend.entity.Booking;
+import com.geekkulcha.backend.entity.BookingStatus;
+import com.geekkulcha.backend.entity.Quote;
+import com.geekkulcha.backend.entity.QuoteStatus;
+import com.geekkulcha.backend.entity.RequestStatus;
+import com.geekkulcha.backend.entity.ServiceRequest;
 import com.geekkulcha.backend.exception.ForbiddenException;
 import com.geekkulcha.backend.exception.ResourceNotFoundException;
 import com.geekkulcha.backend.repository.BookingRepository;
 import com.geekkulcha.backend.repository.QuoteRepository;
 import com.geekkulcha.backend.repository.ServiceRequestRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 /** Accepting a {@link Quote} creates a {@link Booking}. Figma screens 9-11. */
 @Service
@@ -78,6 +85,16 @@ public class BookingService {
         return bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking " + id + " not found"));
     }
+
+        public Booking getByIdForParticipant(long id, long currentUserId) {
+                Booking booking = getById(id);
+                long customerId = booking.getQuote().getServiceRequest().getUser().getId();
+                long providerId = booking.getQuote().getProviderProfile().getUser().getId();
+                if (currentUserId != customerId && currentUserId != providerId) {
+                        throw new ForbiddenException("You don't have access to this booking");
+                }
+                return booking;
+        }
 
     /** Advancing a booking's status is the provider's action — see ProviderBookings.jsx. */
     public Booking updateStatus(long id, BookingStatus status, long currentUserId) {

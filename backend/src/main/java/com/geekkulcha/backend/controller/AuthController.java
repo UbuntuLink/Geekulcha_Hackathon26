@@ -5,6 +5,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.geekkulcha.backend.dto.LoginRequest;
 import com.geekkulcha.backend.dto.RegisterRequest;
@@ -50,6 +52,37 @@ public class AuthController {
         return ResponseEntity
                .status(401)
                .body("Email / Phone Number already exists. Please log in");
+    }
+
+    @PostMapping(path = "/register", consumes = "multipart/form-data")
+    public ResponseEntity<String> registerProvider(
+            @RequestPart String firstName,
+            @RequestPart String lastName,
+            @RequestPart String email,
+            @RequestPart String password,
+            @RequestPart String phoneNumber,
+            @RequestPart MultipartFile profileImage,
+            @RequestPart MultipartFile idImage
+    ) {
+        if (profileImage.isEmpty() || idImage.isEmpty()
+                || !isImage(profileImage) || !isImage(idImage)) {
+            return ResponseEntity.badRequest().body("Provider profile image and ID image must both be valid image files");
+        }
+
+        RegisterRequest request = new RegisterRequest();
+        request.setFirstName(firstName);
+        request.setLastName(lastName);
+        request.setEmail(email);
+        request.setPassword(password);
+        request.setPhoneNumber(phoneNumber);
+        boolean registered = authService.register(request, profileImage, idImage, true);
+        return registered
+                ? ResponseEntity.ok("Registered Successfully")
+                : ResponseEntity.status(401).body("Email / Phone Number already exists. Please log in");
+    }
+
+    private boolean isImage(MultipartFile file) {
+        return file.getContentType() != null && file.getContentType().startsWith("image/");
     }
 
     /** DEMO ONLY — see ResetPasswordRequest's javadoc for why this isn't a real reset flow. */

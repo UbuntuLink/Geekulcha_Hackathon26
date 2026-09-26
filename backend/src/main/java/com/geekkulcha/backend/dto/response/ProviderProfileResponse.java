@@ -6,6 +6,7 @@ import java.util.List;
 public record ProviderProfileResponse(
         long providerProfileId,
         String providerName,
+        String profileImageUrl,
         String bio,
         String location,
         double rating,

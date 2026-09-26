@@ -75,7 +75,7 @@ export default function BookingTracking() {
 
       <div className="mt-4 flex gap-2">
         <button
-          onClick={() => alert("Messaging is coming soon.")}
+          onClick={() => navigate(`/bookings/${bookingId}/messages`)}
           className="flex-1 rounded-lg border border-gray-300 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
         >
           Message provider

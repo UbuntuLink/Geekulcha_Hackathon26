@@ -8,6 +8,15 @@ import { COLOUR_MODES, getA11ySettings, saveA11ySettings } from "../../lib/a11y.
  * `compact` renders a small "Aa Display" button that opens a panel (for the nav bar);
  * otherwise the controls are shown inline (Profile screen, sign-in pages).
  */
+// Done / problem / waiting in each mode, matching styles/theme.css (the 700 shades).
+const SWATCHES = {
+  standard: ["#047857", "#b91c1c", "#b45309"],
+  protanopia: ["#1d4ed8", "#ea580c", "#a16207"],
+  deuteranopia: ["#1d4ed8", "#c2410c", "#a16207"],
+  tritanopia: ["#0f766e", "#b91c1c", "#be185d"],
+  contrast: ["#064e3b", "#7f1d1d", "#78350f"],
+};
+
 export default function DisplaySettings({ compact = false, className = "" }) {
   const [settings, setSettings] = useState(getA11ySettings);
   const [open, setOpen] = useState(false);
@@ -33,24 +42,41 @@ export default function DisplaySettings({ compact = false, className = "" }) {
     };
   }, [open]);
 
+  const renderMode = (mode) => (
+    <label
+      key={mode.value}
+      className="flex min-h-[44px] cursor-pointer items-center gap-2.5 rounded-lg px-2 text-sm text-gray-800 hover:bg-brand-mist"
+    >
+      <input
+        type="radio"
+        name={`${panelId}-colour`}
+        value={mode.value}
+        checked={settings.colourMode === mode.value}
+        onChange={() => update({ colourMode: mode.value })}
+        className="h-4 w-4 shrink-0 accent-brand"
+      />
+      <span className="min-w-0 flex-1">
+        <span className="block leading-tight">{mode.label}</span>
+        {mode.hint && <span className="block text-xs leading-tight text-gray-500">{mode.hint}</span>}
+      </span>
+      {/* Preview of how "done", "problem" and "waiting" look in this mode. */}
+      <span className="flex shrink-0 gap-1" aria-hidden="true">
+        {SWATCHES[mode.value].map((colour) => (
+          <span key={colour} className="h-3.5 w-3.5 rounded-full border border-black/10" style={{ background: colour }} />
+        ))}
+      </span>
+    </label>
+  );
+
   const controls = (
     <div className="space-y-3">
       <fieldset>
         <legend className="mb-1.5 text-sm font-bold text-ink">Colours</legend>
         <div className="space-y-1">
-          {COLOUR_MODES.map((mode) => (
-            <label key={mode.value} className="flex min-h-[40px] cursor-pointer items-center gap-2.5 rounded-lg px-2 text-sm text-gray-800 hover:bg-brand-mist">
-              <input
-                type="radio"
-                name={`${panelId}-colour`}
-                value={mode.value}
-                checked={settings.colourMode === mode.value}
-                onChange={() => update({ colourMode: mode.value })}
-                className="h-4 w-4 accent-brand"
-              />
-              {mode.label}
-            </label>
-          ))}
+          {renderMode(COLOUR_MODES[0])}
+          <p className="px-2 pt-1 text-xs font-semibold uppercase tracking-wide text-gray-500">Colour blindness</p>
+          {COLOUR_MODES.filter((mode) => mode.group === "colourBlind").map(renderMode)}
+          <div className="border-t border-gray-200 pt-1">{renderMode(COLOUR_MODES[COLOUR_MODES.length - 1])}</div>
         </div>
       </fieldset>
       <div className="space-y-1 border-t border-gray-200 pt-2">
@@ -101,7 +127,7 @@ export default function DisplaySettings({ compact = false, className = "" }) {
           id={panelId}
           role="dialog"
           aria-label="Display settings"
-          className="absolute right-0 top-full z-[60] mt-2 w-64 rounded-2xl border border-gray-200 bg-white p-3 shadow-lift"
+          className="absolute right-0 top-full z-[60] mt-2 w-72 rounded-2xl border border-gray-200 bg-white p-3 shadow-lift"
         >
           {controls}
         </div>

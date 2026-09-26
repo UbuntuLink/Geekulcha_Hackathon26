@@ -151,6 +151,10 @@ export default function ReviewProvider() {
         maxLength={2000}
         placeholder={t("customer.reviewPlaceholder")}
       />
+      <p className="mt-1.5 flex justify-between gap-3 text-xs text-gray-400">
+        <span>Your first name, rating and comment will appear on the provider's profile.</span>
+        <span className="shrink-0">{comment.length}/2000</span>
+      </p>
       {error && <div className="mt-4"><ErrorBanner>{error}</ErrorBanner></div>}
       <Button className="mt-6" onClick={handleSubmit} disabled={submitting}>
         {submitting ? t("customer.sending") : t("customer.submitReview")}

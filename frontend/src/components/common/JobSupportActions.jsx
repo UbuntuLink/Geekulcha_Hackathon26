@@ -1,15 +1,45 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { openChatWithCustomer, openChatWithProvider } from "../../api/services.js";
 
 /**
- * "Chat with …" and "Report an issue" for a quote or booking.
+ * "Chat with …" and "Report an issue" for a quote, booking or provider profile.
  *
- * Chat isn't built yet, so it opens a "coming soon" note. Report an issue collects a message and
- * confirms it was received; it isn't sent anywhere yet either.
+ * Chat opens the one conversation between these two people (creating it the first time): pass
+ * providerProfileId when the viewer is the customer, customerUserId when they're the provider.
+ * Report an issue collects a message and confirms it; it isn't sent anywhere yet.
  */
-export default function JobSupportActions({ otherPartyName = "the provider", compact = false }) {
-  const [panel, setPanel] = useState(null); // null | "chat" | "report"
+export default function JobSupportActions({
+  otherPartyName = "the provider",
+  providerProfileId,
+  customerUserId,
+  compact = false,
+}) {
+  const navigate = useNavigate();
+  const [panel, setPanel] = useState(null); // null | "report"
+  const [opening, setOpening] = useState(false);
+  const [chatError, setChatError] = useState("");
   const [message, setMessage] = useState("");
   const [reference, setReference] = useState(null);
+
+  const openChat = async () => {
+    setOpening(true);
+    setChatError("");
+    try {
+      const conversation =
+        providerProfileId != null
+          ? await openChatWithProvider(providerProfileId)
+          : await openChatWithCustomer(customerUserId);
+      navigate(`/messages/${conversation.id}`, { state: { conversation } });
+    } catch (err) {
+      console.error(err);
+      setChatError(err?.response?.data?.message || "Couldn't open the chat. Please try again.");
+    } finally {
+      setOpening(false);
+    }
+  };
+
+  const canChat = providerProfileId != null || customerUserId != null;
 
   const toggle = (name) => {
     setPanel((current) => (current === name ? null : name));
@@ -31,15 +61,16 @@ export default function JobSupportActions({ otherPartyName = "the provider", com
   return (
     <div>
       <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => toggle("chat")}
-          aria-expanded={panel === "chat"}
-          className={`${buttonClass} ${panel === "chat" ? "border-brand bg-brand/5 text-brand" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
-        >
-          Chat with {otherPartyName}
-          <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-700">Soon</span>
-        </button>
+        {canChat && (
+          <button
+            type="button"
+            onClick={openChat}
+            disabled={opening}
+            className={`${buttonClass} border-brand/30 text-brand hover:bg-brand/5 disabled:opacity-60`}
+          >
+            {opening ? "Opening…" : `Chat with ${otherPartyName}`}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => toggle("report")}
@@ -50,14 +81,7 @@ export default function JobSupportActions({ otherPartyName = "the provider", com
         </button>
       </div>
 
-      {panel === "chat" && (
-        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="status">
-          <p className="font-semibold">Chat is coming soon</p>
-          <p className="mt-0.5 text-xs">
-            You'll be able to message {otherPartyName} right here. Until then, use the notes on the work tracker.
-          </p>
-        </div>
-      )}
+      {chatError && <p role="alert" className="mt-2 text-xs text-red-600">{chatError}</p>}
 
       {panel === "report" && (
         <div className="mt-3 rounded-xl border border-gray-200 bg-white p-4">

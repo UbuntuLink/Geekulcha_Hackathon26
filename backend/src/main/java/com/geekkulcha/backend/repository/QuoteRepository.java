@@ -13,6 +13,9 @@ public interface QuoteRepository extends JpaRepository<Quote, Long> {
     List<Quote> findByServiceRequestId(long serviceRequestId);
     List<Quote> findByProviderProfileId(long providerProfileId);
 
+    // Has this provider quoted on any of this customer's requests? (who may message whom)
+    boolean existsByProviderProfile_IdAndServiceRequest_User_Id(long providerProfileId, long customerUserId);
+
     /** Every quote on this customer's requests, newest first, as page-ready summaries (one query). */
     @Query("select new com.geekkulcha.backend.dto.response.QuoteSummaryResponse("
             + "q.id, q.amount, q.message, q.status, q.createdAt, "

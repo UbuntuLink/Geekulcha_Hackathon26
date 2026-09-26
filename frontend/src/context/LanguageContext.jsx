@@ -19,6 +19,7 @@ export const translations = {
     "nav.bookings": "Bookings",
     "nav.myRequests": "My requests",
     "nav.quotes": "Quotes",
+    "nav.messages": "Messages",
     "nav.logout": "Logout",
     "common.back": "Back",
     "welcome.title": "Local help. Right when you need it.",

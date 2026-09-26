@@ -166,3 +166,18 @@ export const getCustomerBookings = () => apiClient.get("/api/bookings/as-custome
 
 export const mockCharge = (bookingId, amount) =>
   apiClient.post(`/api/bookings/${bookingId}/payment/mock-charge`, null, { params: { amount } }).then((res) => res.data);
+
+// --- Messaging ---
+export const listConversations = () => apiClient.get("/api/conversations").then((res) => res.data);
+export const getUnreadMessageCount = () =>
+  apiClient.get("/api/conversations/unread-count").then((res) => res.data.count ?? 0);
+// Opens (or creates) the one thread between the caller and this provider / this customer.
+export const openChatWithProvider = (providerProfileId) =>
+  apiClient.post(`/api/conversations/with-provider/${providerProfileId}`).then((res) => res.data);
+export const openChatWithCustomer = (customerUserId) =>
+  apiClient.post(`/api/conversations/with-customer/${customerUserId}`).then((res) => res.data);
+// after: only messages newer than this id, for polling an open chat.
+export const getMessages = (conversationId, after = 0) =>
+  apiClient.get(`/api/conversations/${conversationId}/messages`, { params: { after } }).then((res) => res.data);
+export const sendMessage = (conversationId, body) =>
+  apiClient.post(`/api/conversations/${conversationId}/messages`, { body }).then((res) => res.data);

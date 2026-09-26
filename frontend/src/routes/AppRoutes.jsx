@@ -17,6 +17,8 @@ import CompareProviders from "../pages/customer/CompareProviders.jsx";
 import ProviderProfileView from "../pages/customer/ProviderProfileView.jsx";
 import QuoteRequest from "../pages/customer/QuoteRequest.jsx";
 import Quotes from "../pages/customer/Quotes.jsx";
+import Messages from "../pages/messages/Messages.jsx";
+import Conversation from "../pages/messages/Conversation.jsx";
 import BookingConfirmation from "../pages/customer/BookingConfirmation.jsx";
 import BookingTracking from "../pages/customer/BookingTracking.jsx";
 import ReviewProvider from "../pages/customer/ReviewProvider.jsx";
@@ -57,6 +59,8 @@ export default function AppRoutes() {
         <Route path="/providers/:providerId" element={<ProtectedRoute><ProviderProfileView /></ProtectedRoute>} />
         <Route path="/requests/:id/quote" element={<ProtectedRoute><QuoteRequest /></ProtectedRoute>} />
         <Route path="/quotes" element={<ProtectedRoute><Quotes /></ProtectedRoute>} />
+        <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+        <Route path="/messages/:id" element={<ProtectedRoute><Conversation /></ProtectedRoute>} />
         <Route path="/requests/:id/quotes" element={<ProtectedRoute><Quotes /></ProtectedRoute>} />
         <Route path="/bookings/:bookingId/confirmation" element={<ProtectedRoute><BookingConfirmation /></ProtectedRoute>} />
         <Route path="/bookings/:bookingId" element={<ProtectedRoute><BookingTracking /></ProtectedRoute>} />

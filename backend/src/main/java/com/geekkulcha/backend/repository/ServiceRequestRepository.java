@@ -18,6 +18,9 @@ public interface ServiceRequestRepository
 
     List<ServiceRequest> findByUserId(long userId);
 
+    // Did this customer ask this provider for a quote? (who may message whom)
+    boolean existsByUser_IdAndPreferredProvider_Id(long userId, long providerProfileId);
+
     List<ServiceRequest> findByStatus(RequestStatus status);
 
     List<ServiceRequest> findByStatusIn(Collection<RequestStatus> statuses);

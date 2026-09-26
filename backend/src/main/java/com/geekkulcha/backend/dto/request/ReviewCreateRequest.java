@@ -2,9 +2,10 @@ package com.geekkulcha.backend.dto.request;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 
 public record ReviewCreateRequest(
         @Min(1) @Max(5) int rating,
-        String comment
+        @Size(max = 2000) String comment
 ) {
 }

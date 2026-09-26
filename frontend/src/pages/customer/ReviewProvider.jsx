@@ -148,6 +148,7 @@ export default function ReviewProvider() {
       <TextArea
         value={comment}
         onChange={(e) => setComment(e.target.value)}
+        maxLength={2000}
         placeholder={t("customer.reviewPlaceholder")}
       />
       {error && <div className="mt-4"><ErrorBanner>{error}</ErrorBanner></div>}

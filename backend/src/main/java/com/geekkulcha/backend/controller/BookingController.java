@@ -33,8 +33,8 @@ public class BookingController {
     }
 
     @GetMapping("/{id}")
-    public Booking getById(@PathVariable long id) {
-        return bookingService.getById(id);
+    public Booking getById(@AuthenticationPrincipal Jwt jwt, @PathVariable long id) {
+        return bookingService.getForParticipant(id, userService.getCurrentUser(jwt).getId());
     }
 
     @PatchMapping("/{id}/status")

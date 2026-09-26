@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Screen from "../../components/layout/Screen.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import Card from "../../components/common/Card.jsx";
+import StarRating from "../../components/common/StarRating.jsx";
 import { getMyBookings, getMyProviderProfile, getMyServiceRequests, getOpenRequests } from "../../api/services.js";
 
 const ACTIVE_STATUSES = ["REQUEST_SENT", "ACCEPTED", "ON_THE_WAY"];
@@ -27,6 +28,9 @@ export default function ProviderDashboard() {
       .catch(() => setOpenCount(0));
     getMyBookings().then((list) => setActiveCount(list.filter((b) => ACTIVE_STATUSES.includes(b.status)).length));
   }, [navigate]);
+
+  const latestReview = [...(profile?.reviews ?? [])]
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0];
 
   return (
     <Screen title={`Hi, ${profile?.providerName?.split(" ")[0] ?? t("common.personFallback")}`} subtitle="Here’s what needs your attention today." showBack={false} withNav navRole="provider" size="wide">
@@ -53,6 +57,20 @@ export default function ProviderDashboard() {
               {profile.services.length} service{profile.services.length === 1 ? "" : "s"} listed ·{" "}
               {profile.availableToday ? t("provider.availableToday") : t("provider.unavailableToday")}
             </p>
+
+            {/* The provider's standing, from the reviews customers have left on completed jobs. */}
+            <div className="mt-4 border-t border-gray-100 pt-4">
+              {profile.reviewCount > 0 ? (
+                <>
+                  <StarRating rating={profile.rating} reviewCount={profile.reviewCount} />
+                  {latestReview?.comment && (
+                    <p className="mt-2 text-sm italic leading-6 text-gray-600">“{latestReview.comment}”</p>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-gray-500">No reviews yet. Customers can rate you once a job is marked completed.</p>
+              )}
+            </div>
           </Card>
         )}
       </div>

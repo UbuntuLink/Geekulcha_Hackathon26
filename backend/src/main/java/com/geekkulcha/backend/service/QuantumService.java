@@ -1,5 +1,6 @@
 package com.geekkulcha.backend.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -11,9 +12,9 @@ public class QuantumService {
 
     private final RestClient restClient;
 
-    public QuantumService() {
+    public QuantumService(@Value("${ml.base-url}") String mlBaseUrl) {
         this.restClient = RestClient.builder()
-                .baseUrl("http://localhost:8000")
+                .baseUrl(mlBaseUrl)
                 .build();
     }
 

@@ -4,3 +4,7 @@ pydantic
 python-dotenv
 requests
 openai
+numpy
+scipy
+qiskit
+qiskit-addon-opt-mapper

@@ -1,15 +1,8 @@
-import numpy as np
-
-from scipy.optimize import minimize
-
-from qiskit.circuit.library import qaoa_ansatz
-from qiskit.primitives import StatevectorEstimator, StatevectorSampler
-
-from qiskit_addon_opt_mapper import OptimizationProblem
-from qiskit_addon_opt_mapper.converters import OptimizationProblemToQubo
-from qiskit_addon_opt_mapper.translators import to_ising
-
 from app.schemas.quantum import QuantumOptimisationRequest
+
+# numpy/scipy/qiskit are imported inside optimise_quantum, not here: main.py loads this module at
+# startup, so a missing or broken quantum install would otherwise take classification and pricing
+# down with it instead of failing only /quantum/optimise.
 
 
 def _normalise_lower_is_better(values: list[float]) -> list[float]:
@@ -95,6 +88,17 @@ def optimise_quantum(request: QuantumOptimisationRequest):
             ],
             "algorithm": "DIRECT"
         }
+
+    import numpy as np
+
+    from scipy.optimize import minimize
+
+    from qiskit.circuit.library import qaoa_ansatz
+    from qiskit.primitives import StatevectorEstimator, StatevectorSampler
+
+    from qiskit_addon_opt_mapper import OptimizationProblem
+    from qiskit_addon_opt_mapper.converters import OptimizationProblemToQubo
+    from qiskit_addon_opt_mapper.translators import to_ising
 
     # ---------------------------------------------------------
     # 1. NORMALISE PROVIDER INFORMATION

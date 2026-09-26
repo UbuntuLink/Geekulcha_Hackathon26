@@ -33,8 +33,9 @@ matches them with nearby, rated providers to get quotes and book the work.
   optimiser is unavailable, the page falls back to the normal list without it.
 - **Compare, quote and book.** Compare providers, request quotes, accept one with a date and time
   to create a booking, and follow the booking's status.
-- **Pay and review.** Mock checkout (no real money in this build), then rate and review the
-  provider.
+- **Pay and review.** Mock checkout (no real money in this build), then rate the provider out of
+  five stars with an optional comment. The rating immediately updates the provider's average,
+  which feeds matching, sorting and the quantum recommendation.
 - **Onboarding preferences.** Location and whether price or rating matters more shape the default
   sort.
 - **Multilingual.** The landing page is available in English, isiZulu, Sesotho, Setswana and
@@ -47,6 +48,7 @@ matches them with nearby, rated providers to get quotes and book the work.
 - **Provider profile.** Services offered, prices per service, and location.
 - **Requests feed.** Open requests in the provider's categories, with the option to quote.
 - **Bookings dashboard.** Accepted jobs, advanced through their statuses as the work happens.
+- **Their rating.** Average stars, review count and the latest review, on the dashboard.
 
 ---
 
@@ -59,7 +61,8 @@ matches them with nearby, rated providers to get quotes and book the work.
 | **Passwords** | Hashed with **Argon2** (Spring Security's recommended settings). Plain-text passwords are never stored. |
 | **Authentication** | Stateless **JWT** (HS256), signed with a server-side secret of 32+ characters and valid for **1 hour**. |
 | **Every API route is protected** | Everything except `/auth/**` and the API docs requires a valid token. The signature and expiry are checked on every request. |
-| **Ownership checks** | Customers can only act on their own service requests, quotes and bookings, and providers can only update their own bookings. Anything else gets **403 Forbidden**. |
+| **Ownership checks** | Customers can only act on their own service requests, quotes and bookings, and providers can only update their own bookings. A booking can only be viewed by its customer and its provider. Anything else gets **403 Forbidden**. |
+| **Trustworthy ratings** | Only the customer who booked a job can review it, only after it's completed, and only once. The provider's rating is recalculated from their actual reviews, with row locks so simultaneous reviews can't corrupt it. |
 | **Input validation** | Request bodies are validated with Bean Validation (`@Valid`) and rejected with a clear 400. |
 | **Consistent errors** | A global exception handler maps errors to proper status codes (400/403/404/409) without leaking stack traces. |
 | **CORS** | The backend and ML service only accept browser calls from the app's own frontend origins. |
@@ -76,8 +79,6 @@ account, but they would need fixing before real users arrive.
 | Gap | Risk | Fix |
 |---|---|---|
 | **Password reset needs only email + phone number** | Anyone who knows both can take over the account. | Emailed, single-use, expiring reset link. |
-| **Any logged-in user can review any booking** | Fake or duplicate reviews. | Only the booking's customer, only once, only after the job is complete. |
-| **Any logged-in user can read any booking by ID** (`GET /api/bookings/{id}`) | Exposes other people's booking details. | Same ownership check the other booking routes already use. |
 | **The ML service has no authentication** | Anyone can call it directly and use up the AI quota. | Shared secret between backend and ML service, plus rate limiting. |
 | **The JWT is kept in `localStorage`** | A cross-site scripting bug could steal it. | `HttpOnly` cookie. |
 | **No login rate limiting** | Password guessing isn't slowed down. | Throttle or lock out after repeated failures. |

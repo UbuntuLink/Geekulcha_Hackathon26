@@ -1,220 +1,126 @@
-# Security and privacy plan — POPIA and related South African law
+# Security and privacy plan
 
-**Status:** plan only. Nothing here is implemented yet unless marked ✅.
-**Not legal advice.** This maps the law to our system so the team knows what to build; before a real launch,
-have the privacy notice, terms and disclaimer reviewed by someone qualified in South African law.
+How UbuntuLink protects people's information, in plain language, in three parts:
+
+1. **What's already real** — working protection in the app today.
+2. **What we show as a demo (mock)** — features that look and behave as they would in production but don't
+   do the real thing behind the scenes yet, and **why that's reasonable** at this stage.
+3. **What still has to be done** before real customers use it, and **how**.
+
+It's written against South Africa's **POPIA** (Protection of Personal Information Act) and the **Consumer
+Protection Act**. It isn't legal advice — before launch, a lawyer should review the privacy notice, terms and
+disclaimer.
 
 ---
 
-## 1. The laws that apply
+## Part 1 — Already real
 
-| Law | Why it applies to UbuntuLink |
+| Protection | What it means for users |
 |---|---|
-| **POPIA** — Protection of Personal Information Act 4 of 2013 | We collect and store personal information of South Africans: names, contact details, locations, photos, messages. This is the main one. |
-| **CPA** — Consumer Protection Act 68 of 2008 | Customers are consumers. Limits what a disclaimer can exclude; terms must be in plain language. |
-| **ECTA** — Electronic Communications and Transactions Act 25 of 2002 | Online agreements (terms accepted by ticking a box), and information a website selling services must display. |
-| **PAIA** — Promotion of Access to Information Act 2 of 2000 | Private bodies must publish a PAIA manual explaining how people can request their records. |
-| **Cybercrimes Act 19 of 2020** | Security incidents may have reporting duties. |
+| **Passwords are scrambled** (Argon2 hashing) | Even we can't read anyone's password. A leaked database wouldn't reveal them. |
+| **Logins expire after an hour** | A stolen login stops working quickly. |
+| **You only see your own jobs** | Requests, quotes, bookings, the work tracker, reviews and chats are visible only to the customer and provider involved. |
+| **We never keep ID numbers** | A provider's South African ID number is checked, then thrown away. We keep only "verified: yes". |
+| **Photos are cleaned** | Location data hidden inside phone photos (GPS) is removed before upload, so a photo can't reveal where someone lives. Only real image files are accepted. |
+| **Fair ratings** | Only the customer who booked a completed job can review it, and only once. |
+| **No double-booking** | A job can't be booked twice, even if two people tap at the same moment. |
+| **Secrets kept out of the code** | Passwords and keys live in the hosting settings, not in the code; the code history has been checked. |
+| **Sign-in disclaimer** | Users acknowledge that UbuntuLink connects them with providers and doesn't do the work itself. |
 
 ---
 
-## 2. What personal information we hold today
+## Part 2 — Demo (mock) features, and why they're justified
 
-| Data | Where | Sensitivity | Notes |
+A hackathon build shows the **experience and the design** of a feature; the heavy lifting (legal agreements,
+paid services, third-party integrations) comes with launch. For each mock below, the user sees exactly what
+they would in production, and the written justification is what to say if asked.
+
+### Already mocked in the app
+
+| Feature | What the user sees | What really happens | Justification |
 |---|---|---|---|
-| Name, email, phone number | `users` table | Personal | Phone number is also used (weakly) for password reset. |
-| Password | `users.password_hash` | Secret | ✅ Hashed with Argon2, never stored in plain text. |
-| **SA ID number** | **Not stored** | Special-risk identifier | ✅ Only checked and discarded; the profile stores just `idValidated` (true/false). Logs show a masked version. Good data minimisation — keep it this way. |
-| ID photo and selfie | **Not stored** | Would be **special personal information** (biometric) if kept | ✅ Browser previews only, never uploaded. A real face-match must follow §4.4. |
-| Home / job location (coordinates) | `service_request`, `provider_profile` | Personal, reveals where people live | Precise to a few metres. |
-| Problem descriptions, AI classification | `service_request` | Personal (can describe a home, health, security) | |
-| Problem photos | `service_request.photo_data_url` | Personal (inside people's homes) | Stored in the database. |
-| Review comments and photos | `review`, `review_photo` | Personal; **public** on profiles | Reviewer shown as first name + last initial. ✅ Photo EXIF/GPS stripped in the browser before upload. |
-| Chat messages | `conversation`, `message` | Personal, private | |
-| Booking history and tracker notes | `booking`, `booking_status_event` | Personal | |
-| Voice notes | **Not stored** | Personal (voice) | Sent to the AI for transcription, text returned, audio discarded. |
+| **ID document photo and selfie** when becoming a provider | Upload an ID photo and a selfie, previews shown, required to continue | Nothing is uploaded or stored | Real face matching uses **biometric data**, the most sensitive category under POPIA. It needs explicit consent and an accredited verification partner, so storing it in a demo would be **irresponsible**. Not storing it is the safest possible choice. The ID *number* check is real. |
+| **Report an issue** | Write a message, then get "Report received" and a reference number | Nothing is sent | Shows the complaints path users will have. The real version needs a staffed support process, not just a database table. |
+| **Payment** | Completing a job "charges" the quote amount | No money moves | Real payments need a licensed payment provider (e.g. PayFast, Yoco) and card-security certification. We never touch card details, so there's nothing to leak. |
 
-### Where it goes
+### Recommended new mocks for the demo
 
-| Destination | What | Location | POPIA issue |
-|---|---|---|---|
-| **Supabase** (database) | Everything above | **Frankfurt, Germany** (`aws-0-eu-central-1`) | Cross-border transfer (s72). |
-| **Render** (backend, ML service) | Passes through, in logs | Render's region (check dashboard) | Cross-border; logs may contain personal data. |
-| **Vercel** (website) | No stored personal data | Global CDN | Low. |
-| **Google Gemini** (AI) | Problem descriptions, photos, voice audio | Google (outside SA) | Cross-border; third-party processing; must check Google's data-use terms for the API tier we use. |
+Low effort, and each shows a POPIA requirement being designed in from the start.
 
----
-
-## 3. Gaps against POPIA's eight conditions
-
-| POPIA condition | Where we stand | Gap |
+| Mock | What the user would see | Justification (what it demonstrates) |
 |---|---|---|
-| **1. Accountability** (s8) | No named owner. | Appoint and register an **Information Officer** with the Information Regulator. |
-| **2. Processing limitation** — lawful basis, minimality, consent (s9–12) | Minimal ID handling ✅. No record of consent. | Record consent and the version of terms accepted; justify each field. |
-| **3. Purpose specification** — collect for a defined purpose, keep only as long as needed (s13–14) | No retention rules; data kept forever. | Retention schedule (§4.5). |
-| **4. Further processing limitation** (s15) | Data only used for the service ✅. | Don't reuse for marketing or AI training without consent. |
-| **5. Information quality** (s16) | Users can edit their profile. | Let users correct all their data. |
-| **6. Openness** — tell people what you collect and why (s17–18) | Sign-in disclaimer only. **No privacy notice.** | Privacy notice + PAIA manual (§4.1). |
-| **7. Security safeguards** (s19–22) | Good basics (§5 ✅). Several gaps (§5). | Close gaps; breach procedure (§4.7). |
-| **8. Data subject participation** — access, correction, deletion (s23–25) | None. | Download my data, delete my account (§4.6). |
-| **Special personal information** (s26–33) | Not processed ✅ (no biometrics stored, no ID number stored). | Keep it that way unless §4.4 is done. |
-| **Children** (s34–35) | No age check for customers. | Require 18+ at registration. |
-| **Direct marketing** (s69) | None sent ✅. | Opt-in only, if ever added. |
-| **Cross-border transfer** (s72) | Frankfurt DB, Google AI — not disclosed. | Disclose + legal basis (§4.3). |
+| **Privacy notice page** | A clear page: what we collect, why, who we share it with, how long we keep it, and your rights | POPIA requires telling people this up front (**openness**). Content can be final; only the legal sign-off is pending. |
+| **Consent at registration** | "I agree to the Terms and have read the Privacy Notice" plus "I am 18 or older", required to sign up | POPIA requires a **lawful basis** and protection of **children's data**. Moving the disclaimer here, instead of every sign-in, is also the correct place for it. |
+| **AI consent for photos and voice** | A one-time question: "Let our AI read your photo or voice to identify the job?" | Photos and voice go to an overseas AI service. Asking first shows **consent before sharing** and **data leaving South Africa** being handled properly. |
+| **"Your data" section on Profile** | **Download my data** and **Delete my account** buttons with a confirmation, then "Your request has been received and will be completed within 30 days" | POPIA gives people the right to **access** and **delete** their information. The demo shows where and how; the automated process comes later. |
+| **Data retention notice** | In the privacy notice: "Chats are kept for 12 months, unused requests for 12 months, booking records for 5 years…" | POPIA says don't keep data longer than needed. Publishing the schedule shows the policy exists. |
+| **Security incident page** (internal document) | Not in the app — a one-page "what we do if data leaks" plan | POPIA requires telling the **Information Regulator** and affected users after a breach. Having the plan written shows readiness. |
 
 ---
 
-## 4. The plan
+## Part 3 — Still to do before launch, and how
 
-### 4.1 Openness: privacy notice, terms, PAIA manual
+### Must fix first (security gaps)
 
-- **Privacy notice page** (`/privacy`, linked from sign-in, register and the footer), in plain language, in all
-  five app languages: what we collect (§2), why, legal basis, who we share it with (Supabase, Render, Vercel,
-  Google — and **the other party in a job**), that data leaves South Africa and why that's allowed, how long we
-  keep it, users' rights, how to complain to the **Information Regulator**, and the Information Officer's
-  contact details.
-- **Terms of use page** (`/terms`) — the full version of the sign-in disclaimer.
-- **PAIA manual** published on the site.
-- **Files:** new `frontend/src/pages/legal/Privacy.jsx`, `Terms.jsx`; routes in `AppRoutes.jsx`; links in
-  `Welcome.jsx` footer and `AuthShell.jsx`.
-
-### 4.2 Consent, recorded — and fixing the disclaimer
-
-Today the disclaimer is a checkbox on **every sign-in**, and nothing is recorded.
-
-- **Move it to registration**, together with the privacy notice: *"I agree to the Terms and have read the
-  Privacy Notice"* — required, with links. Record it: new columns on `users`:
-  `terms_version`, `terms_accepted_at`, `privacy_version`, `privacy_accepted_at`.
-- **Sign-in**: no checkbox. Instead, if the terms version has changed since the user last accepted, show the
-  new terms once and record acceptance.
-- **Separate, optional consents** (never pre-ticked, never required to use the app), each recorded with a
-  timestamp: AI processing of photos and voice (§4.3); marketing (only if ever added).
-- **Age:** "I am 18 or older" at registration.
-- **Disclaimer wording** (have a lawyer confirm): keep *"UbuntuLink connects customers and providers and does
-  not perform the work"*. But under the CPA a platform **cannot** exclude liability for its own gross
-  negligence, and unfair or hidden exclusions are void — so limit it to what we don't control (the provider's
-  workmanship and conduct), keep it in plain language, and state what we **do** do: verify ID numbers, show
-  ratings, keep messages, and offer "Report an issue".
-- **Files:** `backend/.../entity/User.java`, `dto/RegisterRequest.java`, `service/AuthService.java`;
-  `frontend/src/pages/auth/Register.jsx`, `Login.jsx`.
-
-### 4.3 Cross-border transfers and the AI provider
-
-- **Database:** move to a Supabase project in a region we choose deliberately. Keeping Frankfurt is lawful
-  under POPIA s72 because the EU (GDPR) gives comparable protection — but it must be **disclosed** in the
-  privacy notice. If a South African region becomes available on our hosting, prefer it.
-- **Google Gemini:** personal information leaves SA and reaches a third party.
-  - Use an API tier whose terms say **inputs are not used for training** and are not retained beyond
-    processing; record that in the privacy notice. Sign Google's data processing terms.
-  - **Minimise what's sent**: strip names, phone numbers and emails from descriptions before the AI call
-    (simple pattern redaction in `python/app/services/classification_service.py`).
-  - **Opt-in for photos and voice**: the text description works without AI photos or voice, so ask first
-    ("Let AI read your photo/voice to identify the job?").
-  - Or: keep the AI provider swappable (it is — `LLM_BASE_URL`) and move to one hosted in SA/EU with a
-    data-processing agreement.
-- **Operator agreements (s20–21)**: written agreements with every operator (Supabase, Render, Vercel,
-  Google) requiring them to keep the data secure — usually their standard DPA; download and file them.
-
-### 4.4 ID verification and biometrics (if made real)
-
-The current ID photo and selfie are a demo mock and store nothing — that's the safest position. If real
-verification is added:
-
-- A selfie used for **face matching is biometric = special personal information** (s26). It needs **explicit
-  consent** and should not be kept after the check.
-- Use an **accredited identity-verification provider** (e.g. one that checks against Home Affairs) as an
-  operator; send them the images, store only the **result** (verified yes/no, date, provider reference) —
-  never the ID number or the images.
-- Keep the profile photo (if any) separate from the verification selfie, and let the provider choose it.
-
-### 4.5 Retention and deletion schedule
-
-| Data | Keep for | Then |
+| Gap | Why it matters | How to fix it |
 |---|---|---|
-| Account data | While the account is active | Delete on account deletion (§4.6) |
-| Service requests that never became bookings | 12 months | Delete, including photos |
-| Bookings, quotes, amounts | 5 years (tax/accounting — confirm with an accountant) | Anonymise (remove names, descriptions, photos; keep amount, service, month) |
-| Chat messages | 12 months after the job's last activity | Delete |
-| Tracker notes | With the booking | Anonymise with the booking |
-| Reviews and review photos | While the provider's profile exists; reviewer can delete theirs | Reviewer shown as "Former customer" after account deletion |
-| Precise coordinates on requests | 90 days after the job | Round to ~1 km (suburb level) |
-| Server logs | 30 days | Delete |
-| Voice audio | Never stored ✅ | — |
+| **Database password was exposed** in a file on a teammate's GitHub branch | Anyone who saw it could read the database | **Change the database password now** in Supabase, update the hosting settings, and delete that branch. |
+| **Password reset is weak** — only needs email and phone number | Someone who knows both could take over an account | Send a **one-time reset link by email** that expires after 15 minutes. |
+| **The AI service is open to the internet** | Anyone could use our AI (running up cost) or send it data | Let it accept requests **only from our own backend**, using a shared secret. |
+| **No limit on repeated attempts** | Password guessing, spam messages, AI abuse | **Limit how often** anyone can try to log in, register, message or use AI in a short time. |
+| **Test/debug tools still switched on** | Unneeded ways into the system | **Remove** the ID-check test endpoint before launch. |
 
-**Build:** a nightly job (Spring `@Scheduled`) in a new `service/RetentionService.java` that applies this
-table, with a test per rule.
+### Legal and privacy setup (POPIA)
 
-### 4.6 Users' rights: see, correct, download, delete
-
-- **Profile → "Your data"** section:
-  - **Download my data** — `GET /api/users/me/export`: a JSON file of everything we hold about them.
-  - **Correct** — every field editable (profile, requests while open).
-  - **Delete my account** — `DELETE /api/users/me`, with confirmation: deletes the user, their messages and
-    open requests; anonymises bookings and reviews per §4.5; signs them out.
-- **Written requests** (email to the Information Officer) answered within a reasonable time — log each one.
-- **Files:** new `controller/PrivacyController.java`, `service/PrivacyService.java`;
-  `frontend/src/pages/customer/Profile.jsx`, `pages/provider/ProviderProfileEdit.jsx`.
-
-### 4.7 Security incidents (s22)
-
-- **Breach procedure** (`SECURITY_INCIDENT.md`): who decides, how to contain (rotate DB password, JWT secret,
-  API keys), and **notify the Information Regulator and affected users as soon as reasonably possible**, with
-  what happened, what data, and what they should do.
-- **Detect:** alert on repeated failed logins and on unusual data exports.
-- **Rehearse once** before launch.
-
----
-
-## 5. Technical security — current state and fixes
-
-### ✅ Already in place
-
-- Passwords hashed with **Argon2**; login tokens (JWT) signed, expire after 1 hour.
-- Every API route requires login except sign-in/register and public images.
-- **Ownership checks**: requests, quotes, bookings, tracker, reviews and chats are only readable/changeable by
-  the people involved (403 otherwise).
-- Row locking for booking, reviewing and status changes (no double-booking or lost updates).
-- Uploaded images checked by their actual bytes (JPEG/PNG/WebP only, 2 MB), served with `nosniff`; EXIF/GPS
-  stripped client-side.
-- Secrets in environment variables; git history scanned clean.
-- SA ID number never stored; masked in logs.
-- CORS limited to our own site's origins.
-
-### To fix, in priority order
-
-| # | Issue | Risk | Fix | Where |
-|---|---|---|---|---|
-| 1 | **Database password was exposed** in a committed log on a teammate's branch | Full data access | **Rotate the Supabase password now**; update Render and `.env` files; delete that branch | Supabase, Render |
-| 2 | **Password reset needs only email + phone number** | Account takeover | Emailed, single-use, 15-minute reset link | `AuthService.resetPassword` |
-| 3 | **ML service has no authentication** | Anyone can call the AI with our key (cost) and send it data | Shared secret header between backend and ML service; frontend calls go via the backend | `python/app/main.py`, `SecurityConfig` |
-| 4 | **No rate limiting** on login, register, AI and messages | Password guessing, spam, AI cost | Per-IP and per-user limits (e.g. Bucket4j) | Backend filter |
-| 5 | **Token kept in `localStorage`** | Stolen by any cross-site scripting bug | `HttpOnly`, `Secure`, `SameSite` cookie + refresh token | `api/auth.js`, `AuthController` |
-| 6 | **Security headers** only Spring defaults | Clickjacking, script injection | Content-Security-Policy, HSTS, Referrer-Policy, Permissions-Policy (camera/microphone only where used) | `SecurityConfig`, `frontend/vercel.json` |
-| 7 | **Photos stored in the database**, base64 | Large backups containing personal photos | Private object storage (Supabase Storage) with short-lived signed URLs | `ServiceRequest`, `ReviewPhoto` |
-| 8 | **Debug endpoint** `/api/debug/validate-id` still deployed | Minor information leak | Remove | `IdDebugController.java` |
-| 9 | **Encryption at rest** relies on the host only | Exposure through backups | Confirm Supabase disk encryption; encrypt phone numbers and chat bodies at field level | Entities |
-| 10 | **Logs** may include request bodies and emails | Personal data in logs | Log IDs, not content; 30-day log retention | Backend/ML logging config |
-| 11 | **Public profile/review photo URLs** guessable by number | Enumeration of reviews' photos | Random (UUID) photo IDs | `ReviewPhoto`, controllers |
-| 12 | **Dependency and code scanning** | Known vulnerabilities | GitHub Dependabot + CodeQL in CI | `.github/workflows` |
-
----
-
-## 6. Order of work
-
-| When | Items |
+| To do | How |
 |---|---|
-| **Now (before any real users)** | §5 #1 rotate DB password · #8 remove debug endpoint · §4.1 privacy notice + terms pages · §4.2 consent at registration (move disclaimer, record version, 18+) · disclose cross-border transfers |
-| **Before public launch** | §5 #2 password reset · #3 ML auth · #4 rate limits · #6 headers · §4.3 AI minimisation and opt-in, operator DPAs · §4.6 download/delete my data · §4.7 breach procedure · register Information Officer · PAIA manual · lawyer review of terms and disclaimer |
-| **Within 3 months of launch** | §5 #5 cookie auth · #7 object storage · #9 field encryption · #10 log hygiene · #11 random IDs · #12 scanning · §4.5 retention job |
-| **Ongoing** | Review this plan when adding any new data type (especially real ID verification — §4.4); annual review of the privacy notice; rehearse the breach procedure yearly |
+| **Appoint an Information Officer** | Name a responsible person (usually a founder) and **register them with the Information Regulator** (free, online). |
+| **Publish the privacy notice and terms** | Turn the demo pages into final versions after a **lawyer's review**. Include that our database is in Europe and the AI provider is overseas, and why that's allowed. |
+| **Rework the disclaimer** | Under consumer law a platform **can't disclaim its own negligence**. Limit the disclaimer to what we don't control (a provider's workmanship), in plain language, and state what we *do* do: verify IDs, show ratings, keep messages, handle complaints. |
+| **Record consent properly** | Store the date and the version of the terms each user accepted; ask again when the terms change. |
+| **Agreements with our suppliers** | Sign the standard **data processing agreements** with our database, hosting and AI providers, requiring them to protect the data. Choose an AI plan that **doesn't train on our customers' data**. |
+| **PAIA manual** | Publish the short standard document explaining how people can request their records (required of private companies). |
+| **Make "Your data" real** | Turn the demo buttons into an automatic download and a real deletion (keeping only what the law requires, such as financial records, with names removed). |
+| **Retention in practice** | A nightly clean-up that deletes or anonymises data once its time is up, following the published schedule. |
+| **Share less with the AI** | Strip names, phone numbers and emails from messages before they go to the AI. |
+| **Breach procedure** | Finalise the incident plan and **rehearse it once**: who decides, how to lock things down, and how to notify the Regulator and users quickly. |
+
+### Stronger protection (within a few months of launch)
+
+| Improvement | How |
+|---|---|
+| **Safer login storage** in the browser | Keep the login in a protected browser cookie that page scripts can't read. |
+| **Photos out of the main database** | Move them to private file storage with short-lived links. |
+| **Extra encryption** for the most sensitive fields (phone numbers, chats) | Encrypt them individually, so a stolen database backup is unreadable. |
+| **Browser security settings** | Standard protections that stop other websites embedding or injecting into ours. |
+| **Logs without personal data** | Log what happened, not what people wrote; delete logs after 30 days. |
+| **Automatic security checks** | Turn on GitHub's free vulnerability alerts and code scanning. |
+
+### If ID verification becomes real
+
+Use an **accredited identity-verification company** that checks against Home Affairs. Ask for **explicit
+consent** for the selfie match. Keep only the **result** ("verified on this date"), never the ID photo, selfie
+or ID number.
 
 ---
 
-## 7. What to say if asked today
+## Order of work
 
-- *"We don't store ID numbers or ID photos — only whether the ID passed validation."*
-- *"Passwords are hashed with Argon2; every record is only visible to the people involved in that job."*
-- *"Customers' AI inputs go to Google for processing, and our database is in the EU; for launch we'll disclose
-  that in a POPIA privacy notice and record consent at registration."*
-- *"We have a written plan to meet POPIA's eight conditions — retention, access and deletion, breach
-  notification and an Information Officer."*
+| When | What |
+|---|---|
+| **Now** | Change the exposed database password · remove the debug tool · build the demo mocks from Part 2 |
+| **Before launch** | Fix the password reset · lock down the AI service · add attempt limits · Information Officer · privacy notice, terms and disclaimer (lawyer-reviewed) · supplier agreements · real "Your data" · breach plan |
+| **First 3 months** | Stronger protection list · automatic retention clean-up |
+| **Ongoing** | Review this plan whenever we collect a new kind of data; rehearse the breach plan yearly |
+
+---
+
+## What to say if asked
+
+- *"We never store ID numbers, ID photos or selfies — only whether the ID was verified."*
+- *"Passwords are scrambled, logins expire, and every job is visible only to the two people involved."*
+- *"The demo shows how users will see their privacy notice, give consent, and download or delete their data.
+  Before launch those are finalised with a lawyer, and we register our Information Officer with the
+  Regulator."*
+- *"Payments and ID checks are demo versions on purpose — the real ones go through licensed, accredited
+  partners, so we never hold card details or biometrics ourselves."*

@@ -6,6 +6,7 @@ import Button from "../../components/common/Button.jsx";
 import Loading from "../../components/common/Loading.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import EmptyState from "../../components/common/EmptyState.jsx";
+import JobSupportActions from "../../components/common/JobSupportActions.jsx";
 import { getMyProviderProfile, getProviderProfile, reviewPhotoUrl } from "../../api/services.js";
 import { formatRange } from "../../lib/format.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
@@ -276,6 +277,11 @@ export default function ProviderProfileView() {
             {!state?.serviceRequestId && <p className="mt-2 text-center text-xs text-gray-500">{t("common.startFromProblem")}</p>}
             {isOwnProviderProfile && state?.serviceRequestId && (
               <p className="mt-2 text-center text-xs text-gray-500">You cannot request a quote from yourself.</p>
+            )}
+            {!isOwnProviderProfile && (
+              <div className="mt-4">
+                <JobSupportActions otherPartyName={profile.providerName.split(" ")[0]} />
+              </div>
             )}
           </div>
         </div>

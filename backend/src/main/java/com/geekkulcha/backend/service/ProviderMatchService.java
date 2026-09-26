@@ -5,8 +5,12 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.geekkulcha.backend.dto.request.QuantumJob;
+import com.geekkulcha.backend.dto.request.QuantumOptimisationRequest;
+import com.geekkulcha.backend.dto.request.QuantumProvider;
 import com.geekkulcha.backend.dto.response.ProviderMatchResponse;
 import com.geekkulcha.backend.dto.response.ProviderProfileResponse;
+import com.geekkulcha.backend.dto.response.QuantumOptimisationResponse;
 import com.geekkulcha.backend.dto.response.ReviewResponse;
 import com.geekkulcha.backend.dto.response.ServicePriceResponse;
 import com.geekkulcha.backend.entity.ProviderProfile;
@@ -31,6 +35,7 @@ public class ProviderMatchService {
     private final ProviderServiceRepository providerServiceRepository;
     private final ProviderProfileRepository providerProfileRepository;
     private final ReviewRepository reviewRepository;
+    private final QuantumService quantumService;
 
     /** Every validated provider offering this service, unsorted and unfiltered by distance. */
     public List<ProviderMatchResponse> findProvidersForService(long serviceId) {
@@ -110,5 +115,155 @@ public class ProviderMatchService {
     // "Thabo Plumbing") — no separate business-name field for MVP.
     private String providerName(ProviderProfile p) {
         return (p.getUser().getFirstName() + " " + p.getUser().getLastName()).trim();
+    }
+
+    public ProviderMatchResponse findQuantumRecommendedProvider(
+            long jobId,
+            long serviceId,
+            double urgency,
+            Double latitude,
+            Double longitude
+    ) {
+
+        // First use all of our existing matching logic.
+        List<ProviderMatchResponse> matches =
+                findProvidersForService(
+                        serviceId,
+                        latitude,
+                        longitude
+                );
+
+        if (matches.isEmpty()) {
+            throw new ResourceNotFoundException(
+                    "No eligible providers found for service " + serviceId
+            );
+        }
+
+        /*
+        * Some older providers may not have coordinates.
+        *
+        * The quantum service expects a numeric distance,
+        * so unknown distances are treated as worse than
+        * the furthest known provider.
+        */
+        double unknownDistanceFallback = matches.stream()
+                .map(ProviderMatchResponse::distanceKm)
+                .filter(distance -> distance != null)
+                .mapToDouble(Double::doubleValue)
+                .max()
+                .orElse(50.0)
+                + 10.0;
+
+        /*
+        * Find the highest known estimated price.
+        *
+        * This lets us avoid treating providers with missing
+        * prices as if they were free.
+        */
+        double unknownPriceFallback = matches.stream()
+                .mapToDouble(match ->
+                        estimatedPriceOrNaN(
+                                match.minPrice(),
+                                match.maxPrice()
+                        )
+                )
+                .filter(Double::isFinite)
+                .max()
+                .orElse(500.0);
+
+        List<QuantumProvider> quantumProviders =
+                matches.stream()
+                        .map(match -> {
+
+                            double distance =
+                                    match.distanceKm() != null
+                                            ? match.distanceKm()
+                                            : unknownDistanceFallback;
+
+                            double price =
+                                    estimatedPriceOrNaN(
+                                            match.minPrice(),
+                                            match.maxPrice()
+                                    );
+
+                            if (!Double.isFinite(price)) {
+                                price = unknownPriceFallback;
+                            }
+
+                            return new QuantumProvider(
+                                    match.providerProfileId(),
+                                    match.rating(),
+                                    distance,
+                                    price,
+                                    match.availableToday()
+                            );
+                        })
+                        .toList();
+
+        QuantumJob job = new QuantumJob(
+                jobId,
+                "service-" + serviceId,
+                urgency
+        );
+
+        QuantumOptimisationRequest quantumRequest =
+                new QuantumOptimisationRequest(
+                        List.of(job),
+                        quantumProviders
+                );
+
+        QuantumOptimisationResponse quantumResponse =
+                quantumService.optimise(quantumRequest);
+
+        if (quantumResponse == null
+                || quantumResponse.assignments() == null
+                || quantumResponse.assignments().isEmpty()) {
+
+            throw new IllegalStateException(
+                    "Quantum optimiser returned no assignment"
+            );
+        }
+
+        Long selectedProviderId =
+                quantumResponse
+                        .assignments()
+                        .get(0)
+                        .providerId();
+
+        return matches.stream()
+                .filter(match ->
+                        selectedProviderId.equals(
+                                match.providerProfileId()
+                        )
+                )
+                .findFirst()
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Quantum-selected provider was not found"
+                        )
+                );
+    }
+
+
+    private double estimatedPriceOrNaN(
+            Number minPrice,
+            Number maxPrice
+    ) {
+        if (minPrice != null && maxPrice != null) {
+            return (
+                    minPrice.doubleValue()
+                    + maxPrice.doubleValue()
+            ) / 2.0;
+        }
+
+        if (minPrice != null) {
+            return minPrice.doubleValue();
+        }
+
+        if (maxPrice != null) {
+            return maxPrice.doubleValue();
+        }
+
+        return Double.NaN;
     }
 }

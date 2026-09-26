@@ -8,12 +8,13 @@ import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import EmptyState from "../../components/common/EmptyState.jsx";
 import Button from "../../components/common/Button.jsx";
 import ProgressSteps from "../../components/common/ProgressSteps.jsx";
-import { getMatchingProviders, getMyProviderProfile, getServiceRequest } from "../../api/services.js";
+import { getMatchingProviders, getMyProviderProfile, getServiceRequest, getQuantumMatch } from "../../api/services.js";
 import { getOnboarding } from "../../lib/preferences.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 
 const SORT_OPTIONS = [
   { key: "recommended", label: "Recommended" },
+  { key: "quantum", label: "Quantum" },
   { key: "price", label: "Lowest price" },
   { key: "ratings", label: "Top rated" },
   { key: "today", label: "Available today" },
@@ -27,10 +28,17 @@ export default function MatchingProviders() {
   const { user } = useAuth();
   const [providers, setProviders] = useState(null);
   const [error, setError] = useState("");
+  const [quantumProviderId, setQuantumProviderId] = useState(null);
+  const [quantumStatus, setQuantumStatus] = useState("");
   const preferredPriority = getOnboarding().priority;
   const [sortMode, setSortMode] = useState(preferredPriority === "ratings" ? "ratings" : "recommended");
 
   useEffect(() => {
+    const controller = new AbortController();
+    setQuantumProviderId(null);
+    setQuantumStatus("");
+    setProviders(null);
+    setError("");
     (async () => {
       try {
         let serviceId = state?.serviceId;
@@ -39,7 +47,7 @@ export default function MatchingProviders() {
           serviceId = request.service?.id;
         }
         if (!serviceId) {
-          setProviders([]);
+          if (!controller.signal.aborted) setProviders([]);
           return;
         }
         // The customer's coordinates come from onboarding. Sending them is what turns this from
@@ -58,12 +66,34 @@ export default function MatchingProviders() {
         }
         // No pre-sort by onboarding priority here: sortedProviders below already applies it,
         // together with the sort chips, so sorting twice would only be overwritten.
-        setProviders(list);
+        if (controller.signal.aborted) return;
+
+        // Optional recommendation: sorting only changes when the user chooses Quantum.
+        if (list.length > 0) {
+          setQuantumStatus("Finding a quantum recommendation…");
+          try {
+            const match = await getQuantumMatch(id, serviceId, latitude ?? null, longitude ?? null, controller.signal);
+            if (controller.signal.aborted) return;
+            const selected = list.find((provider) =>
+              match?.providerProfileId != null && String(provider.providerProfileId) === String(match.providerProfileId)
+            );
+            setQuantumProviderId(selected?.providerProfileId ?? null);
+            setQuantumStatus(selected ? "" : "No quantum recommendation for these providers. You can still choose any provider.");
+          } catch {
+            if (!controller.signal.aborted) {
+              setQuantumStatus("Quantum recommendation is unavailable. You can still choose any provider.");
+            }
+          }
+        }
+        // Reveal the list and recommendation together, including the fallback on failure.
+        if (!controller.signal.aborted) setProviders(list);
       } catch (err) {
+        if (controller.signal.aborted) return;
         setError("Couldn't load providers — is the backend running?");
         console.error(err);
       }
     })();
+    return () => controller.abort();
   }, [id, state, user?.isProvider]);
 
   const sortedProviders = useMemo(() => {
@@ -77,13 +107,19 @@ export default function MatchingProviders() {
     }
 
     if (preferredPriority === "price") {
-      return list.sort((a, b) => (a.minPrice ?? Infinity) - (b.minPrice ?? Infinity));
+      list.sort((a, b) => (a.minPrice ?? Infinity) - (b.minPrice ?? Infinity));
+    } else {
+      list.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
     }
-    return list.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-  }, [providers, sortMode, preferredPriority]);
+    if (sortMode === "quantum" && quantumProviderId != null) {
+      list.sort((a, b) => Number(b.providerProfileId === quantumProviderId) - Number(a.providerProfileId === quantumProviderId));
+    }
+    return list;
+  }, [providers, sortMode, preferredPriority, quantumProviderId]);
 
   return (
     <Screen
+      onBack={() => navigate("/requests/mine", { replace: true })}
       title={providers ? `${providers.length} ${t("customer.providersFound")}` : t("customer.providersLoading")}
       subtitle={providers?.length ? t("customer.providerAvailability") : t("customer.providersLoading")}
       eyebrow="Step 3 of 3"
@@ -94,7 +130,7 @@ export default function MatchingProviders() {
       {error && <ErrorBanner>{error}</ErrorBanner>}
       {providers === null && !error && (
         <div className="rounded-2xl border border-brand/15 bg-brand-mist px-4">
-          <Loading label={t("customer.findingProviders")} />
+          <Loading label={quantumStatus || t("customer.findingProviders")} />
         </div>
       )}
       {providers?.length === 0 && <EmptyState>{t("customer.noServiceProviders")}</EmptyState>}
@@ -103,7 +139,11 @@ export default function MatchingProviders() {
         <div className="mb-5 rounded-3xl border border-white/80 bg-white/68 p-3 shadow-sm backdrop-blur sm:p-4 lg:flex lg:items-center lg:justify-between lg:gap-4">
           <div>
             <p className="text-sm font-extrabold text-ink">Tune your matches</p>
-            <p className="mt-0.5 text-xs text-gray-500">Sorting happens instantly — no extra API call.</p>
+            <p className="mt-0.5 text-xs text-gray-500">
+              {sortMode === "quantum"
+                ? "Quantum puts the suggested provider first and keeps all your other matches."
+                : "Sorting happens instantly — no extra API call."}
+            </p>
           </div>
 
           <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto pb-1 lg:mt-0 lg:justify-end">
@@ -111,6 +151,7 @@ export default function MatchingProviders() {
               <button
                 key={option.key}
                 type="button"
+                aria-pressed={sortMode === option.key}
                 onClick={() => setSortMode(option.key)}
                 className={`shrink-0 rounded-full px-3.5 py-2 text-xs font-bold transition-all ${
                   sortMode === option.key
@@ -125,11 +166,14 @@ export default function MatchingProviders() {
         </div>
       )}
 
+      {providers !== null && quantumStatus && <p role="status" className="mb-3 text-xs text-gray-500">{quantumStatus}</p>}
+
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {sortedProviders?.map((p, index) => (
           <div key={p.providerProfileId} className="animate-fade-up" style={{ animationDelay: `${Math.min(index * 55, 220)}ms` }}>
             <ProviderCard
               provider={p}
+              quantumRecommended={quantumProviderId != null && p.providerProfileId === quantumProviderId}
               onClick={() => navigate(`/providers/${p.providerProfileId}`, { state: { serviceRequestId: id } })}
             />
           </div>

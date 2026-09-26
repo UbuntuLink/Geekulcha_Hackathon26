@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 
@@ -57,5 +58,15 @@ public class ServiceRequestController {
     public ServiceRequest setPreferredProvider(@AuthenticationPrincipal Jwt jwt, @PathVariable long id,
                                                 @RequestParam long providerProfileId) {
         return serviceRequestService.setPreferredProvider(id, providerProfileId, userService.getCurrentUser(jwt).getId());
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable long id
+    ) {
+        long currentUserId = userService.getCurrentUser(jwt).getId();
+        serviceRequestService.delete(id, currentUserId);
     }
 }

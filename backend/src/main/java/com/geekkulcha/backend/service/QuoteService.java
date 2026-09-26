@@ -25,8 +25,18 @@ public class QuoteService {
 
     @Transactional
     public Quote create(ProviderProfile provider, QuoteCreateRequest request) {
-        var serviceRequest = serviceRequestRepository.findById(request.serviceRequestId())
-                .orElseThrow(() -> new ResourceNotFoundException("Service request " + request.serviceRequestId() + " not found"));
+        var serviceRequest = serviceRequestRepository
+            .findByIdForUpdate(request.serviceRequestId())
+            .orElseThrow(() -> new ResourceNotFoundException(
+                    "Service request " + request.serviceRequestId() + " not found"
+            ));
+
+        if (serviceRequest.getStatus() != RequestStatus.OPEN
+                && serviceRequest.getStatus() != RequestStatus.QUOTED) {
+            throw new IllegalStateException(
+                    "This request is no longer accepting quotes."
+            );
+        }
 
         Quote quote = new Quote();
         quote.setServiceRequest(serviceRequest);

@@ -45,6 +45,9 @@ export const createUnsupportedServiceRequest = (payload) =>
 export const getMyServiceRequests = () =>
   apiClient.get("/api/service-requests/mine").then((res) => res.data);
 
+export const deleteServiceRequest = (id) =>
+  apiClient.delete(`/api/service-requests/${id}`).then((res) => res.data);
+
 export const setPreferredProvider = (requestId, providerProfileId) =>
   apiClient
     .patch(`/api/service-requests/${requestId}/preferred-provider`, null, { params: { providerProfileId } })

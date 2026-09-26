@@ -79,6 +79,17 @@ public class BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Booking " + id + " not found"));
     }
 
+    /** A booking, for the customer who made it or the provider doing it — nobody else. */
+    public Booking getForParticipant(long id, long currentUserId) {
+        Booking booking = getById(id);
+        long customerId = booking.getQuote().getServiceRequest().getUser().getId();
+        long providerUserId = booking.getQuote().getProviderProfile().getUser().getId();
+        if (currentUserId != customerId && currentUserId != providerUserId) {
+            throw new ForbiddenException("You don't have access to this booking");
+        }
+        return booking;
+    }
+
     /** Advancing a booking's status is the provider's action — see ProviderBookings.jsx. */
     public Booking updateStatus(long id, BookingStatus status, long currentUserId) {
         Booking booking = getById(id);

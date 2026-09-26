@@ -99,7 +99,16 @@ export default function BookingTracking() {
 
       {booking.status === "COMPLETED" && hasReview && (
         <div className="mt-4 rounded-lg bg-green-50 px-4 py-3 text-center text-sm font-medium text-green-700">
-          Review submitted ✓
+          {booking.review?.rating ? (
+            <>
+              You rated this job{" "}
+              <span className="text-amber-500" aria-label={`${booking.review.rating} out of 5 stars`}>
+                {"★".repeat(booking.review.rating)}
+              </span>
+            </>
+          ) : (
+            "Review submitted ✓"
+          )}
         </div>
       )}
     </Screen>

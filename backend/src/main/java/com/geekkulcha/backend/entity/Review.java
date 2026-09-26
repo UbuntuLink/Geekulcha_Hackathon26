@@ -1,5 +1,6 @@
 package com.geekkulcha.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,6 +21,7 @@ public class Review {
     private long id;
 
     @OneToOne(optional = false)
+    @JsonIgnoreProperties("review")
     private Booking booking;
 
     private int rating;

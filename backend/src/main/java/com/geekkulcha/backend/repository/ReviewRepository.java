@@ -8,4 +8,6 @@ import java.util.List;
 public interface ReviewRepository extends JpaRepository<Review, Long> {
     // Review -> Booking -> Quote -> ProviderProfile.id (underscores disambiguate the nested path)
     List<Review> findByBooking_Quote_ProviderProfile_Id(long providerProfileId);
+
+    boolean existsByBooking_Id(long bookingId);
 }

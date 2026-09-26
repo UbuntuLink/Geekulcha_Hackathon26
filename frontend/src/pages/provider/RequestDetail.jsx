@@ -8,6 +8,7 @@ import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import { Field, TextArea, TextInput } from "../../components/common/Field.jsx";
 import { createQuote, getMyServiceRequests, getServiceRequest } from "../../api/services.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
+import VoiceInputButton from "../../components/common/VoiceInputButton.jsx";
 
 export default function RequestDetail() {
   const { id } = useParams();
@@ -41,7 +42,7 @@ export default function RequestDetail() {
 
     const value = Number(amount);
     if (!Number.isFinite(value) || value <= 0) {
-      setError("Enter a quote amount greater than R0.");
+      setError(t("quoteForm.amountError"));
       return;
     }
 
@@ -68,16 +69,16 @@ export default function RequestDetail() {
 
   if (done) {
     return (
-      <Screen title="Quote sent">
+      <Screen title={t("quoteForm.sent")}>
         <p className="text-gray-600">
           The customer can now see and accept your quote. It's listed under "Quotes awaiting the customer" on
           your Bookings page, and becomes a booking when they accept.
         </p>
         <Button className="mt-6" onClick={() => navigate("/provider/bookings")}>
-          Go to my bookings
+          {t("quoteForm.goToBookings")}
         </Button>
         <Button variant="outline" className="mt-3" onClick={() => navigate("/provider/requests")}>
-          Back to requests
+          {t("quoteForm.backToRequests")}
         </Button>
       </Screen>
     );
@@ -111,13 +112,14 @@ export default function RequestDetail() {
         </Field>
         <Field label="Message to customer">
           <TextArea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="I can come by today..." />
+          <VoiceInputButton className="mt-2" onText={(text) => setMessage(`${message}${message ? " " : ""}${text}`)} />
         </Field>
       </div>
 
       {error && <div className="mt-4"><ErrorBanner>{error}</ErrorBanner></div>}
 
       <Button onClick={handleSubmit} disabled={submitting || !amount || isOwnRequest} className="mt-6">
-        {submitting ? t("customer.sending") : "Send quote"}
+        {submitting ? t("customer.sending") : t("quoteForm.send")}
       </Button>
     </Screen>
   );

@@ -11,6 +11,9 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      # Public URL of ubuntulink-ml-service, for the quantum provider match.
+      - key: ML_SERVICE_URL
+        sync: false
 
   - type: web
     name: ubuntulink-ml-service

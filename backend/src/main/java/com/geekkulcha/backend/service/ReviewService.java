@@ -5,11 +5,14 @@ import com.geekkulcha.backend.entity.Booking;
 import com.geekkulcha.backend.entity.BookingStatus;
 import com.geekkulcha.backend.entity.ProviderProfile;
 import com.geekkulcha.backend.entity.Review;
+import com.geekkulcha.backend.entity.ReviewPhoto;
 import com.geekkulcha.backend.exception.ForbiddenException;
 import com.geekkulcha.backend.exception.ResourceNotFoundException;
 import com.geekkulcha.backend.repository.BookingRepository;
 import com.geekkulcha.backend.repository.ProviderProfileRepository;
+import com.geekkulcha.backend.repository.ReviewPhotoRepository;
 import com.geekkulcha.backend.repository.ReviewRepository;
+import com.geekkulcha.backend.util.ReviewPhotos;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +28,7 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final BookingRepository bookingRepository;
     private final ProviderProfileRepository providerProfileRepository;
+    private final ReviewPhotoRepository reviewPhotoRepository;
 
     /**
      * Records a customer's review of a completed booking and updates the provider's rating.
@@ -51,6 +55,10 @@ public class ReviewService {
             throw new IllegalStateException("A review has already been submitted for this booking.");
         }
 
+        // Checked before anything is saved, so a bad photo rejects the whole review cleanly.
+        List<ReviewPhotos.Image> photos = request.photos() == null ? List.of()
+                : request.photos().stream().map(ReviewPhotos::decode).toList();
+
         Review review = new Review();
         review.setBooking(booking);
         review.setRating(request.rating());
@@ -58,6 +66,15 @@ public class ReviewService {
         review.setComment(comment.isEmpty() ? null : comment);
         review.setCreatedAt(Instant.now());
         Review saved = reviewRepository.save(review);
+
+        for (int i = 0; i < photos.size(); i++) {
+            ReviewPhoto photo = new ReviewPhoto();
+            photo.setReview(saved);
+            photo.setPosition(i);
+            photo.setContentType(photos.get(i).contentType());
+            photo.setData(photos.get(i).data());
+            reviewPhotoRepository.save(photo);
+        }
 
         recalculateRating(booking.getQuote().getProviderProfile().getId());
         return saved;

@@ -2,6 +2,8 @@ package com.geekkulcha.backend.service;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -20,6 +22,7 @@ import com.geekkulcha.backend.entity.User;
 import com.geekkulcha.backend.exception.ResourceNotFoundException;
 import com.geekkulcha.backend.repository.ProviderProfileRepository;
 import com.geekkulcha.backend.repository.ProviderServiceRepository;
+import com.geekkulcha.backend.repository.ReviewPhotoRepository;
 import com.geekkulcha.backend.repository.ReviewRepository;
 import com.geekkulcha.backend.util.GeoUtils;
 
@@ -38,6 +41,7 @@ public class ProviderMatchService {
     private final ProviderServiceRepository providerServiceRepository;
     private final ProviderProfileRepository providerProfileRepository;
     private final ReviewRepository reviewRepository;
+    private final ReviewPhotoRepository reviewPhotoRepository;
     private final QuantumService quantumService;
 
     /** Every validated provider offering this service, unsorted and unfiltered by distance. */
@@ -106,20 +110,27 @@ public class ProviderMatchService {
                 .map(ps -> new ServicePriceResponse(ps.getService().getId(), ps.getService().getName(), ps.getMinPrice(), ps.getMaxPrice()))
                 .toList();
 
-        List<ReviewResponse> reviews = reviewRepository.findByBooking_Quote_ProviderProfile_Id(providerProfileId).stream()
+        List<Review> reviewRows = reviewRepository.findByBooking_Quote_ProviderProfile_Id(providerProfileId);
+        // One query for every review's photo ids, without the image bytes.
+        Map<Long, List<Long>> photoIds = reviewRows.isEmpty() ? Map.of()
+                : reviewPhotoRepository.findRefsByReviewIds(reviewRows.stream().map(Review::getId).toList()).stream()
+                        .collect(Collectors.groupingBy(ReviewPhotoRepository.PhotoRef::getReviewId,
+                                Collectors.mapping(ReviewPhotoRepository.PhotoRef::getPhotoId, Collectors.toList())));
+
+        List<ReviewResponse> reviews = reviewRows.stream()
                 .sorted(Comparator.comparing(Review::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(this::toReviewResponse)
+                .map(r -> toReviewResponse(r, photoIds.getOrDefault(r.getId(), List.of())))
                 .toList();
 
         return new ProviderProfileResponse(p.getId(), providerName(p), p.getBio(), p.getLocation(),
                 p.getRating(), p.getReviewCount(), p.isAvailableToday(), p.isIdValidated(), services, reviews);
     }
 
-    private ReviewResponse toReviewResponse(Review r) {
+    private ReviewResponse toReviewResponse(Review r, List<Long> photoIds) {
         ServiceRequest request = r.getBooking().getQuote().getServiceRequest();
         String serviceName = request.getService() != null ? request.getService().getName() : null;
         return new ReviewResponse(r.getRating(), r.getComment(), r.getCreatedAt(),
-                reviewerName(request.getUser()), serviceName);
+                reviewerName(request.getUser()), serviceName, photoIds);
     }
 
     /** "Thandi Mokoena" -> "Thandi M." */

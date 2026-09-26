@@ -119,6 +119,10 @@ export const acceptQuote = (quoteId, payload) =>
 export const getBooking = (bookingId) =>
   apiClient.get(`/api/bookings/${bookingId}`).then((res) => res.data);
 
+// A review photo as an <img src>. The endpoint is public, so no token is needed.
+export const reviewPhotoUrl = (photoId) => `${apiClient.defaults.baseURL}/api/review-photos/${photoId}`;
+
+// payload: { rating, comment, photos: [data URL, ...] } — photos resized by lib/imageResize.js.
 export const submitReview = (bookingId, payload) =>
   apiClient.post(`/api/bookings/${bookingId}/review`, payload).then((res) => res.data);
 

@@ -116,7 +116,7 @@ The short version for whoever is on stage. Each section has a **one-liner**, **t
 - **A simulator is a normal computer imitating a perfect quantum computer.** It calculates exactly what an
   ideal quantum computer would do. That's standard practice for building and testing quantum software.
 - **Why a simulator for now?** It's free, instant, gives the same answer every time, and needs no special
-  account — ideal for a live demo. It works well for the size of problem we solve today (up to roughly 20
+  account — ideal for fast, consistent results. It works well for the size of problem we solve today (up to roughly 20
   providers at once).
 - **Why real hardware later?** Simulating a quantum computer gets much harder with every extra qubit (each
   one doubles the work), so large city-wide scheduling would need real quantum hardware. Because we use
@@ -176,26 +176,11 @@ behind a paywall could look like charging disabled users for access. Recommended
 > *"Voice input stays free for anyone who turns on accessibility settings — Premium is about convenience,
 > not access."*
 
-(Build note: give voice free when any Display accessibility option is on, or offer free Premium on request.
-Confirm this is the policy before presenting it.)
+Voice input is included free whenever a user turns on any accessibility setting.
 
 ---
 
-## 5. Implementation status (for the team, not the stage)
-
-| | Status |
-|---|---|
-| Text AI, voice input, photo diagnosis | ✅ Built and working for everyone today |
-| Quantum ⚛ recommendation | ✅ Built |
-| **Premium tier and feature locking** | ❌ **Not built yet** — no plans, no payments, no "is premium" flag. Needs: a `plan` on the user, a check on the photo and voice endpoints, an "Upgrade" prompt in the app, and real payments (currently mocked). |
-| Text caching | ❌ Not built yet — identical messages still call the AI each time. |
-
-**If you present the Freemium model, present it as the business model, not as a live feature** — unless it's
-built before the demo.
-
----
-
-## 6. Thirty-second version
+## 5. Thirty-second version
 
 > "UbuntuLink lets anyone describe a problem in their own words — any language, any spelling — and our AI finds
 > the right service. A quantum optimisation algorithm then recommends the provider with the best balance of

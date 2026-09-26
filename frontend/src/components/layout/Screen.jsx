@@ -24,6 +24,7 @@ export default function Screen({
   title,
   subtitle,
   showBack = true,
+  onBack,
   withNav = false,
   navRole,
   desktopNav,
@@ -55,7 +56,7 @@ export default function Screen({
             <div className={`mb-4 flex items-center gap-3 ${!showBack && withNav ? "lg:hidden" : ""}`}>
               {showBack ? (
                 <button
-                  onClick={() => navigate(-1)}
+                  onClick={onBack ?? (() => navigate(-1))}
                   className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-brand/10 bg-white/70 px-3 text-sm font-semibold text-gray-600 shadow-sm backdrop-blur transition-all hover:-translate-y-0.5 hover:border-brand/25 hover:text-brand active:scale-95"
                   aria-label={t("common.back")}
                 >

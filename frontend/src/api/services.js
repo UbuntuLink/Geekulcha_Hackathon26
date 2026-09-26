@@ -67,6 +67,18 @@ export const getMatchingProviders = (serviceId, latitude = null, longitude = nul
 export const getProviderProfile = (providerProfileId) =>
   apiClient.get(`/api/provider-profiles/${providerProfileId}`).then((res) => res.data);
 
+// Uses Spring's default urgency (0.5) and the same location as the normal matches.
+export const getQuantumMatch = (jobId, serviceId, latitude = null, longitude = null, signal) =>
+  apiClient.get("/api/quantum-match", {
+    params: {
+      jobId,
+      serviceId,
+      ...(latitude != null && longitude != null ? { latitude, longitude } : {}),
+    },
+    signal,
+    timeout: 30000,
+  }).then((res) => res.data);
+
 // --- Backend: self-service provider profile ---
 export const getMyProviderProfile = () => apiClient.get("/api/provider-profiles/me").then((res) => res.data);
 

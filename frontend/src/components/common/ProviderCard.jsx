@@ -2,12 +2,17 @@ import Card from "./Card.jsx";
 import StarRating from "./StarRating.jsx";
 import { formatRange } from "../../lib/format.js";
 
-export default function ProviderCard({ provider, onClick }) {
+export default function ProviderCard({ provider, onClick, quantumRecommended = false }) {
   const initials = (provider.providerName || "Provider").split(" ").slice(0, 2).map((part) => part[0]).join("").toUpperCase();
   return (
     <Card onClick={onClick} className="provider-card group h-full overflow-hidden">
       <div className="h-1.5 bg-gradient-to-r from-brand via-brand-light to-emerald-300/80 opacity-75 transition-opacity group-hover:opacity-100" />
       <div className="p-4 lg:p-5">
+        {quantumRecommended && (
+          <p className="mb-3 inline-flex rounded-full bg-brand-soft px-2.5 py-1 text-[11px] font-bold text-brand">
+            <span aria-hidden="true" className="mr-1">⚛</span> Quantum recommended
+          </p>
+        )}
         <div className="flex items-start gap-3">
           <div className="relative grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-brand-soft text-sm font-extrabold text-brand transition-transform duration-200 group-hover:scale-[1.04]">
             {initials}

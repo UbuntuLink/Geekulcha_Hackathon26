@@ -30,6 +30,10 @@ export const createServiceRequest = (payload) =>
 export const getServiceRequest = (id) =>
   apiClient.get(`/api/service-requests/${id}`).then((res) => res.data);
 
+// Base64 WAV from lib/wavRecorder.js; resolves to the transcript, in the language spoken.
+export const transcribeAudio = (audioBase64) =>
+  mlClient.post("/transcribe", { audioBase64 }, { timeout: 60000 }).then((res) => res.data.text);
+
 export const refineDescription = (job_description, additional_details) => mlClient
     .post("/classify/refine-description", {
       job_description,

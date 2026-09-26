@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import FRONTEND_URL
-from app.routers import classification, pricing, quantum
+from app.routers import classification, pricing, quantum, transcription
 
 app = FastAPI(title="UbuntuLink ML Service")
 
@@ -28,6 +28,7 @@ app.add_middleware(
 app.include_router(classification.router)
 app.include_router(pricing.router)
 app.include_router(quantum.router)
+app.include_router(transcription.router)
 
 
 @app.get("/health")

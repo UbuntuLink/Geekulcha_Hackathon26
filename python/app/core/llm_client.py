@@ -165,6 +165,15 @@ def image_block(photo_data_url: str) -> dict:
     return {"type": "image_url", "image_url": {"url": photo_data_url}}
 
 
+def audio_block(audio_base64: str, audio_format: str = "wav") -> dict:
+    """A recorded voice note as an OpenAI-protocol audio part.
+
+    Base64 without the "data:" prefix, and the format named separately — the protocol only takes
+    "wav" or "mp3", which is why the browser encodes its recording as WAV before sending it.
+    """
+    return {"type": "input_audio", "input_audio": {"data": audio_base64, "format": audio_format}}
+
+
 def _provider() -> str:
     """A readable provider name for error messages, taken from the base URL's host."""
     host = BASE_URL.split("//")[-1].split("/")[0]

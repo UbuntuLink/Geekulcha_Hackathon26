@@ -8,7 +8,7 @@ change**.
 
 | Feature | Where the user finds it | Code |
 |---|---|---|
-| **Display settings**: Standard / Colour-blind friendly / High contrast colours, Larger text, Reduce motion | "Aa Display" in the desktop nav bar and on the sign-in pages; the "Display" card on Profile (customers) and Edit profile (providers) on phones. Saved per device. | `components/common/DisplaySettings.jsx`, `lib/a11y.js` |
+| **Display settings**: Standard, three colour-blind modes (red-blind / protanopia, green-blind / deuteranopia, blue–yellow blind / tritanopia), High contrast; Larger text; Reduce motion | "Aa Display" in the desktop nav bar and on the sign-in pages; the "Display" card on Profile (customers) and Edit profile (providers) on phones. Saved per device. | `components/common/DisplaySettings.jsx`, `lib/a11y.js` |
 | Themeable colours (every Tailwind colour is a CSS variable) | — | `styles/theme.css` (generated), `tailwind.config.js` |
 | System "reduce motion" respected everywhere | Automatic | `styles/index.css` (end) |
 | Minimum text size 12px; darker hint text (grey-500) | Everywhere | all pages |
@@ -16,6 +16,17 @@ change**.
 | Screen-reader announcements for new messages and tracker status changes | Automatic | `BottomNav.jsx`, `BookingTracking.jsx` |
 | Larger tap targets (photo ✕, "Skip to", sort chips) | — | `ReviewProvider.jsx`, `BookingTracking.jsx`, `MatchingProviders.jsx` |
 | Newer screens' text routed through translations | Tracker, Quotes, Messages, My requests | `context/LanguageContext.jsx` (`status.*`, `tracker.*`, `quotes.*`, `messages.*`) |
+
+**Colour-blind modes** (`styles/theme.css`, generated):
+
+| Mode | Done | Problem | Waiting | Brand |
+|---|---|---|---|---|
+| Red-blind (protanopia) | blue | bright orange | yellow | blue |
+| Green-blind (deuteranopia) | blue | vermilion orange | yellow | blue |
+| Blue–yellow blind (tritanopia) | teal | red | pink | green |
+
+Each option in the Display menu shows these three colours as a preview. The old single
+"colour-blind friendly" setting is migrated to green-blind.
 
 **Still to do:**
 - The new translation keys are **English only**; isiZulu, Setswana and Afrikaans fall back to English until a

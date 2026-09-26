@@ -63,8 +63,57 @@
   --c-gray-900: 17 24 39;
 }
 
-/* Colour-blind friendly: blue for good, orange for bad, yellow for waiting */
-html.theme-colorblind {
+/* Protanopia (red-blind): blue good, bright orange bad, yellow waiting */
+html.theme-protanopia {
+  --c-green-50: 239 246 255;
+  --c-green-100: 219 234 254;
+  --c-green-200: 191 219 254;
+  --c-green-300: 147 197 253;
+  --c-green-400: 96 165 250;
+  --c-green-500: 59 130 246;
+  --c-green-600: 37 99 235;
+  --c-green-700: 29 78 216;
+  --c-green-800: 30 64 175;
+  --c-green-900: 30 58 138;
+  --c-emerald-50: 239 246 255;
+  --c-emerald-100: 219 234 254;
+  --c-emerald-200: 191 219 254;
+  --c-emerald-300: 147 197 253;
+  --c-emerald-400: 96 165 250;
+  --c-emerald-500: 59 130 246;
+  --c-emerald-600: 37 99 235;
+  --c-emerald-700: 29 78 216;
+  --c-emerald-800: 30 64 175;
+  --c-emerald-900: 30 58 138;
+  --c-red-50: 255 247 237;
+  --c-red-100: 255 247 237;
+  --c-red-200: 255 237 213;
+  --c-red-300: 254 215 170;
+  --c-red-400: 253 186 116;
+  --c-red-500: 251 146 60;
+  --c-red-600: 249 115 22;
+  --c-red-700: 234 88 12;
+  --c-red-800: 194 65 12;
+  --c-red-900: 154 52 18;
+  --c-amber-50: 254 252 232;
+  --c-amber-100: 254 249 195;
+  --c-amber-200: 254 240 138;
+  --c-amber-300: 253 224 71;
+  --c-amber-400: 250 204 21;
+  --c-amber-500: 234 179 8;
+  --c-amber-600: 202 138 4;
+  --c-amber-700: 161 98 7;
+  --c-amber-800: 133 77 14;
+  --c-amber-900: 113 63 18;
+  --c-brand: 11 79 138;
+  --c-brand-dark: 8 59 104;
+  --c-brand-light: 21 101 168;
+  --c-brand-soft: 220 234 246;
+  --c-brand-mist: 239 245 251;
+}
+
+/* Deuteranopia (green-blind): blue good, vermilion bad, yellow waiting */
+html.theme-deuteranopia {
   --c-green-50: 239 246 255;
   --c-green-100: 219 234 254;
   --c-green-200: 191 219 254;
@@ -110,6 +159,40 @@ html.theme-colorblind {
   --c-brand-light: 21 101 168;
   --c-brand-soft: 220 234 246;
   --c-brand-mist: 239 245 251;
+}
+
+/* Tritanopia (blue-yellow): red bad, teal good, pink waiting */
+html.theme-tritanopia {
+  --c-green-50: 240 253 250;
+  --c-green-100: 204 251 241;
+  --c-green-200: 153 246 228;
+  --c-green-300: 94 234 212;
+  --c-green-400: 45 212 191;
+  --c-green-500: 20 184 166;
+  --c-green-600: 13 148 136;
+  --c-green-700: 15 118 110;
+  --c-green-800: 17 94 89;
+  --c-green-900: 19 78 74;
+  --c-emerald-50: 240 253 250;
+  --c-emerald-100: 204 251 241;
+  --c-emerald-200: 153 246 228;
+  --c-emerald-300: 94 234 212;
+  --c-emerald-400: 45 212 191;
+  --c-emerald-500: 20 184 166;
+  --c-emerald-600: 13 148 136;
+  --c-emerald-700: 15 118 110;
+  --c-emerald-800: 17 94 89;
+  --c-emerald-900: 19 78 74;
+  --c-amber-50: 253 242 248;
+  --c-amber-100: 252 231 243;
+  --c-amber-200: 251 207 232;
+  --c-amber-300: 249 168 212;
+  --c-amber-400: 244 114 182;
+  --c-amber-500: 236 72 153;
+  --c-amber-600: 219 39 119;
+  --c-amber-700: 190 24 93;
+  --c-amber-800: 157 23 77;
+  --c-amber-900: 131 24 67;
 }
 
 /* High contrast */

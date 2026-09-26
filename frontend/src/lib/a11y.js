@@ -4,17 +4,24 @@
 
 const STORAGE_KEY = "ul_a11y";
 
+// The colour-blind modes each suit one type of colour blindness (see styles/theme.css).
 export const COLOUR_MODES = [
   { value: "standard", label: "Standard colours" },
-  { value: "colorblind", label: "Colour-blind friendly" },
-  { value: "contrast", label: "High contrast" },
+  { value: "protanopia", label: "Red-blind", hint: "Protanopia", group: "colourBlind" },
+  { value: "deuteranopia", label: "Green-blind", hint: "Deuteranopia · most common", group: "colourBlind" },
+  { value: "tritanopia", label: "Blue–yellow blind", hint: "Tritanopia", group: "colourBlind" },
+  { value: "contrast", label: "High contrast", hint: "Low vision" },
 ];
+
+const THEME_CLASSES = ["protanopia", "deuteranopia", "tritanopia", "contrast"];
 
 const DEFAULTS = { colourMode: "standard", largeText: false, reduceMotion: false };
 
 export function getA11ySettings() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    // The single "colorblind" mode that came before the three types was the green-blind palette.
+    if (saved.colourMode === "colorblind") saved.colourMode = "deuteranopia";
     return { ...DEFAULTS, ...saved };
   } catch {
     return { ...DEFAULTS };
@@ -23,8 +30,9 @@ export function getA11ySettings() {
 
 export function applyA11ySettings(settings = getA11ySettings()) {
   const root = document.documentElement;
-  root.classList.toggle("theme-colorblind", settings.colourMode === "colorblind");
-  root.classList.toggle("theme-contrast", settings.colourMode === "contrast");
+  for (const mode of THEME_CLASSES) {
+    root.classList.toggle(`theme-${mode}`, settings.colourMode === mode);
+  }
   root.classList.toggle("text-large", Boolean(settings.largeText));
   root.classList.toggle("reduce-motion", Boolean(settings.reduceMotion));
 }

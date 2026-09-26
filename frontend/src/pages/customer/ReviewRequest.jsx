@@ -89,8 +89,11 @@ export default function ReviewRequest() {
         serviceId: serviceId ?? null,
       });
 
-      navigate(`/requests/${created.id}/classification`, {
-        state: { classification: finalClassification, serviceId: serviceId ?? null, justSubmitted: true },
+      // Straight to the real results: the matches page shows its own loader while providers load.
+      // replace, so Back can't return to this already-submitted form and send it twice.
+      navigate(`/requests/${created.id}/matches`, {
+        replace: true,
+        state: { serviceId: serviceId ?? null },
       });
     } catch (err) {
       console.error(err);

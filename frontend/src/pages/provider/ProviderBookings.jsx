@@ -13,17 +13,10 @@ import {
   updateBookingStatus,
 } from "../../api/services.js";
 import { formatZAR } from "../../lib/format.js";
+import { STEP_ACTIONS, STEP_LABELS, isFinished, nextStep } from "../../lib/bookingSteps.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
-const STEPS = ["REQUEST_SENT", "ACCEPTED", "ON_THE_WAY", "COMPLETED"];
-const STEP_LABELS = {
-  REQUEST_SENT: "Request sent",
-  ACCEPTED: "Accepted",
-  ON_THE_WAY: "On the way",
-  COMPLETED: "Completed",
-};
-
-/** This is where booking status actually advances now — the customer's view is read-only. */
+/** The provider's jobs. Each opens the work tracker (/bookings/:id), where status is updated. */
 export default function ProviderBookings() {
   const { t } = useLanguage();
   const [bookings, setBookings] = useState(null);
@@ -66,18 +59,20 @@ export default function ProviderBookings() {
     return () => clearInterval(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Quick "next step" from the list; the tracker offers notes, skipping ahead and cancelling.
   const advance = async (booking) => {
-    const currentIndex = STEPS.indexOf(booking.status);
-    const next = STEPS[Math.min(currentIndex + 1, STEPS.length - 1)];
+    const next = nextStep(booking.status);
+    if (!next) return;
     setBusyId(booking.id);
+    setError("");
     try {
       await updateBookingStatus(booking.id, next);
       if (next === "COMPLETED") {
-        await mockCharge(booking.id, booking.quote.amount);
+        await mockCharge(booking.id, booking.quote.amount).catch((err) => console.error(err));
       }
       await load();
     } catch (err) {
-      setError("Couldn't update that booking — is the backend running?");
+      setError(err?.response?.data?.message || "Couldn't update that booking. Please try again.");
       console.error(err);
     } finally {
       setBusyId(null);
@@ -144,27 +139,45 @@ export default function ProviderBookings() {
       )}
 
       <div className="space-y-3">
-        {bookings?.map((b) => {
-          const currentIndex = STEPS.indexOf(b.status);
-          return (
-            <Card key={b.id}>
-              <p className="font-semibold text-gray-900">{b.quote.serviceRequest?.description}</p>
-              <p className="mt-1 text-sm text-gray-500">
-                {b.quote.serviceRequest?.user?.firstName} {b.quote.serviceRequest?.user?.lastName} · {formatZAR(b.quote.amount)}
-              </p>
-              <p className="mt-2 text-sm font-medium text-brand">{STEP_LABELS[b.status]}</p>
-              {b.status !== "COMPLETED" && (
-                <button
-                  onClick={() => advance(b)}
-                  disabled={busyId === b.id}
-                  className="mt-3 w-full rounded-lg border border-brand py-2 text-sm font-medium text-brand transition-colors hover:bg-brand/5 disabled:opacity-50"
-                >
-                  {busyId === b.id ? "Updating..." : `Mark "${STEP_LABELS[STEPS[currentIndex + 1]]}"`}
+        {[...(bookings ?? [])]
+          // Live jobs first, newest first within each group.
+          .sort((a, b) => Number(isFinished(a.status)) - Number(isFinished(b.status)) || b.id - a.id)
+          .map((b) => {
+            const next = nextStep(b.status);
+            return (
+              <Card key={b.id}>
+                <button type="button" onClick={() => navigate(`/bookings/${b.id}`)} className="w-full text-left">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="min-w-0 font-semibold text-gray-900">{b.quote.serviceRequest?.description}</p>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${
+                        b.status === "CANCELLED"
+                          ? "bg-red-50 text-red-700"
+                          : b.status === "COMPLETED"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-brand-soft text-brand"
+                      }`}
+                    >
+                      {STEP_LABELS[b.status] ?? b.status}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {b.quote.serviceRequest?.user?.firstName} {b.quote.serviceRequest?.user?.lastName} · {formatZAR(b.quote.amount)}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-brand">Open work tracker →</p>
                 </button>
-              )}
-            </Card>
-          );
-        })}
+                {next && (
+                  <button
+                    onClick={() => advance(b)}
+                    disabled={busyId === b.id}
+                    className="mt-3 w-full rounded-lg border border-brand py-2 text-sm font-medium text-brand transition-colors hover:bg-brand/5 disabled:opacity-50"
+                  >
+                    {busyId === b.id ? "Updating..." : STEP_ACTIONS[next]}
+                  </button>
+                )}
+              </Card>
+            );
+          })}
       </div>
     </Screen>
   );

@@ -1,5 +1,6 @@
 package com.geekkulcha.backend.controller;
 
+import com.geekkulcha.backend.dto.response.BookingEventResponse;
 import com.geekkulcha.backend.entity.Booking;
 import com.geekkulcha.backend.entity.BookingStatus;
 import com.geekkulcha.backend.service.BookingService;
@@ -37,11 +38,25 @@ public class BookingController {
         return bookingService.getForParticipant(id, userService.getCurrentUser(jwt).getId());
     }
 
+    /** Work tracker: the provider moves the job forward; either side can cancel (see BookingService). */
     @PatchMapping("/{id}/status")
     public Booking updateStatus(@AuthenticationPrincipal Jwt jwt, @PathVariable long id,
-                                 @RequestParam BookingStatus status) {
+                                 @RequestParam BookingStatus status,
+                                 @RequestParam(required = false) String note) {
         long userId = userService.getCurrentUser(jwt).getId();
-        return bookingService.updateStatus(id, status, userId);
+        return bookingService.updateStatus(id, status, note, userId);
+    }
+
+    /** Every status change on the booking, oldest first, for the tracker timeline. */
+    @GetMapping("/{id}/timeline")
+    public List<BookingEventResponse> timeline(@AuthenticationPrincipal Jwt jwt, @PathVariable long id) {
+        return bookingService.timeline(id, userService.getCurrentUser(jwt).getId());
+    }
+
+    /** The signed-in customer's bookings — lets "My requests" open each booked job's tracker. */
+    @GetMapping("/as-customer")
+    public List<Booking> asCustomer(@AuthenticationPrincipal Jwt jwt) {
+        return bookingService.findByCustomer(userService.getCurrentUser(jwt).getId());
     }
 
     /** Provider's own bookings — backs ProviderBookings.jsx. */

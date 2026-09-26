@@ -16,6 +16,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     // Booking -> Quote -> ProviderProfile -> User.id — the provider's own bookings
     List<Booking> findByQuote_ProviderProfile_User_Id(long userId);
 
+    // Booking -> Quote -> ServiceRequest -> User.id — the customer's own bookings
+    List<Booking> findByQuote_ServiceRequest_User_Id(long userId);
+
     boolean existsByQuote_ServiceRequest_Id(long serviceRequestId);
 
     // Locks the booking while it is reviewed, so two submissions for the same booking can't both

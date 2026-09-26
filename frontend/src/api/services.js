@@ -152,8 +152,17 @@ export const submitReview = (bookingId, payload) =>
 // --- Backend: bookings (provider) ---
 export const getMyBookings = () => apiClient.get("/api/bookings/mine").then((res) => res.data);
 
-export const updateBookingStatus = (bookingId, status) =>
-  apiClient.patch(`/api/bookings/${bookingId}/status`, null, { params: { status } }).then((res) => res.data);
+// note is optional: shown to the other side on the tracker ("Running 10 minutes late").
+export const updateBookingStatus = (bookingId, status, note = "") =>
+  apiClient
+    .patch(`/api/bookings/${bookingId}/status`, null, { params: { status, ...(note.trim() ? { note: note.trim() } : {}) } })
+    .then((res) => res.data);
+
+export const getBookingTimeline = (bookingId) =>
+  apiClient.get(`/api/bookings/${bookingId}/timeline`).then((res) => res.data);
+
+// The signed-in customer's bookings, to link booked requests to their tracker.
+export const getCustomerBookings = () => apiClient.get("/api/bookings/as-customer").then((res) => res.data);
 
 export const mockCharge = (bookingId, amount) =>
   apiClient.post(`/api/bookings/${bookingId}/payment/mock-charge`, null, { params: { amount } }).then((res) => res.data);

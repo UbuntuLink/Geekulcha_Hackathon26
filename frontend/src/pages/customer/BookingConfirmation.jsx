@@ -57,7 +57,7 @@ export default function BookingConfirmation() {
       </Card>
 
       <Button className="mt-6" onClick={() => navigate(`/bookings/${booking.id}`)}>
-        View booking
+        Track the job
       </Button>
     </Screen>
   );

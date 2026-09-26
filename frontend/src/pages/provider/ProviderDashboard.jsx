@@ -4,9 +4,9 @@ import Screen from "../../components/layout/Screen.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import Card from "../../components/common/Card.jsx";
 import StarRating from "../../components/common/StarRating.jsx";
+import { ACTIVE_STATUSES } from "../../lib/bookingSteps.js";
 import { getMyBookings, getMyProviderProfile, getMyServiceRequests, getOpenRequests } from "../../api/services.js";
 
-const ACTIVE_STATUSES = ["REQUEST_SENT", "ACCEPTED", "ON_THE_WAY"];
 
 export default function ProviderDashboard() {
   const navigate = useNavigate();

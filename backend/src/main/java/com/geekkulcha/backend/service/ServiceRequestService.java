@@ -64,7 +64,10 @@ public class ServiceRequestService {
 
     /** Provider's Requests Feed — every open request, not scoped to any one provider. */
     public List<ServiceRequest> findOpen() {
-        return serviceRequestRepository.findByStatus(RequestStatus.OPEN);
+        // QUOTED too: a request stays open to other providers until the customer books one.
+        // Filtering on OPEN alone hid a request from every provider as soon as the first quote
+        // landed, including the provider the customer had specifically asked.
+        return serviceRequestRepository.findByStatusIn(QuoteService.ACCEPTING_QUOTES);
     }
 
     public ServiceRequest setPreferredProvider(long id, long providerProfileId, long currentUserId) {

@@ -6,6 +6,8 @@ import com.geekkulcha.backend.entity.User;
 import com.geekkulcha.backend.repository.ProviderProfileRepository;
 import com.geekkulcha.backend.repository.ServiceRepository;
 import com.geekkulcha.backend.repository.ServiceRequestRepository;
+import com.geekkulcha.backend.repository.QuoteRepository;
+import com.geekkulcha.backend.repository.BookingRepository;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
@@ -20,14 +22,29 @@ class ServiceRequestServiceTest {
 
     @Test
     void createPersistsPhotoData() {
-        ServiceRequestRepository serviceRequestRepository = mock(ServiceRequestRepository.class);
-        ServiceRepository serviceRepository = mock(ServiceRepository.class);
-        ProviderProfileRepository providerProfileRepository = mock(ProviderProfileRepository.class);
-        ServiceRequestService serviceRequestService = new ServiceRequestService(
-                serviceRequestRepository,
-                serviceRepository,
-                providerProfileRepository
-        );
+        ServiceRequestRepository serviceRequestRepository =
+        mock(ServiceRequestRepository.class);
+
+        ServiceRepository serviceRepository =
+                mock(ServiceRepository.class);
+
+        ProviderProfileRepository providerProfileRepository =
+                mock(ProviderProfileRepository.class);
+
+        QuoteRepository quoteRepository =
+                mock(QuoteRepository.class);
+
+        BookingRepository bookingRepository =
+                mock(BookingRepository.class);
+
+        ServiceRequestService serviceRequestService =
+                new ServiceRequestService(
+                        serviceRequestRepository,
+                        serviceRepository,
+                        providerProfileRepository,
+                        quoteRepository,
+                        bookingRepository
+                );
 
         User customer = new User();
         customer.setId(42L);

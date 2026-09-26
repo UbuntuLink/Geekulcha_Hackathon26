@@ -25,17 +25,42 @@ public class BookingService {
     private final ServiceRequestRepository serviceRequestRepository;
 
     @Transactional
-    public Booking acceptQuote(long quoteId, LocalDate scheduledDate, LocalTime scheduledTime, long currentUserId) {
+    public Booking acceptQuote(
+            long quoteId,
+            LocalDate scheduledDate,
+            LocalTime scheduledTime,
+            long currentUserId
+    ) {
         Quote quote = quoteRepository.findById(quoteId)
-                .orElseThrow(() -> new ResourceNotFoundException("Quote " + quoteId + " not found"));
-        if (quote.getServiceRequest().getUser().getId() != currentUserId) {
-            throw new ForbiddenException("You don't own this service request");
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Quote " + quoteId + " not found"
+                ));
+
+        ServiceRequest serviceRequest = serviceRequestRepository
+                .findByIdForUpdate(quote.getServiceRequest().getId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Service request not found"
+                ));
+
+        if (serviceRequest.getUser().getId() != currentUserId) {
+            throw new ForbiddenException(
+                    "You don't own this service request"
+            );
+        }
+
+        if ((serviceRequest.getStatus() != RequestStatus.OPEN
+                && serviceRequest.getStatus() != RequestStatus.QUOTED)
+                || bookingRepository.existsByQuote_ServiceRequest_Id(
+                        serviceRequest.getId()
+                )) {
+            throw new IllegalStateException(
+                    "This request is no longer available for booking."
+            );
         }
 
         quote.setStatus(QuoteStatus.ACCEPTED);
         quoteRepository.save(quote);
 
-        ServiceRequest serviceRequest = quote.getServiceRequest();
         serviceRequest.setStatus(RequestStatus.BOOKED);
         serviceRequestRepository.save(serviceRequest);
 
@@ -45,6 +70,7 @@ public class BookingService {
         booking.setScheduledTime(scheduledTime);
         booking.setStatus(BookingStatus.REQUEST_SENT);
         booking.setCreatedAt(Instant.now());
+
         return bookingRepository.save(booking);
     }
 

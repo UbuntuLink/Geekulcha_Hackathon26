@@ -9,8 +9,11 @@ import com.geekkulcha.backend.exception.ResourceNotFoundException;
 import com.geekkulcha.backend.repository.ProviderProfileRepository;
 import com.geekkulcha.backend.repository.ServiceRepository;
 import com.geekkulcha.backend.repository.ServiceRequestRepository;
+import com.geekkulcha.backend.repository.QuoteRepository;
+import com.geekkulcha.backend.repository.BookingRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -26,6 +29,8 @@ public class ServiceRequestService {
     private final ServiceRequestRepository serviceRequestRepository;
     private final ServiceRepository serviceRepository;
     private final ProviderProfileRepository providerProfileRepository;
+    private final QuoteRepository quoteRepository;
+    private final BookingRepository bookingRepository;
 
     public ServiceRequest create(User customer, ServiceRequestCreateRequest request) {
         ServiceRequest serviceRequest = new ServiceRequest();
@@ -76,5 +81,32 @@ public class ServiceRequestService {
         if (serviceRequest.getUser().getId() != currentUserId) {
             throw new ForbiddenException("You don't own this service request");
         }
+    }
+
+    @Transactional
+    public void delete(long id, long currentUserId) {
+        ServiceRequest request = serviceRequestRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Service request " + id + " not found"
+                ));
+
+        requireOwner(request, currentUserId);
+
+        if ((request.getStatus() != RequestStatus.OPEN
+                && request.getStatus() != RequestStatus.QUOTED)
+                || bookingRepository.existsByQuote_ServiceRequest_Id(id)) {
+            throw new IllegalStateException(
+                    "Requests with bookings or closed requests cannot be deleted."
+            );
+        }
+
+        // Remove dependent quotes before removing the request.
+        quoteRepository.deleteAll(
+                quoteRepository.findByServiceRequestId(id)
+        );
+        quoteRepository.flush();
+
+        serviceRequestRepository.delete(request);
+        serviceRequestRepository.flush();
     }
 }

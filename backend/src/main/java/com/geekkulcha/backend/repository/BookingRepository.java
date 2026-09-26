@@ -11,4 +11,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     // Booking -> Quote -> ProviderProfile -> User.id — the provider's own bookings
     List<Booking> findByQuote_ProviderProfile_User_Id(long userId);
+
+    boolean existsByQuote_ServiceRequest_Id(long serviceRequestId);
 }

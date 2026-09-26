@@ -9,6 +9,7 @@ function Icon({ name }) {
   if (name === "home") return <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="m3 10 9-7 9 7"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-7h6v7"/></svg>;
   if (name === "requests") return <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M7 4h10"/><path d="M7 8h10"/><rect x="4" y="2" width="16" height="20" rx="3"/><path d="M8 13h8M8 17h5"/></svg>;
   if (name === "bookings") return <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="m9 15 2 2 4-4"/></svg>;
+  if (name === "quotes") return <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>;
   if (name === "dashboard") return <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>;
   return <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>;
 }
@@ -16,6 +17,7 @@ function Icon({ name }) {
 const CUSTOMER_LINKS = [
   { to: "/home", label: "nav.home", icon: "home" },
   { to: "/requests/mine", label: "nav.requests", icon: "requests" },
+  { to: "/quotes", label: "nav.quotes", icon: "quotes" },
   { to: "/profile", label: "nav.profile", icon: "profile" },
 ];
 

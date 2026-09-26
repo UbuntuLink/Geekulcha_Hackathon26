@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Screen from "../../components/layout/Screen.jsx";
 import Card from "../../components/common/Card.jsx";
@@ -62,6 +62,33 @@ export default function BecomeProvider() {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
+  // ID document photo and selfie: required to continue, previewed here, and kept only in this
+  // page — they are not sent with the profile.
+  const [idPhoto, setIdPhoto] = useState(null); // { url, name }
+  const [selfie, setSelfie] = useState(null);
+
+  const pickImage = (setter) => (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file.");
+      return;
+    }
+    setError("");
+    setter((previous) => {
+      if (previous) URL.revokeObjectURL(previous.url);
+      return { url: URL.createObjectURL(file), name: file.name };
+    });
+  };
+
+  // Free the previews when leaving the page (replacing an image frees the old one in pickImage).
+  const previews = useRef({});
+  previews.current = { idPhoto, selfie };
+  useEffect(() => () => {
+    Object.values(previews.current).forEach((image) => image && URL.revokeObjectURL(image.url));
+  }, []);
+
   const updateIdNumber = (event) => {
     const digitsOnly = event.target.value.replace(/\D/g, "").slice(0, 13);
     setForm((current) => ({ ...current, idNumber: digitsOnly }));
@@ -77,6 +104,9 @@ export default function BecomeProvider() {
     if (!isValidSaId(form.idNumber)) {
       return "That ID number doesn't look right. The last digit is a check digit, so one wrong digit invalidates the whole number.";
     }
+
+    if (!idPhoto) return "Please upload a photo of your ID document.";
+    if (!selfie) return "Please add a selfie so we can match you to your ID.";
 
     if (!form.bio.trim() || !form.location.trim() || !form.serviceId) {
       return t("becomeProvider.requiredError");
@@ -195,6 +225,24 @@ export default function BecomeProvider() {
                 </p>
               </Field>
 
+              <div className="grid gap-3 sm:grid-cols-2">
+                <ImagePicker
+                  label="Photo of your ID document"
+                  hint="Green ID book or smart ID card, all four corners visible."
+                  image={idPhoto}
+                  onChange={pickImage(setIdPhoto)}
+                  caption={form.idNumber ? `ID number: ${formatIdNumber(form.idNumber)}` : "Enter your ID number above"}
+                />
+                <ImagePicker
+                  label="Selfie"
+                  hint="Face the camera in good light, no hat or sunglasses."
+                  image={selfie}
+                  onChange={pickImage(setSelfie)}
+                  capture="user"
+                  round
+                />
+              </div>
+
               <Field label={t("provider.bio")}>
                 <TextArea
                   value={form.bio}
@@ -297,5 +345,46 @@ export default function BecomeProvider() {
         </form>
       </div>
     </Screen>
+  );
+}
+
+/** "8001015009087" -> "800101 5009 08 7": date of birth, sequence, citizenship and check digit. */
+function formatIdNumber(id) {
+  return [id.slice(0, 6), id.slice(6, 10), id.slice(10, 12), id.slice(12)].filter(Boolean).join(" ");
+}
+
+function ImagePicker({ label, hint, image, onChange, caption, capture, round = false }) {
+  return (
+    <div>
+      <p className="mb-1.5 text-sm font-medium text-gray-700">
+        {label} <span className="text-red-500">*</span>
+      </p>
+      <label className="block cursor-pointer">
+        <input type="file" accept="image/*" capture={capture} className="sr-only" onChange={onChange} />
+        {image ? (
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+            <div className="grid h-40 place-items-center bg-gray-50">
+              <img
+                src={image.url}
+                alt={label}
+                className={round ? "h-32 w-32 rounded-full object-cover" : "h-full w-full object-contain"}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-2 border-t border-gray-100 px-3 py-2 text-xs">
+              <span className="min-w-0 truncate font-semibold text-emerald-700">✓ {caption || "Added"}</span>
+              <span className="shrink-0 font-semibold text-brand">Change</span>
+            </div>
+          </div>
+        ) : (
+          <div className="grid h-40 place-items-center rounded-xl border-2 border-dashed border-brand/25 bg-brand-mist/40 px-4 text-center transition-colors hover:bg-brand/5">
+            <div>
+              <p className="text-2xl leading-none text-brand">+</p>
+              <p className="mt-1 text-sm font-semibold text-brand">{capture ? "Take or upload a selfie" : "Upload photo"}</p>
+              <p className="mt-1 text-xs text-gray-500">{hint}</p>
+            </div>
+          </div>
+        )}
+      </label>
+    </div>
   );
 }

@@ -36,3 +36,5 @@ build/
 ### .env  ###
 .env
 .env.bak
+runlog.txt
+*.log

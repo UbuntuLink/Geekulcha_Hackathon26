@@ -85,31 +85,12 @@ export default function BottomNav({ role, desktopVariant }) {
         ))}
       </nav>
 
-      {/* The home navigation is visually in the hero, but fixed outside its clipping/animation context. */}
-      {heroNavigation ? (
-        <>
-          <div aria-hidden="true" className={`hero-nav-frost hidden lg:block ${dock?.pinned ? "is-pinned" : ""}`} />
-          <nav
-            aria-label="Main navigation"
-            className={`hero-desktop-nav hidden lg:flex ${dock?.pinned ? "is-pinned" : ""}`}
-            style={dock ? { top: dock.top, left: dock.left, width: dock.width } : { visibility: "hidden" }}
-          >
-            <Link to="/home" className="hero-nav-brand" aria-label="UbuntuLink home"><BrandMark compact inverse={!dock?.pinned} /></Link>
-            <div className="hero-nav-links">
-              {links.map((link) => (
-                <NavLink key={link.to} to={link.to} className="nav-item hero-nav-link"><Icon name={link.icon} />{t(link.label)}</NavLink>
-              ))}
-            </div>
-          </nav>
-        </>
-      ) : (
-
-      <nav aria-label="Main navigation" className="desktop-nav glass-nav fixed left-1/2 top-5 z-50 hidden w-[calc(100%-80px)] max-w-[1450px] -translate-x-1/2 items-center justify-between rounded-[1.4rem] border border-white/80 bg-white/82 px-4 py-3 shadow-[0_12px_34px_rgba(23,35,30,0.10)] backdrop-blur-2xl lg:flex xl:px-5">
+      <nav aria-label="Main navigation" className="dashboard-nav desktop-nav fixed left-1/2 top-5 z-50 hidden w-[calc(100%-80px)] max-w-[1450px] -translate-x-1/2 items-center justify-between rounded-[1.4rem] border border-slate-200 bg-white px-4 py-3 shadow-[0_12px_30px_rgba(15,23,42,0.09)] lg:flex xl:px-5">
         <Link to={provider ? "/provider/dashboard" : "/home"} className="rounded-xl transition-transform hover:scale-[1.015]">
           <BrandMark compact />
         </Link>
 
-        <div className={`${provider ? "" : "ml-auto"} flex items-center gap-1 rounded-2xl bg-brand-mist/70 p-1`}>
+        <div className={`${provider ? "" : "ml-auto"} flex items-center gap-1 rounded-2xl bg-slate-100 p-1`}>
           {links.map((link) => (
             <NavLink
               key={link.to}
@@ -117,8 +98,8 @@ export default function BottomNav({ role, desktopVariant }) {
               className={({ isActive }) =>
                 `nav-item inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all xl:px-4 ${
                   isActive
-                    ? "bg-white text-brand shadow-sm"
-                    : "text-gray-500 hover:bg-white/65 hover:text-brand"
+                    ? "bg-white text-brand shadow-sm ring-1 ring-slate-200"
+                    : "text-slate-600 hover:bg-white hover:text-brand"
                 }`
               }
             >
@@ -128,10 +109,9 @@ export default function BottomNav({ role, desktopVariant }) {
           ))}
         </div>
 
-        {/* Account controls live in the bar, so there is no second bar above the page title. */}
         <AccountControls compact />
       </nav>
-      )}
     </>
   );
 }
+

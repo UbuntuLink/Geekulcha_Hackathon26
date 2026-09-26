@@ -24,6 +24,25 @@ function greeting(t) {
   return t("customer.greetingEvening");
 }
 
+const SERVICE_IMAGES = {
+  plumbing: "/images/services/plumbing.jpg",
+  electrical: "/images/services/electrical.jpg",
+  cleaning: "/images/services/cleaning.jpg",
+  painting: "/images/services/painting.jpg",
+  building: "/images/services/building.jpg",
+  hairdressing: "/images/services/beauty.jpg",
+  braiding: "/images/services/beauty.jpg",
+  beauty: "/images/services/beauty.jpg",
+};
+
+function getServiceImage(name = "") {
+  const key = String(name).trim().toLowerCase();
+  if (!key) return null;
+  const normalized = key.replace(/[^a-z]/g, "");
+  const match = Object.keys(SERVICE_IMAGES).find((candidate) => normalized.includes(candidate));
+  return match ? SERVICE_IMAGES[match] : null;
+}
+
 export default function CustomerHome() {
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -167,34 +186,52 @@ export default function CustomerHome() {
 
   return (
     <Screen showBack={false} withNav size="wide" desktopNav="hero">
-      {/* Stripped back: the decorative blur blobs, the orbiting dots, the "A little help. A lot of
-          community." tagline and the "AI-assisted matching" badge were all marketing dressing
-          inside an app the person has already signed into. What's left is who they are, what they
-          can do, and where they are. */}
-      <section className="home-hero hero-glass relative overflow-hidden rounded-3xl bg-brand p-5 text-white shadow-lift sm:p-6 lg:p-8 xl:p-10">
+      <section className="home-hero hero-glass relative overflow-hidden rounded-[30px] p-5 text-white shadow-lift sm:p-6 lg:p-8 xl:p-10">
+        <div className="hero-ambient" aria-hidden="true" />
         <div id="hero-navigation-anchor" aria-hidden="true" className="hero-navigation-anchor hidden lg:block" />
         <div className="relative lg:flex lg:items-end lg:justify-between lg:gap-10">
-          <div>
-            <p className="text-sm font-medium text-white/70">{greeting(t)}, {name || "there"}</p>
-            <h1 className="mt-1 max-w-[620px] text-[1.75rem] font-extrabold leading-tight tracking-[-0.03em] sm:text-3xl lg:text-[2.65rem] lg:leading-[1.05]">
+          <div className="max-w-[640px]">
+            <div className="home-hero-badges">
+              <span className="home-pill">Trusted local network</span>
+              <span className="home-pill home-pill-soft">{location || "Your area"}</span>
+            </div>
+            <p className="text-sm font-semibold text-white/75">{greeting(t)}, {name || "there"}</p>
+            <h1 className="mt-2 max-w-[620px] text-[1.9rem] font-extrabold leading-[1.02] tracking-[-0.04em] sm:text-3xl lg:text-[2.75rem]">
               {t("customer.helpTitle")}
             </h1>
-            <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-white/65">
-              <svg aria-hidden="true" className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 10c0 6-8 11-8 11S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
-              {location || "Your area"}
-            </p>
+            <div className="home-stat-row">
+              <div className="home-stat-item">
+                <span>{recentRequests.length}</span>
+                <small>Active requests</small>
+              </div>
+              <div className="home-stat-item">
+                <span>24/7</span>
+                <small>Fast matching</small>
+              </div>
+              <div className="home-stat-item">
+                <span>Local</span>
+                <small>Near you</small>
+              </div>
+            </div>
           </div>
 
-          <button
-            onClick={() => navigate("/requests/new")}
-            className="group mt-5 flex w-full items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3.5 text-left text-brand shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 lg:mt-0 lg:max-w-[390px] lg:px-5 lg:py-4"
-          >
-            <span>
-              <span className="block text-sm font-extrabold lg:text-base">{t("customer.describe")}</span>
-              <span className="mt-0.5 block text-xs font-medium text-brand/60">{t("customer.describeSubtitle")}</span>
-            </span>
-            <span className="shrink-0 text-xl transition-transform group-hover:translate-x-1">→</span>
-          </button>
+          <div className="home-hero-panel">
+            <p className="home-hero-panel-label">Need help today?</p>
+            <button
+              onClick={() => navigate("/requests/new")}
+              className="group mt-3 flex w-full items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3.5 text-left text-brand shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 lg:px-5"
+            >
+              <span>
+                <span className="block text-sm font-extrabold lg:text-base">{t("customer.describe")}</span>
+                <span className="mt-0.5 block text-xs font-medium text-brand/60">{t("customer.describeSubtitle")}</span>
+              </span>
+              <span className="shrink-0 text-xl transition-transform group-hover:translate-x-1">→</span>
+            </button>
+            <div className="home-hero-meta">
+              <span>Vetted providers</span>
+              <span>Clear quotes</span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -202,9 +239,14 @@ export default function CustomerHome() {
         {/* Searching and browsing are the same job — finding someone — so they live in one card
             rather than two stacked ones competing for the same decision. */}
         <Card className="home-categories min-w-0 sm:p-6 lg:p-7">
-        <p className="mb-1 text-sm font-extrabold text-ink">{t("customer.findProvider")}</p>
-        <p className="mb-3 text-xs text-gray-500">Describe who you need in your own words — spelling doesn't matter.</p>
-        <form onSubmit={handleAiSearch} className="flex gap-2">
+        <div className="home-search-header">
+          <div>
+            <p className="mb-1 text-sm font-extrabold text-ink">{t("customer.findProvider")}</p>
+            <p className="text-xs text-gray-500">Describe who you need in your own words — spelling doesn't matter.</p>
+          </div>
+          <span className="home-mini-chip">AI powered</span>
+        </div>
+        <form onSubmit={handleAiSearch} className="home-search-form">
           <TextInput
             value={aiQuery}
             onChange={(e) => setAiQuery(e.target.value)}
@@ -284,22 +326,33 @@ export default function CustomerHome() {
                 </div>
               ) : services.length === 0 ? <EmptyState>No categories are available yet.</EmptyState> : (
                 <div className="category-grid">
-                  {services.map((service, index) => (
-                    <button
-                      key={service.id}
-                      ref={(node) => { if (node) categoryButtons.current.set(service.id, node); else categoryButtons.current.delete(service.id); }}
-                      style={{ "--tile-delay": `${Math.min(index, 7) * 35}ms` }}
-                      type="button"
-                      onClick={() => handleBrowseCategory(service)}
-                      className="category-tile group"
-                    >
-                      <span className="category-icon"><ServiceIcon name={service.name} /></span>
-                      <span className="min-w-0">
-                        <span className="block break-words text-sm font-bold text-ink group-hover:text-brand">{service.name}</span>
-                        <span className="mt-1 block text-xs font-medium text-gray-500">View providers <span aria-hidden="true">→</span></span>
-                      </span>
-                    </button>
-                  ))}
+                  {/* Every category stays browsable: the ones without a photo fall back to their icon. */}
+                  {services
+                    .map((service, index) => {
+                      const image = getServiceImage(service.name);
+                      return (
+                        <button
+                          key={service.id}
+                          ref={(node) => { if (node) categoryButtons.current.set(service.id, node); else categoryButtons.current.delete(service.id); }}
+                          style={{ "--tile-delay": `${Math.min(index, 7) * 35}ms` }}
+                          type="button"
+                          onClick={() => handleBrowseCategory(service)}
+                          className="category-tile group"
+                        >
+                          {image ? (
+                            <span className="category-image">
+                              <img src={image} alt={service.name} />
+                            </span>
+                          ) : (
+                            <span className="category-icon"><ServiceIcon name={service.name} /></span>
+                          )}
+                          <span className="category-copy min-w-0">
+                            <span className="block break-words text-sm font-bold text-ink group-hover:text-brand">{service.name}</span>
+                            <span className="mt-1 block text-xs font-medium text-gray-500">View providers <span aria-hidden="true">→</span></span>
+                          </span>
+                        </button>
+                      );
+                    })}
                 </div>
               )}
             </div>

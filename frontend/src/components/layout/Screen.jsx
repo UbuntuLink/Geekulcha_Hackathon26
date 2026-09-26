@@ -43,7 +43,7 @@ export default function Screen({
       <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-brand/7 blur-3xl lg:h-96 lg:w-96" />
       <div className="pointer-events-none absolute -left-24 top-64 h-52 w-52 rounded-full bg-white/70 blur-3xl lg:h-80 lg:w-80" />
 
-      <div className={`relative mx-auto w-full ${widthClass} px-4 pt-5 sm:px-6 sm:pt-6 lg:px-8 ${withNav && desktopNav !== "hero" ? "lg:pt-28" : "lg:pt-8"} xl:px-10`}>
+      <div className={`relative mx-auto w-full ${widthClass} px-4 pt-5 sm:px-6 sm:pt-6 lg:px-8 ${withNav ? "lg:pt-28" : "lg:pt-8"} xl:px-10`}>
         {/* Only the brand mark, and only on a phone screen that has no title of its own. */}
         {!title && !showBack && withNav && (
           <div className="mb-4 lg:hidden">

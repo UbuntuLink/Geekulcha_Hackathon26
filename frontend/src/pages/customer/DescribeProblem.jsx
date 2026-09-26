@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import Screen from "../../components/layout/Screen.jsx";
@@ -26,6 +26,110 @@ export default function DescribeProblem() {
   const [photoName, setPhotoName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isListening, setIsListening] = useState(false);
+  const [voiceDraft, setVoiceDraft] = useState("");
+  const recognitionRef = useRef(null);
+
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = "en-ZA";
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setError("");
+    };
+
+    recognition.onresult = (event) => {
+      let interimTranscript = "";
+      let finalTranscript = "";
+
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        const transcript = result[0]?.transcript?.trim() ?? "";
+
+        if (!transcript) continue;
+
+        if (result.isFinal) {
+          finalTranscript = finalTranscript ? `${finalTranscript} ${transcript}` : transcript;
+        } else {
+          interimTranscript = interimTranscript ? `${interimTranscript} ${transcript}` : transcript;
+        }
+      }
+
+      if (finalTranscript) {
+        setDescription((prev) => {
+          const next = `${prev}${prev ? " " : ""}${finalTranscript}`.trim();
+          return next;
+        });
+        setVoiceDraft("");
+      } else if (interimTranscript) {
+        setVoiceDraft(interimTranscript);
+      }
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      setVoiceDraft("");
+    };
+
+    recognition.onerror = (event) => {
+      setIsListening(false);
+      setVoiceDraft("");
+
+      if (event.error === "not-allowed" || event.error === "permission-denied") {
+        setError("Microphone access was blocked. Please allow access and try again.");
+        return;
+      }
+
+      if (event.error === "no-speech") {
+        setError("No speech was detected. Please try again or type your problem.");
+        return;
+      }
+
+      if (event.error === "audio-capture") {
+        setError("Your microphone could not be accessed. Please check your device settings and try again.");
+        return;
+      }
+
+      setError("Speech recognition could not start right now. Please try again or type your problem.");
+    };
+
+    recognitionRef.current = recognition;
+
+    return () => {
+      recognition.stop();
+    };
+  }, []);
+
+  const toggleVoiceInput = () => {
+    if (!recognitionRef.current) {
+      setError("Speech recognition isn’t supported in this browser. Please type your problem instead.");
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+      return;
+    }
+
+    setError("");
+    setVoiceDraft("");
+
+    try {
+      recognitionRef.current.start();
+    } catch {
+      setError("The microphone is already active. Please wait a moment and try again.");
+    }
+  };
 
   const handlePhotoSelect = (event) => {
     const file = event.target.files?.[0];
@@ -142,6 +246,46 @@ export default function DescribeProblem() {
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand lg:h-10 lg:w-10">✦</span>
           </div>
 
+          <div className="mb-3 flex items-center justify-end">
+            <button
+              type="button"
+              onClick={toggleVoiceInput}
+              className={`grid h-11 w-11 place-items-center rounded-2xl border transition-all ${
+                isListening
+                  ? "border-red-200 bg-red-50 text-red-600"
+                  : "border-brand/20 bg-brand-soft text-brand hover:-translate-y-0.5 hover:bg-brand/10"
+              }`}
+              aria-label={isListening ? "Stop microphone" : "Start microphone"}
+            >
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-5 w-5"
+              >
+                {isListening ? (
+                  <>
+                    <rect x="9" y="3" width="6" height="11" rx="3" />
+                    <path d="M5 10a7 7 0 0 0 14 0" />
+                    <path d="M12 17v4" />
+                    <path d="M8 21h8" />
+                  </>
+                ) : (
+                  <>
+                    <rect x="9" y="3" width="6" height="11" rx="3" />
+                    <path d="M5 10a7 7 0 0 0 14 0" />
+                    <path d="M12 17v4" />
+                    <path d="M8 21h8" />
+                  </>
+                )}
+              </svg>
+            </button>
+          </div>
+
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -149,8 +293,8 @@ export default function DescribeProblem() {
             placeholder={t("customer.problemPreview")}
             className="min-h-[190px] w-full resize-y rounded-2xl border border-gray-200 bg-brand-mist/45 p-4 text-sm leading-6 text-gray-900 transition-all placeholder:text-gray-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/15"
           />
-          <div className="mt-2 flex items-center justify-between text-xs text-gray-400">
-            <span>Plain language is perfect.</span>
+          <div className="mt-2 flex items-center justify-between gap-3 text-xs text-gray-400">
+            <span>{isListening ? "Listening…" : voiceDraft ? `Voice capture: ${voiceDraft}` : "Plain language is perfect."}</span>
             <span>{description.length}/1000</span>
           </div>
         </Card>

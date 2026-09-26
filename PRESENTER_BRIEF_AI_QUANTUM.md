@@ -44,12 +44,54 @@ The short version for whoever is on stage. Each section has a **one-liner**, **t
 **Where it's used:** only on the **Matching providers** page, for the ⚛ recommendation. Nothing else.
 
 **Likely questions**
-- *Why quantum? Couldn't you just sort?* — **For one job, yes** — and we say so. The real target is
-  **assigning many jobs to many providers at once**, with limits like how many jobs a provider can take per day.
-  The number of possible combinations explodes as the platform grows, and that's exactly the kind of problem
-  quantum optimisation is built for. Our pipeline already accepts a list of jobs; this is the foundation.
-- *Is it real quantum?* — It's a real quantum algorithm running on a simulator, which calculates exactly what
-  an ideal quantum computer would. Swapping to hardware is a configuration change.
+#### "Why quantum? Couldn't you just sort the list?"
+
+**Short answer to say:**
+> "For one job, yes — a normal sort would find the same provider, and we're upfront about that. Quantum is
+> for where we're going: matching *many* jobs to *many* providers at the same time."
+
+**If they want more — explain it like this:**
+
+- **One job is easy.** Picking the best provider for one customer is like choosing the best-value item on a
+  menu: look at each option once, pick the best. Any computer does that instantly.
+- **Many jobs at once is hard.** Now imagine planning a whole morning for a city: 10 customers need help and
+  there are 10 providers. Each provider can only do so many jobs, some jobs are urgent, and nobody should be
+  sent across town when someone closer is free. You can't just give everyone their personal best — two
+  customers might want the same plumber.
+- **The number of options explodes.** With 10 jobs and 10 providers there are about **3.6 million** ways to
+  pair them up. With 20 and 20, it's about **2.4 billion billion**. Every job you add multiplies the options.
+  This kind of puzzle is called a **combinatorial optimisation** problem — delivery routes, flight crews and
+  school timetables are the same type.
+- **That's what quantum optimisation is designed for.** Quantum algorithms like the one we use (QAOA) tackle
+  these puzzles in a fundamentally different way from checking options one by one, and this is one of the
+  most promising early real-world uses of quantum computers.
+- **We've built the foundation.** Today it recommends one provider for one job. The system already accepts a
+  *list* of jobs, and the same steps (score the options, turn them into a quantum problem, solve) carry
+  over. Scaling up means adding the rules — provider capacity, time windows — not starting again.
+
+**If they push harder** ("Is quantum actually faster for this today?"):
+> "Not yet — today's quantum computers are still small, and for problems this size classical methods are
+> fine. We're building on the approach so the platform is ready as the hardware matures, and because the
+> scheduling problem at city scale is exactly where quantum is expected to help."
+
+#### "Is it real quantum?"
+
+**Short answer to say:**
+> "It's a real quantum algorithm, running on a quantum simulator. Moving it to a real IBM quantum computer is
+> a settings change, not a rewrite."
+
+**If they want more:**
+
+- **The algorithm is genuinely quantum.** It's QAOA, built with IBM's Qiskit — the same tools researchers
+  use on IBM's quantum computers.
+- **A simulator is a normal computer imitating a perfect quantum computer.** It calculates exactly what an
+  ideal quantum computer would do. That's standard practice for building and testing quantum software.
+- **Why a simulator for now?** It's free, instant, gives the same answer every time, and needs no special
+  account — ideal for a live demo. It works well for the size of problem we solve today (up to roughly 20
+  providers at once).
+- **Why real hardware later?** Simulating a quantum computer gets much harder with every extra qubit (each
+  one doubles the work), so large city-wide scheduling would need real quantum hardware. Because we use
+  Qiskit, we can send the same algorithm to IBM Quantum's cloud machines by changing configuration.
 
 ---
 

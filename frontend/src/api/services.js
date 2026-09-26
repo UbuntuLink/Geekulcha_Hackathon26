@@ -125,6 +125,10 @@ export const removeMyProviderService = (serviceId) =>
 // Every quote on the signed-in customer's requests, newest first (QuoteSummaryResponse).
 export const getMyQuotes = () => apiClient.get("/api/quotes/mine").then((res) => res.data);
 
+// Provider side: quotes they've sent, and requests customers sent to them specifically.
+export const getSentQuotes = () => apiClient.get("/api/quotes/sent").then((res) => res.data);
+export const getQuoteRequestsForMe = () => apiClient.get("/api/quotes/requested-from-me").then((res) => res.data);
+
 export const createQuote = (payload) =>
   apiClient.post("/api/quotes", payload).then((res) => res.data);
 

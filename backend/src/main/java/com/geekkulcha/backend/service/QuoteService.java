@@ -20,6 +20,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class QuoteService {
 
+    /** Request statuses a provider can still quote on. */
+    public static final List<RequestStatus> ACCEPTING_QUOTES = List.of(RequestStatus.OPEN, RequestStatus.QUOTED);
+
     private final QuoteRepository quoteRepository;
     private final ServiceRequestRepository serviceRequestRepository;
 
@@ -36,6 +39,17 @@ public class QuoteService {
             throw new IllegalStateException(
                     "This request is no longer accepting quotes."
             );
+        }
+
+        if (serviceRequest.getUser().getId() == provider.getUser().getId()) {
+            throw new IllegalArgumentException("You can't quote on your own request.");
+        }
+        // One live offer per provider per request: a second submit (double tap, or coming back to
+        // the page) used to create a duplicate quote the customer then had to decline.
+        if (quoteRepository.existsByServiceRequestIdAndProviderProfileIdAndStatus(
+                serviceRequest.getId(), provider.getId(), QuoteStatus.PENDING)) {
+            throw new IllegalStateException(
+                    "You've already sent a quote on this request. The customer can see it on their Quotes page.");
         }
 
         Quote quote = new Quote();

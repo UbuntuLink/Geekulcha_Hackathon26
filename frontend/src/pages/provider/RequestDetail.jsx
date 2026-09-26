@@ -39,13 +39,27 @@ export default function RequestDetail() {
       return;
     }
 
+    const value = Number(amount);
+    if (!Number.isFinite(value) || value <= 0) {
+      setError("Enter a quote amount greater than R0.");
+      return;
+    }
+
     setSubmitting(true);
     setError("");
     try {
-      await createQuote({ serviceRequestId: Number(id), amount: Number(amount), message });
+      await createQuote({ serviceRequestId: Number(id), amount: value, message: message.trim() });
       setDone(true);
     } catch (err) {
-      setError("Couldn't submit the quote — make sure you've added a service offering on your profile first.");
+      // The server says why (already quoted, request booked or withdrawn, own request...), so
+      // show that instead of one catch-all guess.
+      const status = err?.response?.status;
+      setError(
+        err?.response?.data?.message ||
+          (status === 404
+            ? "This request no longer exists, or your provider profile is missing."
+            : "Couldn't send the quote. Check your connection and try again.")
+      );
       console.error(err);
     } finally {
       setSubmitting(false);
@@ -54,10 +68,16 @@ export default function RequestDetail() {
 
   if (done) {
     return (
-      <Screen title={t("customer.sendQuoteRequest")}>
-        <p className="text-gray-600">The customer can now see and accept your quote.</p>
-        <Button className="mt-6" onClick={() => navigate("/provider/requests")}>
-          {t("customer.backHome")}
+      <Screen title="Quote sent">
+        <p className="text-gray-600">
+          The customer can now see and accept your quote. It's listed under "Quotes awaiting the customer" on
+          your Bookings page, and becomes a booking when they accept.
+        </p>
+        <Button className="mt-6" onClick={() => navigate("/provider/bookings")}>
+          Go to my bookings
+        </Button>
+        <Button variant="outline" className="mt-3" onClick={() => navigate("/provider/requests")}>
+          Back to requests
         </Button>
       </Screen>
     );
@@ -97,7 +117,7 @@ export default function RequestDetail() {
       {error && <div className="mt-4"><ErrorBanner>{error}</ErrorBanner></div>}
 
       <Button onClick={handleSubmit} disabled={submitting || !amount || isOwnRequest} className="mt-6">
-        {submitting ? t("customer.sending") : t("customer.sendQuoteRequest")}
+        {submitting ? t("customer.sending") : "Send quote"}
       </Button>
     </Screen>
   );

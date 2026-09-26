@@ -6,7 +6,7 @@ import Button from "../../components/common/Button.jsx";
 import Loading from "../../components/common/Loading.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import EmptyState from "../../components/common/EmptyState.jsx";
-import { getMyProviderProfile, getProviderProfile } from "../../api/services.js";
+import { getMyProviderProfile, getProviderProfile, reviewPhotoUrl } from "../../api/services.js";
 import { formatRange } from "../../lib/format.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -46,6 +46,15 @@ export default function ProviderProfileView() {
   const [error, setError] = useState("");
   const [ownProviderProfileId, setOwnProviderProfileId] = useState(null);
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [openPhotoId, setOpenPhotoId] = useState(null);
+
+  // Close the enlarged photo with Escape.
+  useEffect(() => {
+    if (openPhotoId == null) return undefined;
+    const onKey = (event) => event.key === "Escape" && setOpenPhotoId(null);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [openPhotoId]);
 
   useEffect(() => {
     setProfile(null);
@@ -219,7 +228,27 @@ export default function ProviderProfileView() {
                           {review.comment?.trim() ? (
                             <p className="mt-2 whitespace-pre-line text-sm leading-6 text-gray-700">{review.comment}</p>
                           ) : (
-                            <p className="mt-2 text-xs italic text-gray-400">Rated without a comment.</p>
+                            !review.photoIds?.length && <p className="mt-2 text-xs italic text-gray-400">Rated without a comment.</p>
+                          )}
+                          {review.photoIds?.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {review.photoIds.map((photoId, photoIndex) => (
+                                <button
+                                  key={photoId}
+                                  type="button"
+                                  onClick={() => setOpenPhotoId(photoId)}
+                                  className="h-16 w-16 overflow-hidden rounded-lg border border-gray-200 transition-transform hover:scale-[1.04]"
+                                  aria-label={`Open photo ${photoIndex + 1} from ${review.reviewerName || "this customer"}`}
+                                >
+                                  <img
+                                    src={reviewPhotoUrl(photoId)}
+                                    alt=""
+                                    loading="lazy"
+                                    className="h-full w-full object-cover"
+                                  />
+                                </button>
+                              ))}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -251,6 +280,30 @@ export default function ProviderProfileView() {
           </div>
         </div>
       </div>
+
+      {openPhotoId != null && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Review photo"
+          onClick={() => setOpenPhotoId(null)}
+          className="fixed inset-0 z-[60] grid place-items-center bg-black/80 p-4"
+        >
+          <img
+            src={reviewPhotoUrl(openPhotoId)}
+            alt="Review photo, enlarged"
+            className="max-h-[85vh] max-w-full rounded-xl object-contain shadow-2xl"
+          />
+          <button
+            type="button"
+            onClick={() => setOpenPhotoId(null)}
+            aria-label="Close photo"
+            className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/15 text-lg font-bold text-white hover:bg-white/25"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </Screen>
   );
 }

@@ -20,6 +20,9 @@ matches them with nearby, rated providers to get quotes and book the work.
 
 - **Describe the problem in plain language.** "My kitchen sink is leaking" is enough. The AI
   classifies it into a service category and gives a fair price estimate.
+- **Or say it out loud.** Tap the microphone, speak for up to a minute in any South African
+  language, and the voice note is transcribed into the description box in the language spoken.
+  It works in every modern browser.
 - **Service not supported yet?** The request is recorded rather than lost, so demand for new
   categories can be measured.
 - **Provider matching.** Validated providers offering the service, with distance from the

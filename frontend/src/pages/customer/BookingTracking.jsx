@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 import { useNavigate, useParams } from "react-router-dom";
 import Screen from "../../components/layout/Screen.jsx";
 import Card from "../../components/common/Card.jsx";
@@ -10,8 +11,7 @@ import { getBooking, getBookingTimeline, mockCharge, updateBookingStatus } from 
 import { useAuth } from "../../context/AuthContext.jsx";
 import { formatZAR } from "../../lib/format.js";
 import {
-  STEP_ACTIONS,
-  STEP_LABELS,
+  STEP_ICONS,
   WORK_STEPS,
   customerCanCancel,
   isFinished,
@@ -42,6 +42,7 @@ export default function BookingTracking() {
   const { bookingId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [booking, setBooking] = useState(null);
   const [timeline, setTimeline] = useState([]);
   const [error, setError] = useState("");
@@ -77,7 +78,7 @@ export default function BookingTracking() {
 
   if (!booking) {
     return (
-      <Screen title="Work tracker">
+      <Screen title={t("tracker.title")}>
         {error ? <ErrorBanner>{error}</ErrorBanner> : <Loading />}
       </Screen>
     );
@@ -128,10 +129,12 @@ export default function BookingTracking() {
 
   return (
     <Screen
-      title="Work tracker"
+      title={t("tracker.title")}
       subtitle={`${request?.service?.name ?? "Job"} · ${isProvider ? "for" : "with"} ${otherParty}`}
       size="wide"
     >
+      {/* Announces status changes from the other side as the page refreshes itself. */}
+      <p className="sr-only" aria-live="polite">Job status: {t(`status.${status}`)}</p>
       <div className="lg:grid lg:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)] lg:items-start lg:gap-6">
         <div>
           {/* Job summary */}
@@ -149,7 +152,7 @@ export default function BookingTracking() {
           {/* Timeline */}
           <Card className="mt-4 lg:p-6">
             <div className="flex items-center justify-between">
-              <h2 className="font-bold text-ink">Progress</h2>
+              <h2 className="font-bold text-ink">{t("tracker.progress")}</h2>
               <span
                 className={`rounded-full px-2.5 py-1 text-xs font-bold ${
                   cancelled
@@ -159,7 +162,7 @@ export default function BookingTracking() {
                       : "bg-brand-soft text-brand"
                 }`}
               >
-                {STEP_LABELS[status] ?? status}
+                <span aria-hidden="true">{STEP_ICONS[status]} </span>{t(`status.${status}`)}
               </span>
             </div>
 
@@ -186,8 +189,8 @@ export default function BookingTracking() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-                        <p className={done ? "font-semibold text-gray-900" : "text-gray-400"}>{STEP_LABELS[step]}</p>
-                        {event?.at && <p className="text-xs text-gray-400">{formatWhen(event.at)}</p>}
+                        <p className={done ? "font-semibold text-gray-900" : "text-gray-500"}>{t(`status.${step}`)}</p>
+                        {event?.at && <p className="text-xs text-gray-500">{formatWhen(event.at)}</p>}
                       </div>
                       {event?.note && (
                         <p className="mt-1 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700">
@@ -218,8 +221,8 @@ export default function BookingTracking() {
 
           {isProvider && next && (
             <Card className="lg:p-6">
-              <h2 className="font-bold text-ink">Update the customer</h2>
-              <p className="mt-0.5 text-xs text-gray-500">They see each step and your note on their tracker.</p>
+              <h2 className="font-bold text-ink">{t("tracker.updateCustomer")}</h2>
+              <p className="mt-0.5 text-xs text-gray-500">{t("tracker.updateHelp")}</p>
               <div className="mt-3">
                 <TextArea
                   value={note}
@@ -235,7 +238,7 @@ export default function BookingTracking() {
                 disabled={busy}
                 className="mt-3 w-full rounded-xl bg-brand py-3 text-sm font-bold text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
               >
-                {busy ? "Updating…" : STEP_ACTIONS[next]}
+                {busy ? "Updating…" : t(`action.${next}`)}
               </button>
               {/* Skipping ahead, e.g. a job next door needs no "on the way". */}
               {WORK_STEPS.slice(WORK_STEPS.indexOf(next) + 1).length > 0 && (
@@ -246,9 +249,9 @@ export default function BookingTracking() {
                       type="button"
                       onClick={() => changeStatus(step)}
                       disabled={busy}
-                      className="rounded-lg border border-brand/25 px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/5 disabled:opacity-50"
+                      className="min-h-[40px] rounded-lg border border-brand/25 px-3 py-2 text-xs font-semibold text-brand hover:bg-brand/5 disabled:opacity-50"
                     >
-                      Skip to: {STEP_LABELS[step]}
+                      Skip to: {t(`status.${step}`)}
                     </button>
                   ))}
                 </div>
@@ -267,7 +270,7 @@ export default function BookingTracking() {
                       ? "The provider is on the way."
                       : "The provider is working on the job."}
               </p>
-              <p className="mt-1 text-xs text-gray-400">This page updates automatically.</p>
+              <p className="mt-1 text-xs text-gray-500">{t("tracker.autoUpdate")}</p>
             </Card>
           )}
 
@@ -311,7 +314,7 @@ export default function BookingTracking() {
                   onClick={() => setConfirmCancel(true)}
                   className="w-full text-center text-sm font-semibold text-red-600 hover:underline"
                 >
-                  Cancel job
+                  {t("tracker.cancelJob")}
                 </button>
               )}
             </Card>

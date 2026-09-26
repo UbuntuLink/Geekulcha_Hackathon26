@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Screen from "../../components/layout/Screen.jsx";
 import Loading from "../../components/common/Loading.jsx";
@@ -18,6 +19,7 @@ export default function Conversation() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { state } = useLocation();
+  const { t } = useLanguage();
   const [messages, setMessages] = useState(null);
   const [other, setOther] = useState(state?.conversation ?? null);
   const [draft, setDraft] = useState("");
@@ -92,7 +94,7 @@ export default function Conversation() {
 
   return (
     <Screen
-      title={other?.otherPartyName ?? "Messages"}
+      title={other?.otherPartyName ?? t("messages.title")}
       subtitle={other ? (other.otherPartyRole === "PROVIDER" ? "Service provider" : "Customer") : undefined}
       onBack={() => navigate("/messages")}
     >
@@ -110,7 +112,7 @@ export default function Conversation() {
         <div className="flex-1 space-y-2 overflow-y-auto p-4" aria-live="polite">
           {messages === null && <Loading />}
           {messages?.length === 0 && (
-            <p className="mt-10 text-center text-sm text-gray-400">No messages yet. Say hello 👋</p>
+            <p className="mt-10 text-center text-sm text-gray-500">No messages yet. Say hello 👋</p>
           )}
           {messages?.map((m) =>
             m.kind === "SYSTEM" ? (
@@ -126,7 +128,7 @@ export default function Conversation() {
                   }`}
                 >
                   <p className="whitespace-pre-line break-words">{m.body}</p>
-                  <p className={`mt-0.5 text-right text-[10px] ${m.mine ? "text-white/70" : "text-gray-400"}`}>
+                  <p className={`mt-0.5 text-right text-xs ${m.mine ? "text-white/70" : "text-gray-500"}`}>
                     {formatChatTime(m.createdAt)}
                   </p>
                 </div>
@@ -145,7 +147,7 @@ export default function Conversation() {
             }}
             maxLength={MAX_LENGTH}
             rows={1}
-            placeholder="Write a message…"
+            placeholder={t("messages.placeholder")}
             aria-label="Message"
             className="max-h-32 min-h-[44px] flex-1 resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
           />
@@ -154,7 +156,7 @@ export default function Conversation() {
             disabled={!draft.trim() || sending}
             className="h-11 shrink-0 rounded-xl bg-brand px-4 text-sm font-bold text-white hover:bg-brand-dark disabled:opacity-50"
           >
-            {sending ? "…" : "Send"}
+            {sending ? "…" : t("messages.send")}
           </button>
         </form>
       </div>

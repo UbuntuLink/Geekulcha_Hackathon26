@@ -74,6 +74,10 @@ export default function BottomNav({ role, desktopVariant }) {
 
   return (
     <>
+      {/* Screen readers hear when new messages arrive; the badge itself is visual only. */}
+      <span className="sr-only" aria-live="polite">
+        {unread > 0 ? `${unread} unread message${unread === 1 ? "" : "s"}` : ""}
+      </span>
       {/* Mobile: native app-style bottom navigation. */}
       <nav aria-label="Main navigation" className="mobile-nav glass-nav fixed bottom-3 left-1/2 z-50 flex w-[calc(100%-24px)] max-w-[496px] -translate-x-1/2 items-center justify-around rounded-2xl border border-white/80 bg-white/92 px-2 py-2 shadow-[0_14px_38px_rgba(23,35,30,0.16)] backdrop-blur-xl lg:hidden">
         {links.map((link) => (
@@ -81,8 +85,8 @@ export default function BottomNav({ role, desktopVariant }) {
             key={link.to}
             to={link.to}
             className={({ isActive }) =>
-              `nav-item flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[11px] font-semibold transition-all ${
-                isActive ? "bg-brand-soft text-brand" : "text-gray-400 hover:bg-brand-mist hover:text-brand"
+              `nav-item flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-xs font-semibold transition-all ${
+                isActive ? "bg-brand-soft text-brand" : "text-gray-500 hover:bg-brand-mist hover:text-brand"
               }`
             }
           >
@@ -126,7 +130,7 @@ function UnreadBadge({ count }) {
   return (
     <span
       aria-label={`${count} unread`}
-      className="absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white"
+      className="absolute -right-2.5 -top-2 grid h-5 min-w-5 place-items-center rounded-full bg-red-600 px-1 text-xs font-bold leading-none text-white"
     >
       {count > 9 ? "9+" : count}
     </span>

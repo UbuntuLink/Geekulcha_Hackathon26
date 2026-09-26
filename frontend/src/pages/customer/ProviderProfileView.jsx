@@ -126,7 +126,7 @@ export default function ProviderProfileView() {
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-lg font-extrabold text-ink">{profile.providerName}</p>
                   {profile.isValidated && (
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
+                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700">
                       ✓ ID verified
                     </span>
                   )}
@@ -220,7 +220,7 @@ export default function ProviderProfileView() {
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-baseline justify-between gap-x-2">
                             <p className="text-sm font-bold text-gray-800">{review.reviewerName || "Customer"}</p>
-                            <p className="text-xs text-gray-400">{formatReviewDate(review.createdAt)}</p>
+                            <p className="text-xs text-gray-500">{formatReviewDate(review.createdAt)}</p>
                           </div>
                           <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs">
                             <Stars value={review.rating} />
@@ -229,7 +229,7 @@ export default function ProviderProfileView() {
                           {review.comment?.trim() ? (
                             <p className="mt-2 whitespace-pre-line text-sm leading-6 text-gray-700">{review.comment}</p>
                           ) : (
-                            !review.photoIds?.length && <p className="mt-2 text-xs italic text-gray-400">Rated without a comment.</p>
+                            !review.photoIds?.length && <p className="mt-2 text-xs italic text-gray-500">Rated without a comment.</p>
                           )}
                           {review.photoIds?.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-2">

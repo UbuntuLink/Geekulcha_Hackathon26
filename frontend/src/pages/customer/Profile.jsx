@@ -5,6 +5,7 @@ import Button from "../../components/common/Button.jsx";
 import { getOnboarding } from "../../lib/preferences.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import AccountControls from "../../components/layout/AccountControls.jsx";
+import DisplaySettings from "../../components/common/DisplaySettings.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
 export default function Profile() {
@@ -76,6 +77,7 @@ export default function Profile() {
           </>
         )}
       </Card>
+      <DisplaySettings className="mt-3" />
     </Screen>
   );
 }

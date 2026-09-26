@@ -176,7 +176,7 @@ export default function ReviewRequest() {
       )}
 
       <div className="mt-5 lg:flex lg:items-center lg:justify-end lg:gap-4">
-        <p className="mb-2 text-center text-xs text-gray-400 lg:mb-0">Your request is only saved when you continue.</p>
+        <p className="mb-2 text-center text-xs text-gray-500 lg:mb-0">Your request is only saved when you continue.</p>
         <Button onClick={handleFindProviders} disabled={loading} className="lg:max-w-[320px]">
           {sending ? <><span className="send-spinner" aria-hidden="true" /> Sending request…</> : <>Find matching providers <span aria-hidden="true">→</span></>}
         </Button>

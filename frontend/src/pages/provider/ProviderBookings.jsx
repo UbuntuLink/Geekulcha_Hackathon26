@@ -13,7 +13,7 @@ import {
   updateBookingStatus,
 } from "../../api/services.js";
 import { formatZAR } from "../../lib/format.js";
-import { STEP_ACTIONS, STEP_LABELS, isFinished, nextStep } from "../../lib/bookingSteps.js";
+import { STEP_ICONS, isFinished, nextStep } from "../../lib/bookingSteps.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
 /** The provider's jobs. Each opens the work tracker (/bookings/:id), where status is updated. */
@@ -158,7 +158,7 @@ export default function ProviderBookings() {
                             : "bg-brand-soft text-brand"
                       }`}
                     >
-                      {STEP_LABELS[b.status] ?? b.status}
+                      <span aria-hidden="true">{STEP_ICONS[b.status]} </span>{t(`status.${b.status}`)}
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-gray-500">
@@ -172,7 +172,7 @@ export default function ProviderBookings() {
                     disabled={busyId === b.id}
                     className="mt-3 w-full rounded-lg border border-brand py-2 text-sm font-medium text-brand transition-colors hover:bg-brand/5 disabled:opacity-50"
                   >
-                    {busyId === b.id ? "Updating..." : STEP_ACTIONS[next]}
+                    {busyId === b.id ? "Updating..." : t(`action.${next}`)}
                   </button>
                 )}
               </Card>

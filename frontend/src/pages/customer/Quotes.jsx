@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Screen from "../../components/layout/Screen.jsx";
 import Card from "../../components/common/Card.jsx";
@@ -12,6 +13,9 @@ import JobSupportActions from "../../components/common/JobSupportActions.jsx";
 
 // How often the page checks for new quotes while it's open and visible.
 const REFRESH_MS = 15000;
+
+// Shown beside the status colour, so it's readable without telling colours apart.
+const STATUS_ICONS = { PENDING: "⏳", ACCEPTED: "✓", REJECTED: "✕", WITHDRAWN: "↩" };
 
 const STATUS_STYLES = {
   PENDING: "bg-amber-50 text-amber-700",
@@ -38,6 +42,7 @@ export default function Quotes() {
   const { id: requestFilter } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [quotes, setQuotes] = useState(null);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
@@ -126,10 +131,10 @@ export default function Quotes() {
 
   return (
     <Screen
-      title="Quotes"
+      title={t("quotes.title")}
       subtitle={
         quotes === null
-          ? "Checking for quotes…"
+          ? t("quotes.checking")
           : pendingCount
             ? `${pendingCount} quote${pendingCount === 1 ? "" : "s"} waiting for your answer`
             : "Offers from providers on your requests"
@@ -140,7 +145,7 @@ export default function Quotes() {
       size="wide"
     >
       {error && <div className="mb-4"><ErrorBanner>{error}</ErrorBanner></div>}
-      {quotes === null && !error && <Loading label="Checking for quotes…" />}
+      {quotes === null && !error && <Loading label={t("quotes.checking")} />}
 
       {requestFilter && quotes !== null && (
         <p className="mb-4 text-sm">
@@ -200,9 +205,10 @@ export default function Quotes() {
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1">
                         {newIds.has(quote.id) && (
-                          <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold uppercase text-white">New</span>
+                          <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold uppercase text-white">New</span>
                         )}
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold capitalize ${STATUS_STYLES[quote.status] ?? ""}`}>
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-bold capitalize ${STATUS_STYLES[quote.status] ?? ""}`}>
+                          <span aria-hidden="true">{STATUS_ICONS[quote.status]} </span>
                           {quote.status.toLowerCase()}
                         </span>
                       </div>
@@ -227,7 +233,7 @@ export default function Quotes() {
                           disabled={busyId !== null}
                           className="flex-1 rounded-xl bg-brand py-2.5 text-sm font-bold text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
                         >
-                          {busyId === quote.id ? "Working…" : "Accept"}
+                          {busyId === quote.id ? "Working…" : t("quotes.accept")}
                         </button>
                         <button
                           type="button"
@@ -235,7 +241,7 @@ export default function Quotes() {
                           disabled={busyId !== null}
                           className="flex-1 rounded-xl border border-gray-300 py-2.5 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
                         >
-                          Decline
+                          {t("quotes.decline")}
                         </button>
                       </div>
                     )}
@@ -248,7 +254,7 @@ export default function Quotes() {
       </div>
 
       {quotes !== null && (
-        <p className="mt-6 text-center text-xs text-gray-400">New quotes appear here automatically.</p>
+        <p className="mt-6 text-center text-xs text-gray-500">{t("quotes.autoUpdate")}</p>
       )}
     </Screen>
   );

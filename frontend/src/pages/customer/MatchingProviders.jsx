@@ -205,7 +205,7 @@ export default function MatchingProviders() {
                 type="button"
                 aria-pressed={sortMode === option.key}
                 onClick={() => setSortMode(option.key)}
-                className={`shrink-0 rounded-full px-3.5 py-2 text-xs font-bold transition-all ${
+                className={`min-h-[40px] shrink-0 rounded-full px-3.5 py-2 text-xs font-bold transition-all ${
                   sortMode === option.key
                     ? "bg-brand text-white shadow-[0_7px_18px_rgba(31,92,69,0.16)]"
                     : "border border-brand/10 bg-white text-gray-500 hover:-translate-y-0.5 hover:border-brand/25 hover:text-brand"

@@ -255,7 +255,7 @@ export default function DescribeProblem() {
             placeholder={t("customer.problemPreview")}
             className="min-h-[190px] w-full resize-y rounded-2xl border border-gray-200 bg-brand-mist/45 p-4 text-sm leading-6 text-gray-900 transition-all placeholder:text-gray-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/15"
           />
-          <div className="mt-2 flex items-center justify-between gap-3 text-xs text-gray-400">
+          <div className="mt-2 flex items-center justify-between gap-3 text-xs text-gray-500">
             <span role="status">
               {voiceState === "recording"
                 ? `Recording… ${recordingSeconds}s — tap the button again to finish`

@@ -1,5 +1,6 @@
 package com.geekkulcha.backend.service;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +17,7 @@ import com.geekkulcha.backend.dto.response.QuantumOptimisationResponse;
 import com.geekkulcha.backend.dto.response.ReviewResponse;
 import com.geekkulcha.backend.dto.response.ServicePriceResponse;
 import com.geekkulcha.backend.entity.ProviderProfile;
+import com.geekkulcha.backend.entity.ProviderService;
 import com.geekkulcha.backend.entity.Review;
 import com.geekkulcha.backend.entity.ServiceRequest;
 import com.geekkulcha.backend.entity.User;
@@ -52,20 +54,36 @@ public class ProviderMatchService {
     /**
      * Providers offering this service, narrowed and ordered by where the customer is.
      *
-     * With the customer's coordinates, a provider is dropped when the job falls outside the
-     * serviceRadiusKm they set during onboarding — which until now was stored and never read —
-     * and the rest come back nearest first.
+     * With the customer's coordinates, a provider whose serviceRadiusKm doesn't reach the job is
+     * left out, and the rest come back nearest first. Those left out are still available on
+     * request, as {@link ProviderMatches#further()}.
      *
      * A provider with no coordinates is never dropped. Most rows in the shared database predate
      * the location picker, and silently hiding them would turn a missing column into an empty
      * results screen. They sort after everyone whose distance is known.
      */
     public List<ProviderMatchResponse> findProvidersForService(long serviceId, Double latitude, Double longitude) {
-        boolean customerLocated = GeoUtils.isUsable(latitude, longitude);
+        return matchProviders(serviceId, latitude, longitude).nearby();
+    }
 
-        return providerServiceRepository.findByServiceId(serviceId).stream()
-        .filter(ps -> ps.getProviderProfile().isIdValidated())
-        .map(ps -> {
+    /** Providers within reach of the customer, and — separately — the ones beyond their radius. */
+    public record ProviderMatches(List<ProviderMatchResponse> nearby, List<ProviderMatchResponse> further) {
+    }
+
+    /**
+     * Both lists from one query (see ProviderServiceRepository#findValidatedWithProviderByServiceId):
+     * the profile, and so its radius, is already loaded with each row.
+     */
+    public ProviderMatches matchProviders(long serviceId, Double latitude, Double longitude) {
+        boolean customerLocated = GeoUtils.isUsable(latitude, longitude);
+        Comparator<ProviderMatchResponse> nearestThenBestRated = Comparator
+                .comparing(ProviderMatchResponse::distanceKm, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(Comparator.comparingDouble(ProviderMatchResponse::rating).reversed());
+
+        List<ProviderMatchResponse> nearby = new ArrayList<>();
+        List<ProviderMatchResponse> further = new ArrayList<>();
+
+        for (ProviderService ps : providerServiceRepository.findValidatedWithProviderByServiceId(serviceId)) {
             ProviderProfile p = ps.getProviderProfile();
             Double distanceKm = null;
 
@@ -73,7 +91,7 @@ public class ProviderMatchService {
                 distanceKm = GeoUtils.distanceKm(latitude, longitude, p.getLatitude(), p.getLongitude());
             }
 
-            return new ProviderMatchResponse(
+            ProviderMatchResponse match = new ProviderMatchResponse(
                     p.getId(),
                     providerName(p),
                     p.getBio(),
@@ -86,20 +104,17 @@ public class ProviderMatchService {
                     ps.getMaxPrice(),
                     distanceKm
             );
-        })
-        .filter(match -> match.distanceKm() == null || match.distanceKm() <= radiusFor(match.providerProfileId()))
-        .sorted(Comparator
-                .comparing(ProviderMatchResponse::distanceKm, Comparator.nullsLast(Comparator.naturalOrder()))
-                .thenComparing(Comparator.comparingDouble(ProviderMatchResponse::rating).reversed()))
-        .toList();
-    }
 
-    /** The provider's own service radius, defaulting generously when they never set one. */
-    private int radiusFor(long providerProfileId) {
-        return providerProfileRepository.findById(providerProfileId)
-                .map(ProviderProfile::getServiceRadiusKm)
-                .filter(radius -> radius > 0)
-                .orElse(Integer.MAX_VALUE);
+            // A radius of 0 means the provider never set one: treat them as covering everywhere.
+            boolean withinReach = distanceKm == null
+                    || p.getServiceRadiusKm() <= 0
+                    || distanceKm <= p.getServiceRadiusKm();
+            (withinReach ? nearby : further).add(match);
+        }
+
+        nearby.sort(nearestThenBestRated);
+        further.sort(nearestThenBestRated);
+        return new ProviderMatches(nearby, further);
     }
 
     public ProviderProfileResponse getProfile(long providerProfileId) {

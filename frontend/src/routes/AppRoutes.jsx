@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Navigate, Routes, Route, useParams } from "react-router-dom";
 import { AuthProvider } from "../context/AuthContext.jsx";
 import ProtectedRoute from "./ProtectedRoute.jsx";
 
@@ -12,7 +12,6 @@ import CustomerHome from "../pages/customer/CustomerHome.jsx";
 import DescribeProblem from "../pages/customer/DescribeProblem.jsx";
 import ServiceNotSupported from "../pages/customer/ServiceNotSupported.jsx";
 import ReviewRequest from "../pages/customer/ReviewRequest.jsx";
-import AIServiceIdentification from "../pages/customer/AIServiceIdentification.jsx";
 import MatchingProviders from "../pages/customer/MatchingProviders.jsx";
 import CompareProviders from "../pages/customer/CompareProviders.jsx";
 import ProviderProfileView from "../pages/customer/ProviderProfileView.jsx";
@@ -50,7 +49,9 @@ export default function AppRoutes() {
         {/* Customer journey — Figma screens 3-12, PROJECT.md §5 */}
         <Route path="/home" element={<ProtectedRoute role="customer"><CustomerHome /></ProtectedRoute>} />
         <Route path="/requests/new" element={<ProtectedRoute><DescribeProblem /></ProtectedRoute>} />
-        <Route path="/requests/:id/classification" element={<ProtectedRoute><AIServiceIdentification /></ProtectedRoute>} />
+        {/* Was a fake progress-bar page between submitting and the matches; kept as a redirect so
+            old links and history entries still land somewhere. */}
+        <Route path="/requests/:id/classification" element={<RedirectToMatches />} />
         <Route path="/requests/:id/matches" element={<ProtectedRoute><MatchingProviders /></ProtectedRoute>} />
         <Route path="/requests/:id/compare" element={<ProtectedRoute><CompareProviders /></ProtectedRoute>} />
         <Route path="/providers/:providerId" element={<ProtectedRoute><ProviderProfileView /></ProtectedRoute>} />
@@ -77,4 +78,9 @@ export default function AppRoutes() {
       </Routes>
     </AuthProvider>
   );
+}
+
+function RedirectToMatches() {
+  const { id } = useParams();
+  return <Navigate to={`/requests/${id}/matches`} replace />;
 }

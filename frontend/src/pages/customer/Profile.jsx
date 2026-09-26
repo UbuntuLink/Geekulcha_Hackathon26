@@ -29,7 +29,14 @@ export default function Profile() {
       {!user?.isProvider && (
         <Card className="mt-3 overflow-hidden border-brand/20 bg-gradient-to-br from-brand/5 to-white">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand/10 text-lg">🛠️</div>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 3h7v7" />
+                <path d="M10 14 21 3" />
+                <path d="M19 13v5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5" />
+                <path d="M3 12v7h7" />
+              </svg>
+            </div>
             <div className="flex-1">
               <p className="font-semibold text-gray-900">{t("becomeProvider.ctaTitle")}</p>
               <p className="mt-1 text-sm leading-5 text-gray-500">{t("becomeProvider.ctaSubtitle")}</p>

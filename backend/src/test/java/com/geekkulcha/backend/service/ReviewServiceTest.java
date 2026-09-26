@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -41,6 +42,7 @@ class ReviewServiceTest {
     private ReviewRepository reviewRepository;
     private ProviderProfileRepository providerProfileRepository;
     private ReviewPhotoRepository reviewPhotoRepository;
+    private MessagingService messagingService;
     private ReviewService reviewService;
     private Booking booking;
     private ProviderProfile provider;
@@ -51,8 +53,9 @@ class ReviewServiceTest {
         BookingRepository bookingRepository = mock(BookingRepository.class);
         providerProfileRepository = mock(ProviderProfileRepository.class);
         reviewPhotoRepository = mock(ReviewPhotoRepository.class);
+        messagingService = mock(MessagingService.class);
         reviewService = new ReviewService(reviewRepository, bookingRepository, providerProfileRepository,
-                reviewPhotoRepository);
+                reviewPhotoRepository, messagingService);
 
         User customer = new User();
         customer.setId(CUSTOMER_ID);
@@ -127,6 +130,18 @@ class ReviewServiceTest {
                 () -> reviewService.create(BOOKING_ID, new ReviewCreateRequest(5, null, null), CUSTOMER_ID));
         verify(reviewRepository, never()).save(any());
         verify(providerProfileRepository, never()).save(any());
+    }
+
+    @Test
+    void theProviderIsToldTheyWereRated() {
+        when(reviewRepository.findByBooking_Quote_ProviderProfile_Id(PROVIDER_PROFILE_ID)).thenReturn(List.of(review(4)));
+
+        reviewService.create(BOOKING_ID, new ReviewCreateRequest(4, "Tidy work", null), CUSTOMER_ID);
+
+        ArgumentCaptor<String> text = ArgumentCaptor.forClass(String.class);
+        verify(messagingService).notifyProvider(any(), any(), text.capture());
+        assertTrue(text.getValue().contains("★★★★ (4/5)"), text.getValue());
+        assertTrue(text.getValue().contains("“Tidy work”"), text.getValue());
     }
 
     @Test

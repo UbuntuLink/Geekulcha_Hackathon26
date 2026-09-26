@@ -212,7 +212,11 @@ export default function Quotes() {
                     {quote.message && <p className="mt-1 whitespace-pre-line text-sm leading-6 text-gray-600">{quote.message}</p>}
 
                     <div className="mt-3">
-                      <JobSupportActions otherPartyName={quote.providerName.split(" ")[0]} compact />
+                      <JobSupportActions
+                        otherPartyName={quote.providerName.split(" ")[0]}
+                        providerProfileId={quote.providerProfileId}
+                        compact
+                      />
                     </div>
 
                     {quote.status === "PENDING" && open && (

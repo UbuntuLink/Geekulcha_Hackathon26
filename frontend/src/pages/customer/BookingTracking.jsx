@@ -320,6 +320,7 @@ export default function BookingTracking() {
           <Card className="lg:p-6">
             <JobSupportActions
               otherPartyName={isProvider ? customer?.firstName || "the customer" : providerUser?.firstName || "the provider"}
+              {...(isProvider ? { customerUserId: customer?.id } : { providerProfileId: quote?.providerProfile?.id })}
             />
           </Card>
 

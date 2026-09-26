@@ -6,6 +6,8 @@ import com.geekkulcha.backend.entity.BookingStatus;
 import com.geekkulcha.backend.entity.ProviderProfile;
 import com.geekkulcha.backend.entity.Review;
 import com.geekkulcha.backend.entity.ReviewPhoto;
+import com.geekkulcha.backend.entity.ServiceRequest;
+import com.geekkulcha.backend.entity.User;
 import com.geekkulcha.backend.exception.ForbiddenException;
 import com.geekkulcha.backend.exception.ResourceNotFoundException;
 import com.geekkulcha.backend.repository.BookingRepository;
@@ -29,6 +31,7 @@ public class ReviewService {
     private final BookingRepository bookingRepository;
     private final ProviderProfileRepository providerProfileRepository;
     private final ReviewPhotoRepository reviewPhotoRepository;
+    private final MessagingService messagingService;
 
     /**
      * Records a customer's review of a completed booking and updates the provider's rating.
@@ -77,6 +80,7 @@ public class ReviewService {
         }
 
         recalculateRating(booking.getQuote().getProviderProfile().getId());
+        notifyProvider(booking, saved, photos.size());
         return saved;
     }
 
@@ -95,5 +99,23 @@ public class ReviewService {
         profile.setRating(Math.round(average * 10) / 10.0);
         profile.setReviewCount(reviews.size());
         providerProfileRepository.save(profile);
+    }
+
+    /** Tells the provider they were rated, as a message in their thread with the customer. */
+    private void notifyProvider(Booking booking, Review review, int photoCount) {
+        ServiceRequest request = booking.getQuote().getServiceRequest();
+        User customer = request.getUser();
+        String service = request.getService() != null ? request.getService().getName().toLowerCase() : "recent";
+        StringBuilder text = new StringBuilder()
+                .append(customer.getFirstName() == null ? "Your customer" : customer.getFirstName())
+                .append(" rated your ").append(service).append(" job ")
+                .append("★".repeat(review.getRating())).append(" (").append(review.getRating()).append("/5)");
+        if (review.getComment() != null) {
+            text.append(": “").append(review.getComment()).append("”");
+        }
+        if (photoCount > 0) {
+            text.append(" · ").append(photoCount).append(photoCount == 1 ? " photo" : " photos").append(" on your profile");
+        }
+        messagingService.notifyProvider(customer, booking.getQuote().getProviderProfile(), text.toString());
     }
 }

@@ -280,7 +280,7 @@ export default function ProviderProfileView() {
             )}
             {!isOwnProviderProfile && (
               <div className="mt-4">
-                <JobSupportActions otherPartyName={profile.providerName.split(" ")[0]} />
+                <JobSupportActions otherPartyName={profile.providerName.split(" ")[0]} providerProfileId={Number(providerId)} />
               </div>
             )}
           </div>

@@ -1,15 +1,10 @@
 package com.geekkulcha.backend.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 
 public class CreateProviderProfileDto {
 
     @NotBlank
-    @Pattern(
-        regexp = "\\d{13}",
-        message = "South African ID must contain exactly 13 digits"
-    )
     private String idNumber;
 
     @NotBlank

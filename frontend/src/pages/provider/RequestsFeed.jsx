@@ -39,7 +39,7 @@ export default function RequestsFeed() {
     <Screen title={t("nav.requests")} subtitle={t("customer.providerAvailability")} showBack={false} withNav navRole="provider">
       {error && <ErrorBanner>{error}</ErrorBanner>}
       {requests === null && !error && <Loading />}
-      {requests?.length === 0 && <EmptyState>No open requests right now — check back soon.</EmptyState>}
+      {requests?.length === 0 && <EmptyState>{t("feed.empty")}</EmptyState>}
 
       <div className="space-y-3">
         {requests
@@ -55,12 +55,12 @@ export default function RequestsFeed() {
               <p className="mr-auto font-semibold text-gray-900">{req.service?.name ?? "General"}</p>
               {req.preferredProvider?.id === myProviderProfileId && (
                 <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-medium text-brand">
-                  Asked for you
+                  {t("feed.askedForYou")}
                 </span>
               )}
               {myQuotes[req.id] && (
                 <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                  You quoted {formatZAR(myQuotes[req.id].amount)}
+                  <span aria-hidden="true">✓ </span>{t("feed.youQuoted")} {formatZAR(myQuotes[req.id].amount)}
                 </span>
               )}
             </div>

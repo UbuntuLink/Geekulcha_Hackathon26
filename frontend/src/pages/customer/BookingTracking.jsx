@@ -17,6 +17,7 @@ import {
   isFinished,
   nextStep,
 } from "../../lib/bookingSteps.js";
+import VoiceInputButton from "../../components/common/VoiceInputButton.jsx";
 
 // How often the tracker checks for the other side's updates while it's open.
 const REFRESH_MS = 15000;
@@ -231,6 +232,7 @@ export default function BookingTracking() {
                   placeholder="Optional note, e.g. “Arriving in 20 minutes”"
                   className="min-h-[80px]"
                 />
+                <VoiceInputButton className="mt-2" onText={(text) => setNote((current) => `${current}${current ? " " : ""}${text}`.slice(0, 280))} />
               </div>
               <button
                 type="button"
@@ -288,6 +290,7 @@ export default function BookingTracking() {
                       placeholder="Reason (optional)"
                       className="min-h-[70px]"
                     />
+                    <VoiceInputButton className="mt-2" onText={(text) => setNote((current) => `${current}${current ? " " : ""}${text}`.slice(0, 280))} />
                   </div>
                   <div className="mt-3 flex gap-2">
                     <button

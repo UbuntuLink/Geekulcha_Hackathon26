@@ -15,6 +15,8 @@ change**.
 | Symbols beside status colours (⏳ ✓ → ⚒ ✕) | Tracker, bookings, My requests, Quotes | `lib/bookingSteps.js` (`STEP_ICONS`), `Quotes.jsx` |
 | Screen-reader announcements for new messages and tracker status changes | Automatic | `BottomNav.jsx`, `BookingTracking.jsx` |
 | Larger tap targets (photo ✕, "Skip to", sort chips) | — | `ReviewProvider.jsx`, `BookingTracking.jsx`, `MatchingProviders.jsx` |
+| **Voice input on every text field** (speak instead of type, any language) | Customers: describe problem, chat, cancel reason. Providers: quote message, tracker note to the customer, bio (Become a provider and Edit profile), chat | `components/common/VoiceInputButton.jsx` |
+| **Provider parity**: read-aloud, language and Display settings on phones; symbols on "Waiting" / "You quoted"; screen readers announce new quote requests; provider screens translated | Provider Edit profile, Bookings, Requests feed, quote form | `ProviderProfileEdit.jsx`, `ProviderBookings.jsx`, `RequestsFeed.jsx`, `RequestDetail.jsx` |
 | Newer screens' text routed through translations | Tracker, Quotes, Messages, My requests | `context/LanguageContext.jsx` (`status.*`, `tracker.*`, `quotes.*`, `messages.*`) |
 
 **Colour-blind modes** (`styles/theme.css`, generated):

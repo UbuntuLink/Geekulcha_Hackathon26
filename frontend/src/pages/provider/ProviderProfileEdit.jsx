@@ -17,6 +17,8 @@ import { useLanguage } from "../../context/LanguageContext.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useNavigate } from "react-router-dom";
 import DisplaySettings from "../../components/common/DisplaySettings.jsx";
+import VoiceInputButton from "../../components/common/VoiceInputButton.jsx";
+import AccountControls from "../../components/layout/AccountControls.jsx";
 
 export default function ProviderProfileEdit() {
   const { t } = useLanguage();
@@ -100,6 +102,10 @@ export default function ProviderProfileEdit() {
         <div className="space-y-4">
           <Field label={t("provider.bio")}>
             <TextArea value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
+            <VoiceInputButton
+              className="mt-2"
+              onText={(text) => setForm((current) => ({ ...current, bio: `${current.bio}${current.bio ? " " : ""}${text}` }))}
+            />
           </Field>
           <Field label={t("provider.location")}>
             <TextInput value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
@@ -195,6 +201,10 @@ export default function ProviderProfileEdit() {
             {t("common.signOut")}
           </Button>
         </Card>
+      </div>
+      {/* Phones have no room for these in the nav, so providers get them here — as customers do on Profile. */}
+      <div className="mt-4 lg:hidden">
+        <AccountControls />
       </div>
       <DisplaySettings className="mt-4" />
     </Screen>

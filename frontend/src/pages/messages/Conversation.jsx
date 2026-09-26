@@ -6,6 +6,7 @@ import Loading from "../../components/common/Loading.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import { getMessages, listConversations, sendMessage } from "../../api/services.js";
 import { formatChatTime } from "../../lib/chat.js";
+import VoiceInputButton from "../../components/common/VoiceInputButton.jsx";
 
 // An open chat checks for new messages this often.
 const POLL_MS = 4000;
@@ -138,7 +139,13 @@ export default function Conversation() {
           <div ref={bottomRef} />
         </div>
 
-        <form onSubmit={handleSend} className="flex items-end gap-2 border-t border-gray-100 p-3">
+        <div className="border-t border-gray-100 px-3 pt-2">
+          <VoiceInputButton
+            label="Speak a message"
+            onText={(text) => setDraft((current) => `${current}${current ? " " : ""}${text}`.slice(0, MAX_LENGTH))}
+          />
+        </div>
+        <form onSubmit={handleSend} className="flex items-end gap-2 p-3">
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}

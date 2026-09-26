@@ -13,6 +13,7 @@ import { getOnboarding } from "../../lib/preferences.js";
 import { isValidSaId } from "../../lib/saId.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
+import VoiceInputButton from "../../components/common/VoiceInputButton.jsx";
 
 export default function BecomeProvider() {
   const navigate = useNavigate();
@@ -249,6 +250,10 @@ export default function BecomeProvider() {
                   onChange={update("bio")}
                   placeholder={t("provider.bioPlaceholder")}
                   rows={4}
+                />
+                <VoiceInputButton
+                  className="mt-2"
+                  onText={(text) => setForm((current) => ({ ...current, bio: `${current.bio}${current.bio ? " " : ""}${text}` }))}
                 />
               </Field>
 

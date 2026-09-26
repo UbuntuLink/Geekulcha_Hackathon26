@@ -84,10 +84,14 @@ export default function ProviderBookings() {
       {error && <ErrorBanner>{error}</ErrorBanner>}
       {bookings === null && !error && <Loading />}
 
+      <p className="sr-only" aria-live="polite">
+        {asked?.length ? `${asked.length} quote request${asked.length === 1 ? "" : "s"} waiting for you` : ""}
+      </p>
+
       {asked?.length > 0 && (
         <section className="mb-6" aria-labelledby="asked-heading">
-          <h2 id="asked-heading" className="text-sm font-extrabold text-ink">Quote requests for you ({asked.length})</h2>
-          <p className="mb-2 mt-0.5 text-xs text-gray-500">Customers asked you specifically. Send a quote to answer.</p>
+          <h2 id="asked-heading" className="text-sm font-extrabold text-ink">{t("pipeline.askedTitle")} ({asked.length})</h2>
+          <p className="mb-2 mt-0.5 text-xs text-gray-500">{t("pipeline.askedHelp")}</p>
           <div className="space-y-2">
             {asked.map((request) => (
               <Card key={request.requestId} onClick={() => navigate(`/provider/requests/${request.requestId}`)}>
@@ -100,7 +104,7 @@ export default function ProviderBookings() {
                       {request.location ? ` · ${request.location}` : ""}
                     </p>
                   </div>
-                  <span className="shrink-0 rounded-full bg-brand px-2.5 py-1 text-xs font-bold text-white">Send quote →</span>
+                  <span className="shrink-0 rounded-full bg-brand px-2.5 py-1 text-xs font-bold text-white">{t("pipeline.sendQuote")}</span>
                 </div>
               </Card>
             ))}
@@ -110,8 +114,8 @@ export default function ProviderBookings() {
 
       {awaiting?.length > 0 && (
         <section className="mb-6" aria-labelledby="awaiting-heading">
-          <h2 id="awaiting-heading" className="text-sm font-extrabold text-ink">Quotes awaiting the customer ({awaiting.length})</h2>
-          <p className="mb-2 mt-0.5 text-xs text-gray-500">They become bookings below when the customer accepts.</p>
+          <h2 id="awaiting-heading" className="text-sm font-extrabold text-ink">{t("pipeline.awaitingTitle")} ({awaiting.length})</h2>
+          <p className="mb-2 mt-0.5 text-xs text-gray-500">{t("pipeline.awaitingHelp")}</p>
           <div className="space-y-2">
             {awaiting.map((quote) => (
               <Card key={quote.id}>
@@ -122,7 +126,7 @@ export default function ProviderBookings() {
                   </div>
                   <div className="shrink-0 text-right">
                     <p className="font-extrabold text-brand">{formatZAR(quote.amount)}</p>
-                    <p className="text-xs text-amber-700">Waiting</p>
+                    <p className="text-xs text-amber-700"><span aria-hidden="true">⏳ </span>{t("pipeline.waiting")}</p>
                   </div>
                 </div>
               </Card>
@@ -132,10 +136,10 @@ export default function ProviderBookings() {
       )}
 
       {(asked?.length > 0 || awaiting?.length > 0) && (
-        <h2 className="mb-2 text-sm font-extrabold text-ink">Bookings</h2>
+        <h2 className="mb-2 text-sm font-extrabold text-ink">{t("pipeline.bookings")}</h2>
       )}
       {bookings?.length === 0 && (
-        <EmptyState>No bookings yet. When a customer accepts one of your quotes, it appears here.</EmptyState>
+        <EmptyState>{t("pipeline.noBookings")}</EmptyState>
       )}
 
       <div className="space-y-3">
@@ -164,7 +168,7 @@ export default function ProviderBookings() {
                   <p className="mt-1 text-sm text-gray-500">
                     {b.quote.serviceRequest?.user?.firstName} {b.quote.serviceRequest?.user?.lastName} · {formatZAR(b.quote.amount)}
                   </p>
-                  <p className="mt-1 text-xs font-semibold text-brand">Open work tracker →</p>
+                  <p className="mt-1 text-xs font-semibold text-brand">{t("pipeline.openTracker")}</p>
                 </button>
                 {next && (
                   <button

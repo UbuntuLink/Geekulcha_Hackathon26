@@ -12,9 +12,11 @@ import {
   classifyMessage,
   listServices,
   createUnsupportedServiceRequest,
+  transcribeAudio,
 } from "../../api/services.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import { matchService } from "../../lib/matching.js";
+import { MAX_RECORDING_SECONDS, isRecordingSupported, startRecording } from "../../lib/wavRecorder.js";
 
 export default function DescribeProblem() {
   const navigate = useNavigate();
@@ -26,109 +28,72 @@ export default function DescribeProblem() {
   const [photoName, setPhotoName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [isListening, setIsListening] = useState(false);
-  const [voiceDraft, setVoiceDraft] = useState("");
-  const recognitionRef = useRef(null);
+  // "idle" | "recording" | "transcribing"
+  const [voiceState, setVoiceState] = useState("idle");
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const recorderRef = useRef(null);
+
+  // Count the seconds while recording, and stop at the limit so a forgotten mic can't run on.
+  useEffect(() => {
+    if (voiceState !== "recording") return undefined;
+    setRecordingSeconds(0);
+    const timer = setInterval(() => setRecordingSeconds((seconds) => seconds + 1), 1000);
+    return () => clearInterval(timer);
+  }, [voiceState]);
 
   useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (voiceState === "recording" && recordingSeconds >= MAX_RECORDING_SECONDS) stopRecording();
+  }, [voiceState, recordingSeconds]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    if (!SpeechRecognition) {
-      return;
-    }
+  // Release the microphone if the customer leaves the page mid-recording.
+  useEffect(() => () => recorderRef.current?.cancel(), []);
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = "en-ZA";
-
-    recognition.onstart = () => {
-      setIsListening(true);
-      setError("");
-    };
-
-    recognition.onresult = (event) => {
-      let interimTranscript = "";
-      let finalTranscript = "";
-
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
-        const result = event.results[index];
-        const transcript = result[0]?.transcript?.trim() ?? "";
-
-        if (!transcript) continue;
-
-        if (result.isFinal) {
-          finalTranscript = finalTranscript ? `${finalTranscript} ${transcript}` : transcript;
-        } else {
-          interimTranscript = interimTranscript ? `${interimTranscript} ${transcript}` : transcript;
-        }
-      }
-
-      if (finalTranscript) {
-        setDescription((prev) => {
-          const next = `${prev}${prev ? " " : ""}${finalTranscript}`.trim();
-          return next;
-        });
-        setVoiceDraft("");
-      } else if (interimTranscript) {
-        setVoiceDraft(interimTranscript);
-      }
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-      setVoiceDraft("");
-    };
-
-    recognition.onerror = (event) => {
-      setIsListening(false);
-      setVoiceDraft("");
-
-      if (event.error === "not-allowed" || event.error === "permission-denied") {
-        setError("Microphone access was blocked. Please allow access and try again.");
-        return;
-      }
-
-      if (event.error === "no-speech") {
-        setError("No speech was detected. Please try again or type your problem.");
-        return;
-      }
-
-      if (event.error === "audio-capture") {
-        setError("Your microphone could not be accessed. Please check your device settings and try again.");
-        return;
-      }
-
-      setError("Speech recognition could not start right now. Please try again or type your problem.");
-    };
-
-    recognitionRef.current = recognition;
-
-    return () => {
-      recognition.stop();
-    };
-  }, []);
-
-  const toggleVoiceInput = () => {
-    if (!recognitionRef.current) {
-      setError("Speech recognition isn’t supported in this browser. Please type your problem instead.");
-      return;
-    }
-
-    if (isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
+  const startVoiceInput = async () => {
+    if (!isRecordingSupported()) {
+      setError("Voice input isn't supported in this browser. Please type your problem instead.");
       return;
     }
 
     setError("");
-    setVoiceDraft("");
-
     try {
-      recognitionRef.current.start();
-    } catch {
-      setError("The microphone is already active. Please wait a moment and try again.");
+      recorderRef.current = await startRecording();
+      setVoiceState("recording");
+    } catch (err) {
+      setError(
+        err?.name === "NotAllowedError" || err?.name === "SecurityError"
+          ? "Microphone access was blocked. Allow it in your browser's site settings and try again."
+          : err?.name === "NotFoundError"
+            ? "No microphone was found. Check your device settings, or type your problem instead."
+            : "The microphone couldn't be started. Please try again or type your problem."
+      );
     }
+  };
+
+  const stopRecording = async () => {
+    const recorder = recorderRef.current;
+    recorderRef.current = null;
+    if (!recorder) return;
+
+    setVoiceState("transcribing");
+    try {
+      const audio = await recorder.stop();
+      const text = (await transcribeAudio(audio)).trim();
+      if (!text) {
+        setError("We didn't catch any speech. Please try again, a little closer to the microphone.");
+      } else {
+        setDescription((prev) => `${prev}${prev ? " " : ""}${text}`.slice(0, 1000));
+      }
+    } catch (err) {
+      console.error(err);
+      setError("We couldn't turn your voice note into text right now. Please try again or type your problem.");
+    } finally {
+      setVoiceState("idle");
+    }
+  };
+
+  const toggleVoiceInput = () => {
+    if (voiceState === "recording") stopRecording();
+    else if (voiceState === "idle") startVoiceInput();
   };
 
   const handlePhotoSelect = (event) => {
@@ -250,12 +215,14 @@ export default function DescribeProblem() {
             <button
               type="button"
               onClick={toggleVoiceInput}
-              className={`grid h-11 w-11 place-items-center rounded-2xl border transition-all ${
-                isListening
-                  ? "border-red-200 bg-red-50 text-red-600"
+              disabled={voiceState === "transcribing" || loading}
+              className={`grid h-11 w-11 place-items-center rounded-2xl border transition-all disabled:cursor-wait disabled:opacity-60 ${
+                voiceState === "recording"
+                  ? "animate-pulse border-red-200 bg-red-50 text-red-600"
                   : "border-brand/20 bg-brand-soft text-brand hover:-translate-y-0.5 hover:bg-brand/10"
               }`}
-              aria-label={isListening ? "Stop microphone" : "Start microphone"}
+              aria-label={voiceState === "recording" ? "Stop recording" : "Record a voice note"}
+              aria-pressed={voiceState === "recording"}
             >
               <svg
                 aria-hidden="true"
@@ -267,13 +234,8 @@ export default function DescribeProblem() {
                 strokeLinejoin="round"
                 className="h-5 w-5"
               >
-                {isListening ? (
-                  <>
-                    <rect x="9" y="3" width="6" height="11" rx="3" />
-                    <path d="M5 10a7 7 0 0 0 14 0" />
-                    <path d="M12 17v4" />
-                    <path d="M8 21h8" />
-                  </>
+                {voiceState === "recording" ? (
+                  <rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" stroke="none" />
                 ) : (
                   <>
                     <rect x="9" y="3" width="6" height="11" rx="3" />
@@ -294,7 +256,13 @@ export default function DescribeProblem() {
             className="min-h-[190px] w-full resize-y rounded-2xl border border-gray-200 bg-brand-mist/45 p-4 text-sm leading-6 text-gray-900 transition-all placeholder:text-gray-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/15"
           />
           <div className="mt-2 flex items-center justify-between gap-3 text-xs text-gray-400">
-            <span>{isListening ? "Listening…" : voiceDraft ? `Voice capture: ${voiceDraft}` : "Plain language is perfect."}</span>
+            <span role="status">
+              {voiceState === "recording"
+                ? `Recording… ${recordingSeconds}s — tap the button again to finish`
+                : voiceState === "transcribing"
+                  ? "Turning your voice note into text…"
+                  : "Type, or tap the microphone and speak in any language."}
+            </span>
             <span>{description.length}/1000</span>
           </div>
         </Card>
@@ -377,7 +345,7 @@ export default function DescribeProblem() {
       <div className="mt-5 lg:flex lg:justify-end">
         <Button
           onClick={handleSubmit}
-          disabled={loading || (!description.trim() && !photoDataUrl)}
+          disabled={loading || voiceState !== "idle" || (!description.trim() && !photoDataUrl)}
           className="lg:max-w-[320px]"
         >
           {loading ? t("customer.aiLoadingShort") : <>{t("customer.findRightService")} <span aria-hidden="true">→</span></>}

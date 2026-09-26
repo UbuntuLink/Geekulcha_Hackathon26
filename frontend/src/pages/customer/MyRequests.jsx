@@ -6,11 +6,13 @@ import EmptyState from "../../components/common/EmptyState.jsx";
 import Loading from "../../components/common/Loading.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { getMyQuotes, getMyServiceRequests, deleteServiceRequest } from "../../api/services.js";
+import { getCustomerBookings, getMyQuotes, getMyServiceRequests, deleteServiceRequest } from "../../api/services.js";
+import { STEP_LABELS } from "../../lib/bookingSteps.js";
 
-function requestRoute(req) {
-  const bookingId = req.bookingId ?? req.booking?.id ?? null;
-  if (bookingId) return `/bookings/${bookingId}`;
+// A service request doesn't carry its booking, so bookings are looked up separately and matched
+// by request id; a booked request opens its work tracker.
+function requestRoute(req, booking) {
+  if (booking) return `/bookings/${booking.id}`;
   return req.status === "OPEN" ? `/requests/${req.id}/matches` : `/requests/${req.id}/quotes`;
 }
 
@@ -24,6 +26,7 @@ export default function MyRequests() {
   const deleteInFlight = useRef(false);
   // Pending quotes per request id, so each request says when an offer is waiting.
   const [pendingQuotes, setPendingQuotes] = useState({});
+  const [bookingsByRequest, setBookingsByRequest] = useState({});
 
   const handleDelete = async (id) => {
     if (deleteInFlight.current) return;
@@ -47,6 +50,11 @@ export default function MyRequests() {
     getMyServiceRequests()
       .then((result) => { if (active) setRequests(result); })
       .catch(() => { if (active) setError("Couldn't load your requests. Please refresh to try again."); });
+    getCustomerBookings()
+      .then((bookings) => {
+        if (active) setBookingsByRequest(Object.fromEntries(bookings.map((b) => [b.quote?.serviceRequest?.id, b])));
+      })
+      .catch(() => {});
     getMyQuotes()
       .then((quotes) => {
         if (!active) return;
@@ -87,10 +95,12 @@ export default function MyRequests() {
           key={req.id}
           className="mb-2 transition-shadow hover:shadow-md"
         >
-          <button type="button" className="w-full rounded-lg text-left focus-visible:outline-brand" onClick={() => navigate(requestRoute(req))}>
+          <button type="button" className="w-full rounded-lg text-left focus-visible:outline-brand" onClick={() => navigate(requestRoute(req, bookingsByRequest[req.id]))}>
             <p className="font-medium text-gray-900">{req.description}</p>
             <p className="text-sm capitalize text-gray-500">
-              {req.status?.toLowerCase().replace("_", " ")}
+              {bookingsByRequest[req.id]
+                ? `${STEP_LABELS[bookingsByRequest[req.id].status] ?? bookingsByRequest[req.id].status} · track job →`
+                : req.status?.toLowerCase().replace("_", " ")}
               {pendingQuotes[req.id] > 0 && (
                 <span className="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold normal-case text-amber-700">
                   {pendingQuotes[req.id]} new quote{pendingQuotes[req.id] === 1 ? "" : "s"}

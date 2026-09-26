@@ -8,6 +8,7 @@ import EmptyState from "../../components/common/EmptyState.jsx";
 import { acceptQuote, getMyQuotes, rejectQuote } from "../../api/services.js";
 import { formatZAR } from "../../lib/format.js";
 import { useAuth } from "../../context/AuthContext.jsx";
+import JobSupportActions from "../../components/common/JobSupportActions.jsx";
 
 // How often the page checks for new quotes while it's open and visible.
 const REFRESH_MS = 15000;
@@ -209,6 +210,10 @@ export default function Quotes() {
 
                     <p className="mt-3 text-2xl font-extrabold text-brand">{formatZAR(quote.amount)}</p>
                     {quote.message && <p className="mt-1 whitespace-pre-line text-sm leading-6 text-gray-600">{quote.message}</p>}
+
+                    <div className="mt-3">
+                      <JobSupportActions otherPartyName={quote.providerName.split(" ")[0]} compact />
+                    </div>
 
                     {quote.status === "PENDING" && open && (
                       <div className="mt-4 flex gap-2">

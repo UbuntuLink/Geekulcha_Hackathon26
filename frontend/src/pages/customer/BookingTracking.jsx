@@ -5,6 +5,7 @@ import Card from "../../components/common/Card.jsx";
 import Loading from "../../components/common/Loading.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import { TextArea } from "../../components/common/Field.jsx";
+import JobSupportActions from "../../components/common/JobSupportActions.jsx";
 import { getBooking, getBookingTimeline, mockCharge, updateBookingStatus } from "../../api/services.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { formatZAR } from "../../lib/format.js";
@@ -315,6 +316,12 @@ export default function BookingTracking() {
               )}
             </Card>
           )}
+
+          <Card className="lg:p-6">
+            <JobSupportActions
+              otherPartyName={isProvider ? customer?.firstName || "the customer" : providerUser?.firstName || "the provider"}
+            />
+          </Card>
 
           {!isProvider && status === "COMPLETED" && !hasReview && (
             <button

@@ -1,9 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 const LOGO_SRC = "/images/ubuntulink-logo.png";
+
+// Used only as a fallback poster if the video cannot load.
 const HERO_BG = "/images/ubuntu-sa-network-bg.jpg";
-const PROVIDER_IMAGE = "/images/providers/thabo.jpg";
+
+// Hero video
+const HERO_VIDEO = "/videos/ubuntulink-hero.mp4";
+
+const PROVIDER_IMAGE = "/images/thabo.jpg";
 
 const languages = [
   { code: "en", name: "English" },
@@ -402,7 +408,8 @@ const translations = {
 
     accessibility: {
       eyebrow: "UKUFINYELELEKA",
-      title: "Yakhelwe ukuthi abantu abaningi bakwazi ukubamba iqhaza.",
+      title:
+        "Yakhelwe ukuthi abantu abaningi bakwazi ukubamba iqhaza.",
       description:
         "Izindlela ezilula zokuxhumana nezinketho eziningi zenza imakethe ibe lula ukuyisebenzisa.",
       cards: [
@@ -482,7 +489,8 @@ const translations = {
 
     services: {
       eyebrow: "LITŠEBELETSO",
-      title: "Eng kapa eng e lokelang ho etsoa, fumana motho ea ka e etsang.",
+      title:
+        "Eng kapa eng e lokelang ho etsoa, fumana motho ea ka e etsang.",
       description:
         "Qala ka tse ling tsa litšebeletso tse batloang haholo sebakeng sa heno, ha mekhahlelo e meng e tla latela.",
       more: "Sheba litšebeletso tsohle",
@@ -1082,7 +1090,10 @@ export default function Welcome() {
   const [languageOpen, setLanguageOpen] = useState(false);
   const [promptIndex, setPromptIndex] = useState(0);
 
+  const heroVideoRef = useRef(null);
+
   const t = translations[language];
+
   const currentPrompt =
     t.hero.prompts[promptIndex % t.hero.prompts.length];
 
@@ -1111,6 +1122,44 @@ export default function Welcome() {
     return () => clearInterval(interval);
   }, [language]);
 
+  // Respect users who prefer reduced motion.
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    );
+
+    const handleMotionPreference = () => {
+      if (!heroVideoRef.current) {
+        return;
+      }
+
+      if (mediaQuery.matches) {
+        heroVideoRef.current.pause();
+        heroVideoRef.current.currentTime = 0;
+      } else {
+        heroVideoRef.current
+          .play()
+          .catch(() => {
+            // Browser may block autoplay. The poster remains visible.
+          });
+      }
+    };
+
+    handleMotionPreference();
+
+    mediaQuery.addEventListener(
+      "change",
+      handleMotionPreference
+    );
+
+    return () => {
+      mediaQuery.removeEventListener(
+        "change",
+        handleMotionPreference
+      );
+    };
+  }, []);
+
   const scrollToSection = (id) => {
     const element = document.getElementById(id);
 
@@ -1138,7 +1187,9 @@ export default function Welcome() {
                 />
               </span>
 
-              <span className="brand-word">UbuntuLink</span>
+              <span className="brand-word">
+                UbuntuLink
+              </span>
             </Link>
 
             <div className="desktop-nav">
@@ -1242,105 +1293,35 @@ export default function Welcome() {
       </header>
 
       <main>
-        <section id="home" className="hero-section">
-          <div className="hero-map-layer">
-            <img
-              src={HERO_BG}
-              alt=""
-              className="hero-map-svg"
-              onError={(event) => {
-                event.currentTarget.style.display = "none";
-              }}
-            />
+        {/* ================================
+            HERO
+        ================================= */}
+        <section
+          id="home"
+          className="hero-section"
+        >
+          <div
+            className="hero-map-layer"
+            aria-hidden="true"
+          >
+            <video
+              ref={heroVideoRef}
+              className="hero-map-video"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              poster={HERO_BG}
+              tabIndex={-1}
+            >
+              <source
+                src={HERO_VIDEO}
+                type="video/mp4"
+              />
+            </video>
 
             <div className="hero-map-overlay" />
-
-            <svg
-              className="hero-network-svg"
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
-              aria-hidden="true"
-            >
-              <path
-                className="hero-network-shape"
-                d="M30 87 C35 79 45 72 54 68 C58 59 62 51 66 43 C69 39 72 34 78 27 C80 23 81 20 82 18"
-              />
-
-              <path
-                className="hero-network-line"
-                d="M54 68 C60 59 63 51 66 43"
-              />
-
-              <path
-                className="hero-network-line"
-                d="M66 43 C70 38 72 34 72 34"
-              />
-
-              <path
-                className="hero-network-line"
-                d="M72 34 C74 31 77 28 78 27"
-              />
-
-              <path
-                className="hero-network-line"
-                d="M78 27 C80 23 81 20 82 18"
-              />
-
-              <path
-                className="hero-network-line"
-                d="M66 43 C63 47 60 50 59 51"
-              />
-
-              <path
-                className="hero-network-line"
-                d="M66 43 C72 42 79 49 84 61"
-              />
-
-              <path
-                className="hero-network-line"
-                d="M54 68 C58 72 64 77 69 81"
-              />
-
-              <path
-                className="hero-network-line"
-                d="M69 81 C75 76 81 68 84 61"
-              />
-
-              <path
-                className="hero-network-node"
-                d="M30 87"
-              />
-
-              <circle cx="30" cy="87" r="1.2" />
-              <circle cx="54" cy="68" r="1.2" />
-              <circle cx="66" cy="43" r="1.2" />
-              <circle cx="72" cy="34" r="1.2" />
-              <circle cx="78" cy="27" r="1.2" />
-              <circle cx="82" cy="18" r="1.2" />
-              <circle cx="84" cy="61" r="1.2" />
-              <circle cx="69" cy="81" r="1.2" />
-              <circle cx="59" cy="51" r="1.2" />
-            </svg>
-
-            <div className="city-label-layer">
-              {cityData.map((city, index) => (
-                <span
-                  key={city.name}
-                  className={`city-label ${
-                    index === 0 || index === 1
-                      ? "city-large"
-                      : ""
-                  } ${city.className}`}
-                  style={{
-                    left: city.left,
-                    top: city.top,
-                    animationDelay: `${index * -0.5}s`,
-                  }}
-                >
-                  {city.name}
-                </span>
-              ))}
-            </div>
           </div>
 
           <div className="shell hero-content">
@@ -1419,6 +1400,9 @@ export default function Welcome() {
           <div className="hero-bottom-line" />
         </section>
 
+        {/* ================================
+            TRUST
+        ================================= */}
         <section className="trust-strip">
           <div className="shell trust-grid">
             <div className="trust-title">
@@ -1429,7 +1413,6 @@ export default function Welcome() {
               <span className="trust-icon trust-green">
                 <Icon name="shield" size={16} />
               </span>
-
               {t.trust.items[0]}
             </div>
 
@@ -1437,7 +1420,6 @@ export default function Welcome() {
               <span className="trust-icon trust-blue">
                 <Icon name="users" size={16} />
               </span>
-
               {t.trust.items[1]}
             </div>
 
@@ -1445,7 +1427,6 @@ export default function Welcome() {
               <span className="trust-icon trust-gold">
                 <Icon name="check" size={16} />
               </span>
-
               {t.trust.items[2]}
             </div>
 
@@ -1453,12 +1434,14 @@ export default function Welcome() {
               <span className="trust-icon trust-red">
                 <Icon name="clock" size={16} />
               </span>
-
               {t.trust.items[3]}
             </div>
           </div>
         </section>
 
+        {/* ================================
+            SERVICES
+        ================================= */}
         <section
           id="services"
           className="light-section section-space"
@@ -1472,7 +1455,9 @@ export default function Welcome() {
 
                 <h2>{t.services.title}</h2>
 
-                <p>{t.services.description}</p>
+                <p>
+                  {t.services.description}
+                </p>
               </div>
             </div>
 
@@ -1485,7 +1470,9 @@ export default function Welcome() {
                   <div className="service-image">
                     <img
                       src={service.image}
-                      alt={t.services.items[service.key]}
+                      alt={
+                        t.services.items[service.key]
+                      }
                       onError={(event) => {
                         event.currentTarget.style.display =
                           "none";
@@ -1518,6 +1505,9 @@ export default function Welcome() {
           </div>
         </section>
 
+        {/* ================================
+            HOW IT WORKS
+        ================================= */}
         <section
           id="how-it-works"
           className="how-section section-space"
@@ -1565,13 +1555,18 @@ export default function Welcome() {
           </div>
         </section>
 
+        {/* ================================
+            MZANSI
+        ================================= */}
         <section
           id="mzansi"
           className="mzansi-section section-space"
         >
           <div className="mzansi-network">
             <div className="mzansi-grid-lines" />
+
             <div className="mzansi-glow mzansi-glow-one" />
+
             <div className="mzansi-glow mzansi-glow-two" />
           </div>
 
@@ -1589,37 +1584,39 @@ export default function Welcome() {
             </div>
 
             <div className="mzansi-grid">
-              {t.mzansi.features.map((feature, index) => (
-                <article
-                  className="mzansi-card mzansi-feature-card"
-                  key={feature.title}
-                >
-                  <div
-                    className={`mzansi-card-icon ${
-                      index === 0
-                        ? "icon-green"
-                        : index === 1
-                          ? "icon-blue"
-                          : "icon-gold"
-                    }`}
+              {t.mzansi.features.map(
+                (feature, index) => (
+                  <article
+                    className="mzansi-card mzansi-feature-card"
+                    key={feature.title}
                   >
-                    <Icon
-                      name={
+                    <div
+                      className={`mzansi-card-icon ${
                         index === 0
-                          ? "location"
+                          ? "icon-green"
                           : index === 1
-                            ? "globe"
-                            : "shield"
-                      }
-                      size={20}
-                    />
-                  </div>
+                            ? "icon-blue"
+                            : "icon-gold"
+                      }`}
+                    >
+                      <Icon
+                        name={
+                          index === 0
+                            ? "location"
+                            : index === 1
+                              ? "globe"
+                              : "shield"
+                        }
+                        size={20}
+                      />
+                    </div>
 
-                  <h3>{feature.title}</h3>
+                    <h3>{feature.title}</h3>
 
-                  <p>{feature.text}</p>
-                </article>
-              ))}
+                    <p>{feature.text}</p>
+                  </article>
+                )
+              )}
 
               <article className="mzansi-card mzansi-wide-card">
                 <div className="wide-card-copy">
@@ -1627,9 +1624,13 @@ export default function Welcome() {
                     <Icon name="users" size={20} />
                   </div>
 
-                  <h3>{t.mzansi.wideTitle}</h3>
+                  <h3>
+                    {t.mzansi.wideTitle}
+                  </h3>
 
-                  <p>{t.mzansi.wideText}</p>
+                  <p>
+                    {t.mzansi.wideText}
+                  </p>
                 </div>
 
                 <div className="mini-network">
@@ -1652,28 +1653,33 @@ export default function Welcome() {
                 <h3>{t.mzansi.citiesTitle}</h3>
 
                 <div className="city-chip-grid">
-                  {cityData.map((city, index) => (
-                    <span
-                      className={`city-chip ${
-                        index % 4 === 0
-                          ? "green"
-                          : index % 4 === 1
-                            ? "blue"
-                            : index % 4 === 2
-                              ? "gold"
-                              : "red"
-                      }`}
-                      key={city.name}
-                    >
-                      {city.name}
-                    </span>
-                  ))}
+                  {cityData.map(
+                    (city, index) => (
+                      <span
+                        className={`city-chip ${
+                          index % 4 === 0
+                            ? "green"
+                            : index % 4 === 1
+                              ? "blue"
+                              : index % 4 === 2
+                                ? "gold"
+                                : "red"
+                        }`}
+                        key={city.name}
+                      >
+                        {city.name}
+                      </span>
+                    )
+                  )}
                 </div>
               </article>
             </div>
           </div>
         </section>
 
+        {/* ================================
+            PROVIDER
+        ================================= */}
         <section className="provider-section section-space">
           <div className="shell provider-layout">
             <div className="provider-copy">
@@ -1686,18 +1692,23 @@ export default function Welcome() {
               <p>{t.provider.description}</p>
 
               <div className="provider-benefits">
-                {t.provider.benefits.map((benefit) => (
-                  <div
-                    className="benefit-item"
-                    key={benefit}
-                  >
-                    <span className="benefit-check">
-                      <Icon name="check" size={15} />
-                    </span>
+                {t.provider.benefits.map(
+                  (benefit) => (
+                    <div
+                      className="benefit-item"
+                      key={benefit}
+                    >
+                      <span className="benefit-check">
+                        <Icon
+                          name="check"
+                          size={15}
+                        />
+                      </span>
 
-                    {benefit}
-                  </div>
-                ))}
+                      {benefit}
+                    </div>
+                  )
+                )}
               </div>
 
               <Link
@@ -1732,12 +1743,17 @@ export default function Welcome() {
                     <div>
                       <strong>Thabo M.</strong>
 
-                      <span>{t.provider.role}</span>
+                      <span>
+                        {t.provider.role}
+                      </span>
                     </div>
                   </div>
 
                   <div className="provider-profile-location">
-                    <Icon name="location" size={14} />
+                    <Icon
+                      name="location"
+                      size={14}
+                    />
                     {t.provider.location}
                   </div>
 
@@ -1745,17 +1761,26 @@ export default function Welcome() {
 
                   <div className="provider-profile-stats">
                     <div>
-                      <span>{t.provider.rating}</span>
+                      <span>
+                        {t.provider.rating}
+                      </span>
+
                       <strong>4.9</strong>
                     </div>
 
                     <div>
-                      <span>{t.provider.jobs}</span>
+                      <span>
+                        {t.provider.jobs}
+                      </span>
+
                       <strong>126</strong>
                     </div>
 
                     <div>
-                      <span>{t.provider.response}</span>
+                      <span>
+                        {t.provider.response}
+                      </span>
+
                       <strong>15m</strong>
                     </div>
                   </div>
@@ -1766,7 +1791,10 @@ export default function Welcome() {
                       {t.provider.available}
                     </span>
 
-                    <Icon name="check" size={13} />
+                    <Icon
+                      name="check"
+                      size={13}
+                    />
                   </div>
                 </div>
               </div>
@@ -1774,6 +1802,9 @@ export default function Welcome() {
           </div>
         </section>
 
+        {/* ================================
+            ACCESSIBILITY
+        ================================= */}
         <section className="accessibility-section section-space">
           <div className="shell">
             <div className="section-heading centered-heading">
@@ -1781,41 +1812,50 @@ export default function Welcome() {
                 {t.accessibility.eyebrow}
               </div>
 
-              <h2>{t.accessibility.title}</h2>
+              <h2>
+                {t.accessibility.title}
+              </h2>
 
-              <p>{t.accessibility.description}</p>
+              <p>
+                {t.accessibility.description}
+              </p>
             </div>
 
             <div className="accessibility-grid">
-              {t.accessibility.cards.map((card, index) => (
-                <article
-                  className="access-card"
-                  key={card}
-                >
-                  <span className="access-icon">
-                    <Icon
-                      name={
-                        index === 0
-                          ? "voice"
-                          : index === 1
-                            ? "text"
-                            : index === 2
-                              ? "image"
-                              : index === 3
-                                ? "voice"
-                                : "globe"
-                      }
-                      size={20}
-                    />
-                  </span>
+              {t.accessibility.cards.map(
+                (card, index) => (
+                  <article
+                    className="access-card"
+                    key={card}
+                  >
+                    <span className="access-icon">
+                      <Icon
+                        name={
+                          index === 0
+                            ? "voice"
+                            : index === 1
+                              ? "text"
+                              : index === 2
+                                ? "image"
+                                : index === 3
+                                  ? "voice"
+                                  : "globe"
+                        }
+                        size={20}
+                      />
+                    </span>
 
-                  <span>{card}</span>
-                </article>
-              ))}
+                    <span>{card}</span>
+                  </article>
+                )
+              )}
             </div>
           </div>
         </section>
 
+        {/* ================================
+            FINAL CTA
+        ================================= */}
         <section className="final-cta section-space">
           <div className="final-cta-network">
             <span />
@@ -1828,9 +1868,7 @@ export default function Welcome() {
           <div className="shell final-cta-inner">
             <div className="final-eyebrow">
               <span className="final-eyebrow-line" />
-
               {t.final.eyebrow}
-
               <span className="final-eyebrow-line" />
             </div>
 
@@ -1858,6 +1896,9 @@ export default function Welcome() {
         </section>
       </main>
 
+      {/* ================================
+          FOOTER
+      ================================= */}
       <footer className="site-footer">
         <div className="shell footer-grid">
           <div className="footer-brand">

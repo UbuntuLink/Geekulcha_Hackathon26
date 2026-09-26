@@ -116,11 +116,13 @@ a {
 }
 
 img,
-svg {
+svg,
+video {
   max-width: 100%;
 }
 
-img {
+img,
+video {
   display: block;
 }
 
@@ -229,6 +231,9 @@ select:focus-visible {
   border: 1px solid rgba(31, 92, 69, 0.22);
 
   background: rgba(255, 253, 248, 0.3);
+
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .button-outline-light:hover {
@@ -262,7 +267,7 @@ select:focus-visible {
 }
 
 .eyebrow {
-  color: rgba(38, 51, 44, 0.62);
+  color: rgba(38, 51, 44, 0.68);
 }
 
 .eyebrow-line,
@@ -609,6 +614,13 @@ select:focus-visible {
     );
 }
 
+/*
+  Full-screen hero video layer.
+
+  The video sits behind the hero content and fills the
+  entire hero section without affecting document layout.
+*/
+
 .hero-map-layer {
   position: absolute;
 
@@ -617,9 +629,18 @@ select:focus-visible {
   overflow: hidden;
 
   pointer-events: none;
+
+  z-index: 0;
+
+  background:
+    linear-gradient(
+      135deg,
+      #ddd1be,
+      #f5f0e6
+    );
 }
 
-.hero-map-svg {
+.hero-map-video {
   position: absolute;
 
   inset: 0;
@@ -629,10 +650,23 @@ select:focus-visible {
 
   object-fit: cover;
 
-  object-position: center;
+  object-position: center center;
 
-  opacity: 0.5;
+  opacity: 0.92;
+
+  transform: scale(1.02);
+
+  filter:
+    saturate(0.9)
+    contrast(1.02);
+
+  background: #26332c;
 }
+
+/*
+  The overlay keeps the original UbuntuLink visual identity
+  while making the hero copy readable over moving footage.
+*/
 
 .hero-map-overlay {
   position: absolute;
@@ -642,76 +676,47 @@ select:focus-visible {
   background:
     linear-gradient(
       90deg,
-      rgba(245, 240, 230, 0.9) 0%,
-      rgba(245, 240, 230, 0.68) 38%,
-      rgba(245, 240, 230, 0.3) 70%,
-      rgba(245, 240, 230, 0.14) 100%
+      rgba(245, 240, 230, 0.96) 0%,
+      rgba(245, 240, 230, 0.86) 20%,
+      rgba(245, 240, 230, 0.69) 38%,
+      rgba(245, 240, 230, 0.43) 57%,
+      rgba(245, 240, 230, 0.2) 77%,
+      rgba(245, 240, 230, 0.1) 100%
     ),
     linear-gradient(
       180deg,
-      rgba(245, 240, 230, 0.52) 0%,
-      transparent 26%,
-      transparent 82%,
-      rgba(245, 240, 230, 0.55) 100%
+      rgba(245, 240, 230, 0.62) 0%,
+      rgba(245, 240, 230, 0.1) 25%,
+      rgba(245, 240, 230, 0.05) 67%,
+      rgba(245, 240, 230, 0.7) 100%
     );
 }
 
-/* New structured network */
+/*
+  Subtle additional tint over the video.
+  This helps darker footage blend into the palette.
+*/
 
-.hero-network-svg {
+.hero-map-layer::after {
+  content: "";
+
   position: absolute;
 
   inset: 0;
 
-  z-index: 1;
+  pointer-events: none;
 
-  width: 100%;
-  height: 100%;
-
-  opacity: 0.78;
-
-  overflow: visible;
-}
-
-.hero-network-line {
-  fill: none;
-
-  stroke: rgba(31, 92, 69, 0.22);
-
-  stroke-width: 0.45;
-
-  stroke-dasharray: 1.4 1.4;
-
-  vector-effect: non-scaling-stroke;
-
-  animation: networkPulse 7s ease-in-out infinite;
-}
-
-.hero-network-shape {
-  fill: none;
-
-  stroke: rgba(31, 92, 69, 0.13);
-
-  stroke-width: 1.1;
-
-  vector-effect: non-scaling-stroke;
-}
-
-.hero-network-svg circle {
-  fill: var(--ul-green);
-
-  opacity: 0.5;
-}
-
-@keyframes networkPulse {
-  0%,
-  100% {
-    opacity: 0.45;
-  }
-
-  50% {
-    opacity: 0.9;
-  }
+  background:
+    radial-gradient(
+      circle at 75% 45%,
+      rgba(31, 92, 69, 0.08),
+      transparent 32%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(22, 70, 52, 0.04),
+      transparent 55%
+    );
 }
 
 .hero-content {
@@ -746,6 +751,8 @@ select:focus-visible {
   line-height: 0.91;
 
   letter-spacing: -0.065em;
+
+  text-wrap: balance;
 }
 
 .hero-description {
@@ -753,7 +760,7 @@ select:focus-visible {
 
   margin: 27px 0 0;
 
-  color: rgba(38, 51, 44, 0.72);
+  color: rgba(38, 51, 44, 0.76);
 
   font-size: 17px;
 
@@ -779,7 +786,7 @@ select:focus-visible {
 
   padding: 15px;
 
-  background: rgba(255, 253, 248, 0.66);
+  background: rgba(255, 253, 248, 0.7);
 
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
@@ -789,7 +796,7 @@ select:focus-visible {
   border-radius: 22px;
 
   box-shadow:
-    0 22px 55px rgba(84, 70, 49, 0.09);
+    0 22px 55px rgba(84, 70, 49, 0.12);
 
   pointer-events: none;
 }
@@ -850,7 +857,7 @@ select:focus-visible {
 
   color: var(--ul-text);
 
-  background: rgba(255, 255, 255, 0.54);
+  background: rgba(255, 255, 255, 0.58);
 
   border: 1px solid rgba(38, 51, 44, 0.08);
 
@@ -862,7 +869,7 @@ select:focus-visible {
 }
 
 .request-input:hover {
-  background: rgba(255, 255, 255, 0.76);
+  background: rgba(255, 255, 255, 0.78);
 
   border-color: rgba(31, 92, 69, 0.17);
 }
@@ -951,115 +958,6 @@ select:focus-visible {
   font-size: 11px;
 }
 
-/* ================================
-   CITY LABELS
-================================ */
-
-.city-label-layer {
-  position: absolute;
-
-  inset: 0;
-
-  z-index: 2;
-}
-
-.city-label {
-  position: absolute;
-
-  display: inline-flex;
-
-  align-items: center;
-
-  gap: 7px;
-
-  transform: translate(-50%, -50%);
-
-  padding: 7px 10px;
-
-  color: rgba(38, 51, 44, 0.78);
-
-  background: rgba(255, 253, 248, 0.58);
-
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-
-  border: 1px solid rgba(38, 51, 44, 0.1);
-
-  border-radius: 999px;
-
-  font-size: 10px;
-
-  font-weight: 700;
-
-  white-space: nowrap;
-
-  box-shadow:
-    0 8px 25px rgba(73, 61, 43, 0.06);
-
-  animation: cityFloat 6s ease-in-out infinite;
-}
-
-.city-label::before {
-  content: "";
-
-  width: 6px;
-  height: 6px;
-
-  flex: 0 0 6px;
-
-  border-radius: 50%;
-
-  background: currentColor;
-}
-
-.city-large {
-  padding-inline: 13px;
-
-  font-size: 11px;
-}
-
-.city-gold {
-  color: #9a7821;
-}
-
-.city-blue {
-  color: #3c638d;
-}
-
-.city-red {
-  color: #a13d43;
-}
-
-.city-green {
-  color: #377151;
-}
-
-.city-blue-red {
-  color: #59677a;
-}
-
-.city-blue-red::before {
-  background:
-    linear-gradient(
-      180deg,
-      var(--ul-blue) 0 50%,
-      var(--ul-red) 50% 100%
-    );
-}
-
-.city-gold-blue {
-  color: #76652b;
-}
-
-.city-gold-blue::before {
-  background:
-    linear-gradient(
-      180deg,
-      var(--ul-gold) 0 50%,
-      var(--ul-blue) 50% 100%
-    );
-}
-
 .hero-bottom-line {
   position: absolute;
 
@@ -1069,7 +967,9 @@ select:focus-visible {
 
   height: 1px;
 
-  background: rgba(38, 51, 44, 0.09);
+  background: rgba(38, 51, 44, 0.12);
+
+  z-index: 4;
 }
 
 /* ================================
@@ -2410,20 +2310,6 @@ select:focus-visible {
    ANIMATIONS
 ================================ */
 
-@keyframes cityFloat {
-  0%,
-  100% {
-    transform: translate(-50%, -50%);
-  }
-
-  50% {
-    transform: translate(
-      -50%,
-      calc(-50% - 4px)
-    );
-  }
-}
-
 @keyframes textSwap {
   from {
     opacity: 0;
@@ -2457,6 +2343,23 @@ select:focus-visible {
     padding-top: 120px;
 
     padding-bottom: 80px;
+  }
+
+  .hero-map-overlay {
+    background:
+      linear-gradient(
+        90deg,
+        rgba(245, 240, 230, 0.97) 0%,
+        rgba(245, 240, 230, 0.84) 34%,
+        rgba(245, 240, 230, 0.5) 63%,
+        rgba(245, 240, 230, 0.18) 100%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(245, 240, 230, 0.55) 0%,
+        rgba(245, 240, 230, 0.1) 30%,
+        rgba(245, 240, 230, 0.46) 100%
+      );
   }
 
   .trust-grid {
@@ -2553,6 +2456,25 @@ select:focus-visible {
     min-height: 730px;
   }
 
+  .hero-map-video {
+    object-position: center center;
+
+    opacity: 0.9;
+
+    transform: scale(1.03);
+  }
+
+  .hero-map-overlay {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(245, 240, 230, 0.78) 0%,
+        rgba(245, 240, 230, 0.65) 26%,
+        rgba(245, 240, 230, 0.57) 60%,
+        rgba(245, 240, 230, 0.82) 100%
+      );
+  }
+
   .hero-copy h1 {
     font-size: clamp(
       3.5rem,
@@ -2591,16 +2513,6 @@ select:focus-visible {
 
   .request-example {
     max-width: 200px;
-  }
-
-  .city-label {
-    padding: 6px 8px;
-
-    font-size: 8px;
-  }
-
-  .city-large {
-    font-size: 9px;
   }
 
   .trust-grid {
@@ -2735,17 +2647,8 @@ select:focus-visible {
     font-size: 3.3rem;
   }
 
-  .city-label {
-    display: none;
-  }
-
-  .city-label:nth-child(1),
-  .city-label:nth-child(2),
-  .city-label:nth-child(4),
-  .city-label:nth-child(5),
-  .city-label:nth-child(8),
-  .city-label:nth-child(10) {
-    display: inline-flex;
+  .hero-map-video {
+    object-position: center center;
   }
 
   .services-grid {
@@ -2793,9 +2696,19 @@ select:focus-visible {
   }
 }
 
+/* ================================
+   REDUCED MOTION
+================================ */
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+
+  .hero-map-video {
+    animation: none;
+
+    transform: none;
   }
 
   *,

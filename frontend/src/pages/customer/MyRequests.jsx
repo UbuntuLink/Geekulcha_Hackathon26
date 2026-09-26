@@ -6,7 +6,7 @@ import EmptyState from "../../components/common/EmptyState.jsx";
 import Loading from "../../components/common/Loading.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
-import { getMyServiceRequests, deleteServiceRequest } from "../../api/services.js";
+import { getMyQuotes, getMyServiceRequests, deleteServiceRequest } from "../../api/services.js";
 
 function requestRoute(req) {
   const bookingId = req.bookingId ?? req.booking?.id ?? null;
@@ -22,6 +22,8 @@ export default function MyRequests() {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const deleteInFlight = useRef(false);
+  // Pending quotes per request id, so each request says when an offer is waiting.
+  const [pendingQuotes, setPendingQuotes] = useState({});
 
   const handleDelete = async (id) => {
     if (deleteInFlight.current) return;
@@ -45,14 +47,41 @@ export default function MyRequests() {
     getMyServiceRequests()
       .then((result) => { if (active) setRequests(result); })
       .catch(() => { if (active) setError("Couldn't load your requests. Please refresh to try again."); });
+    getMyQuotes()
+      .then((quotes) => {
+        if (!active) return;
+        const counts = {};
+        quotes.filter((quote) => quote.status === "PENDING").forEach((quote) => {
+          counts[quote.requestId] = (counts[quote.requestId] ?? 0) + 1;
+        });
+        setPendingQuotes(counts);
+      })
+      .catch(() => {});
     return () => { active = false; };
   }, []);
+
+  const totalPending = Object.values(pendingQuotes).reduce((sum, count) => sum + count, 0);
 
   return (
     <Screen title="Your requests" showBack={false} withNav navRole={user?.isProvider ? "provider" : "customer"}>
       {requests === null && !error && <Loading label="Loading your requests…" />}
       {error && <ErrorBanner>{error}</ErrorBanner>}
       {requests?.length === 0 && <EmptyState>No requests yet.</EmptyState>}
+      {totalPending > 0 && (
+        <button
+          type="button"
+          onClick={() => navigate("/quotes")}
+          className="mb-4 flex w-full items-center justify-between gap-3 rounded-2xl bg-brand px-4 py-3.5 text-left text-white shadow-sm transition-transform hover:-translate-y-0.5"
+        >
+          <span>
+            <span className="block text-sm font-extrabold">
+              {totalPending} quote{totalPending === 1 ? "" : "s"} waiting for your answer
+            </span>
+            <span className="block text-xs text-white/75">Compare offers and accept the one you want.</span>
+          </span>
+          <span className="shrink-0 text-lg">→</span>
+        </button>
+      )}
       {requests?.map((req) => (
         <Card
           key={req.id}
@@ -60,7 +89,14 @@ export default function MyRequests() {
         >
           <button type="button" className="w-full rounded-lg text-left focus-visible:outline-brand" onClick={() => navigate(requestRoute(req))}>
             <p className="font-medium text-gray-900">{req.description}</p>
-            <p className="text-sm capitalize text-gray-500">{req.status?.toLowerCase().replace("_", " ")}</p>
+            <p className="text-sm capitalize text-gray-500">
+              {req.status?.toLowerCase().replace("_", " ")}
+              {pendingQuotes[req.id] > 0 && (
+                <span className="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold normal-case text-amber-700">
+                  {pendingQuotes[req.id]} new quote{pendingQuotes[req.id] === 1 ? "" : "s"}
+                </span>
+              )}
+            </p>
           </button>
           {["OPEN", "QUOTED"].includes(req.status) && !req.bookingId && !req.booking?.id && (
             <div className="mt-3 border-t border-brand/10 pt-3">

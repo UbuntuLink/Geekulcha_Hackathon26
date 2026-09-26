@@ -122,6 +122,9 @@ export const removeMyProviderService = (serviceId) =>
 // --- Backend: quotes ---
 // No providerProfileId here on purpose — the backend derives the provider from the signed-in
 // caller (see QuoteController). payload: { serviceRequestId, amount, message }
+// Every quote on the signed-in customer's requests, newest first (QuoteSummaryResponse).
+export const getMyQuotes = () => apiClient.get("/api/quotes/mine").then((res) => res.data);
+
 export const createQuote = (payload) =>
   apiClient.post("/api/quotes", payload).then((res) => res.data);
 

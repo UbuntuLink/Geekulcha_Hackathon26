@@ -18,7 +18,7 @@ export default function AuthShell({ title, subtitle, children }) {
 
           <div className="mt-8 hidden items-center gap-4 lg:flex">
             <div className="space-y-2">
-              {["Local providers", "AI-assisted matching", "Simple booking"].map((item) => (
+              {["Local providers", "Smart provider matching", "Simple booking"].map((item) => (
                 <div key={item} className="flex items-center gap-2 text-xs font-semibold text-gray-600">
                   <span className="grid h-5 w-5 place-items-center rounded-full bg-brand-soft text-[10px] text-brand">✓</span>
                   {item}

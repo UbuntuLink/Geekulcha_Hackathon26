@@ -5,7 +5,7 @@ import Card from "../../components/common/Card.jsx";
 import Button from "../../components/common/Button.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import Loading from "../../components/common/Loading.jsx";
-import { setPreferredProvider, estimatePrice, getServiceRequest } from "../../api/services.js";
+import { setPreferredProvider, getServiceRequest } from "../../api/services.js";
 import { formatRange } from "../../lib/format.js";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 
@@ -20,22 +20,27 @@ export default function QuoteRequest() {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const provider = state?.provider;
-  const mainService = provider?.services?.[0];
 
-  const [expectedRange, setExpectedRange] = useState(null);
-  const [loadingPrice, setLoadingPrice] = useState(false);
+  // The service this request is for, so the price shown is the provider's own listed range for
+  // that job — a straight read of what they entered on their profile. (It used to take the
+  // provider's first service, which for someone offering Electrical and Plumbing could show the
+  // wrong trade's price, and to ask the AI pricing service instead of using the real figure.)
+  const [requestServiceId, setRequestServiceId] = useState(null);
+  const [loadingRequest, setLoadingRequest] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!mainService) return;
-    setLoadingPrice(true);
+    let active = true;
     getServiceRequest(id)
-      .then((req) => estimatePrice(mainService.serviceName.toLowerCase(), req.description))
-      .then((price) => setExpectedRange(price))
-      .catch(() => setExpectedRange(null))
-      .finally(() => setLoadingPrice(false));
-  }, [id, mainService]);
+      .then((req) => { if (active) setRequestServiceId(req.service?.id ?? null); })
+      .catch(() => {})
+      .finally(() => { if (active) setLoadingRequest(false); });
+    return () => { active = false; };
+  }, [id]);
+
+  const services = provider?.services ?? [];
+  const mainService = services.find((service) => service.serviceId === requestServiceId) ?? services[0];
 
   if (!provider) {
     return (
@@ -68,15 +73,19 @@ export default function QuoteRequest() {
         <p className="font-semibold text-gray-900">{mainService?.serviceName ?? t("common.service")}</p>
       </Card>
 
-      {loadingPrice && (
+      {loadingRequest ? (
         <div className="mt-4">
-          <Loading label=" Asking AI for a fair price estimate..." />
+          <Loading />
         </div>
-      )}
-      {expectedRange?.estimated_min_zar != null && (
-        <p className="mt-4 font-medium text-brand">
-          {t("customer.expectedPrice")}: {formatRange(expectedRange.estimated_min_zar, expectedRange.estimated_max_zar)}
-        </p>
+      ) : (
+        mainService && (
+          <p className="mt-4 font-medium text-brand">
+            {t("customer.expectedPrice")}: {formatRange(mainService.minPrice, mainService.maxPrice)}
+            <span className="block text-xs font-normal text-gray-500">
+              {provider.providerName.split(" ")[0]}'s listed price for {mainService.serviceName.toLowerCase()}. Their quote may differ once they see the job.
+            </span>
+          </p>
+        )
       )}
 
       {error && <div className="mt-4"><ErrorBanner>{error}</ErrorBanner></div>}

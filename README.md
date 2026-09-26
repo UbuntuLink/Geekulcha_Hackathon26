@@ -10,7 +10,7 @@ category rather than geolocation.
 
 | | |
 |---|---|
-| Frontend | https://geekulcha-hackathon26.vercel.app |
+| Frontend | https://ubuntulink.vercel.app |
 | Backend API | https://ubuntulink-backend-yhhu.onrender.com |
 | ML service | Render, see `ML_SERVICE_URL` |
 

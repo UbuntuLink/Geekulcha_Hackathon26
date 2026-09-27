@@ -1,5 +1,6 @@
 package com.geekkulcha.backend.config;
 
+import com.geekkulcha.backend.service.WalletService;
 import com.geekkulcha.backend.entity.*;
 import com.geekkulcha.backend.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class DevDataSeeder implements CommandLineRunner {
     private final BookingRepository bookingRepository;
     private final ReviewRepository reviewRepository;
     private final PasswordEncoder passwordEncoder;
+    private final WalletService walletService;
 
     // Known credentials so you can log in immediately without registering — see INSTRUCTIONS.md.
     private static final String DEMO_PASSWORD = "Demo1234!";
@@ -209,6 +211,10 @@ public class DevDataSeeder implements CommandLineRunner {
         // so its fresh providers get reviews and availability backfilled in the same startup
         // (backfillReviews only touches providers with no reviews yet).
         seedDemoLoginAccounts();
+        // The demo customer starts with R2 000 so paying for a job works straight away in a
+        // presentation. A real ledger entry, and a no-op once the wallet has any history.
+        userRepository.findByEmail("customer@ubuntulink.demo").ifPresent(customer ->
+                walletService.grantStartingBalance(customer.getId(), 200_000, "Welcome credit"));
         backfillIdValidation();
         seedProvidersAcrossCategories();
         seedShowcaseData();

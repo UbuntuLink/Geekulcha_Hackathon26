@@ -9,7 +9,7 @@ import java.time.Instant;
 
 /**
  * MVP-only mock payment record — no real processor is integrated.
- * See {@link com.geekkulcha.backend.payment.MockPaymentService} and PROJECT.md §9c / §10.
+ * Written by WalletService when a customer pays for a completed job from their balance.
  */
 @Entity
 @Table(name = "payment")
@@ -32,4 +32,18 @@ public class Payment {
 
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
+
+    // Wallet payments (see WalletService). Nullable: older rows predate them. Amounts in cents.
+    @Column(length = 32, unique = true)
+    private String reference;
+
+    private Long platformFeeCents;
+
+    private Long providerAmountCents;
+
+    /** BALANCE (customer confirmed) or AUTO_PAY. */
+    @Column(length = 12)
+    private String method;
+
+    private Instant paidAt;
 }

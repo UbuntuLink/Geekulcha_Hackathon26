@@ -128,6 +128,15 @@ public class MessagingService {
         conversationRepository.save(conversation);
     }
 
+    /** The same as notifyProvider, the other way round: unread for the customer only. */
+    @Transactional
+    public void notifyCustomer(User customer, ProviderProfile provider, String body) {
+        Conversation conversation = getOrCreate(customer, provider);
+        save(conversation, null, Message.Kind.SYSTEM, body.length() > MAX_LENGTH ? body.substring(0, MAX_LENGTH) : body);
+        conversation.setProviderLastReadAt(Instant.now());
+        conversationRepository.save(conversation);
+    }
+
     // --- helpers -------------------------------------------------------------------------------
 
     private Conversation getOrCreate(User customer, ProviderProfile provider) {

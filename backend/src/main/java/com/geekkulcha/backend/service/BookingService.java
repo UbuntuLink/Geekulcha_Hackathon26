@@ -102,6 +102,7 @@ public class BookingService {
             BookingStatus.ACCEPTED,
             BookingStatus.ON_THE_WAY,
             BookingStatus.IN_PROGRESS,
+            BookingStatus.AWAITING_PAYMENT,
             BookingStatus.COMPLETED);
 
     /**
@@ -134,7 +135,16 @@ public class BookingService {
             throw new IllegalStateException("The job is already at that step.");
         }
 
+        if (target == BookingStatus.COMPLETED) {
+            // Only a payment completes a job (WalletService.pay), so the customer always confirms.
+            throw new IllegalStateException("Mark the work as done — the job completes when the customer pays.");
+        }
+
         if (target == BookingStatus.CANCELLED) {
+            if (current == BookingStatus.AWAITING_PAYMENT) {
+                throw new IllegalStateException(
+                        "The work is already done, so the job can't be cancelled. Use Report an issue if something is wrong.");
+            }
             if (!isProvider && WORK_STEPS.indexOf(current) >= WORK_STEPS.indexOf(BookingStatus.ON_THE_WAY)) {
                 throw new IllegalStateException(
                         "The provider is already on the way, so the job can't be cancelled from here. Contact them directly.");
@@ -164,6 +174,19 @@ public class BookingService {
         recordEvent(saved, target,
                 isProvider ? BookingStatusEvent.Actor.PROVIDER : BookingStatusEvent.Actor.CUSTOMER, note);
         return saved;
+    }
+
+    /**
+     * Completes a job that has just been paid (called by WalletService, in its transaction, with the
+     * booking already locked). Recorded as the customer's step, since paying is their action.
+     */
+    public void completeByPayment(Booking booking, String note) {
+        booking.setStatus(BookingStatus.COMPLETED);
+        bookingRepository.save(booking);
+        ServiceRequest request = booking.getQuote().getServiceRequest();
+        request.setStatus(RequestStatus.COMPLETED);
+        serviceRequestRepository.save(request);
+        recordEvent(booking, BookingStatus.COMPLETED, BookingStatusEvent.Actor.CUSTOMER, note);
     }
 
     /**

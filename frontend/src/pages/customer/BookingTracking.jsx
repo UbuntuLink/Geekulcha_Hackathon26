@@ -7,7 +7,8 @@ import Loading from "../../components/common/Loading.jsx";
 import ErrorBanner from "../../components/common/ErrorBanner.jsx";
 import { TextArea } from "../../components/common/Field.jsx";
 import JobSupportActions from "../../components/common/JobSupportActions.jsx";
-import { getBooking, getBookingTimeline, mockCharge, updateBookingStatus } from "../../api/services.js";
+import { getBooking, getBookingTimeline, updateBookingStatus } from "../../api/services.js";
+import JobPaymentPanel from "../../components/common/JobPaymentPanel.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { formatZAR } from "../../lib/format.js";
 import {
@@ -15,6 +16,7 @@ import {
   WORK_STEPS,
   customerCanCancel,
   isFinished,
+  laterProviderSteps,
   nextStep,
 } from "../../lib/bookingSteps.js";
 import VoiceInputButton from "../../components/common/VoiceInputButton.jsx";
@@ -94,7 +96,7 @@ export default function BookingTracking() {
   const cancelled = status === "CANCELLED";
   const currentIndex = WORK_STEPS.indexOf(status);
   const next = nextStep(status);
-  const canCancel = !isFinished(status) && (isProvider || customerCanCancel(status));
+  const canCancel = !isFinished(status) && status !== "AWAITING_PAYMENT" && (isProvider || customerCanCancel(status));
   const hasReview = Boolean(booking.review);
 
   // Latest time and note recorded for each step, from the timeline.
@@ -107,10 +109,6 @@ export default function BookingTracking() {
     setError("");
     try {
       await updateBookingStatus(booking.id, target, note);
-      if (target === "COMPLETED") {
-        // Payment is mocked in this build; completing the job is what triggers the charge.
-        await mockCharge(booking.id, quote.amount).catch((err) => console.error(err));
-      }
       setNote("");
       setConfirmCancel(false);
       await load();
@@ -243,9 +241,9 @@ export default function BookingTracking() {
                 {busy ? "Updating…" : t(`action.${next}`)}
               </button>
               {/* Skipping ahead, e.g. a job next door needs no "on the way". */}
-              {WORK_STEPS.slice(WORK_STEPS.indexOf(next) + 1).length > 0 && (
+              {laterProviderSteps(next).length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {WORK_STEPS.slice(WORK_STEPS.indexOf(next) + 1).map((step) => (
+                  {laterProviderSteps(next).map((step) => (
                     <button
                       key={step}
                       type="button"
@@ -261,7 +259,9 @@ export default function BookingTracking() {
             </Card>
           )}
 
-          {!isProvider && !isFinished(status) && (
+          <JobPaymentPanel booking={booking} isProvider={isProvider} onPaid={load} />
+
+          {!isProvider && !isFinished(status) && status !== "AWAITING_PAYMENT" && (
             <Card className="lg:p-6">
               <p className="text-sm text-gray-600">
                 {status === "REQUEST_SENT"

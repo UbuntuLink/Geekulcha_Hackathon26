@@ -93,11 +93,12 @@ public class ReviewService {
         ProviderProfile profile = providerProfileRepository.findByIdForUpdate(providerProfileId)
                 .orElseThrow(() -> new ResourceNotFoundException("Provider " + providerProfileId + " not found"));
 
-        List<Review> reviews = reviewRepository.findByBooking_Quote_ProviderProfile_Id(providerProfileId);
-        double average = reviews.stream().mapToInt(Review::getRating).average().orElse(0);
+        // Ratings only: loading whole reviews also loaded each one's booking, one query per review.
+        List<Integer> ratings = reviewRepository.findRatingsByProviderProfileId(providerProfileId);
+        double average = ratings.stream().mapToInt(Integer::intValue).average().orElse(0);
 
         profile.setRating(Math.round(average * 10) / 10.0);
-        profile.setReviewCount(reviews.size());
+        profile.setReviewCount(ratings.size());
         providerProfileRepository.save(profile);
     }
 

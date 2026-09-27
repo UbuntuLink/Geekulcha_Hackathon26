@@ -84,8 +84,8 @@ class ReviewServiceTest {
     @Test
     void reviewUpdatesProviderRatingFromAllTheirReviews() {
         // Two earlier reviews (5 and 4) plus the new 2-star one: (5 + 4 + 2) / 3 = 3.67 -> 3.7
-        when(reviewRepository.findByBooking_Quote_ProviderProfile_Id(PROVIDER_PROFILE_ID))
-                .thenReturn(List.of(review(5), review(4), review(2)));
+        when(reviewRepository.findRatingsByProviderProfileId(PROVIDER_PROFILE_ID))
+                .thenReturn(List.of(5, 4, 2));
 
         Review saved = reviewService.create(BOOKING_ID, new ReviewCreateRequest(2, "  Arrived late.  ", null), CUSTOMER_ID);
 
@@ -98,8 +98,8 @@ class ReviewServiceTest {
 
     @Test
     void blankCommentIsStoredAsNoComment() {
-        when(reviewRepository.findByBooking_Quote_ProviderProfile_Id(PROVIDER_PROFILE_ID))
-                .thenReturn(List.of(review(5)));
+        when(reviewRepository.findRatingsByProviderProfileId(PROVIDER_PROFILE_ID))
+                .thenReturn(List.of(5));
 
         Review saved = reviewService.create(BOOKING_ID, new ReviewCreateRequest(5, "   ", null), CUSTOMER_ID);
 
@@ -134,7 +134,7 @@ class ReviewServiceTest {
 
     @Test
     void theProviderIsToldTheyWereRated() {
-        when(reviewRepository.findByBooking_Quote_ProviderProfile_Id(PROVIDER_PROFILE_ID)).thenReturn(List.of(review(4)));
+        when(reviewRepository.findRatingsByProviderProfileId(PROVIDER_PROFILE_ID)).thenReturn(List.of(4));
 
         reviewService.create(BOOKING_ID, new ReviewCreateRequest(4, "Tidy work", null), CUSTOMER_ID);
 
@@ -146,8 +146,8 @@ class ReviewServiceTest {
 
     @Test
     void photosAreStoredInOrderWithTheirRealType() {
-        when(reviewRepository.findByBooking_Quote_ProviderProfile_Id(PROVIDER_PROFILE_ID))
-                .thenReturn(List.of(review(5)));
+        when(reviewRepository.findRatingsByProviderProfileId(PROVIDER_PROFILE_ID))
+                .thenReturn(List.of(5));
 
         reviewService.create(BOOKING_ID,
                 new ReviewCreateRequest(5, "Neat job", List.of(dataUrl("image/jpeg", JPEG), dataUrl("image/png", PNG))),

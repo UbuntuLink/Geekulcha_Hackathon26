@@ -205,6 +205,12 @@ public class DevDataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        // Never on Render (it sets RENDER on every service): the deployed app must not rewrite
+        // the shared data, even if SEED_DATA is switched on there by mistake.
+        if (System.getenv("RENDER") != null) {
+            System.out.println("DevDataSeeder: skipped on Render");
+            return;
+        }
         if (serviceRepository.count() == 0) {
             seedCatalogAndDemoProviders();
         }

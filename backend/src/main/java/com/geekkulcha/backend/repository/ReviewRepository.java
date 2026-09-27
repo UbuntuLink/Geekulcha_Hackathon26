@@ -22,6 +22,10 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
             + "join fetch sr.user left join fetch sr.service where q.providerProfile.id = :providerProfileId")
     List<Review> findWithDetailsByProviderProfileId(@Param("providerProfileId") long providerProfileId);
 
+    /** Just the star ratings of a provider's reviews — all the rating recalculation needs. */
+    @Query("select r.rating from Review r where r.booking.quote.providerProfile.id = :providerProfileId")
+    List<Integer> findRatingsByProviderProfileId(@Param("providerProfileId") long providerProfileId);
+
     /** Ids of every provider that has at least one review, in one query (startup seeding). */
     @Query("select distinct r.booking.quote.providerProfile.id from Review r")
     List<Long> findReviewedProviderProfileIds();

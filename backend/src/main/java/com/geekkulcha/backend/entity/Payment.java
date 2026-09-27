@@ -41,7 +41,7 @@ public class Payment {
 
     private Long providerAmountCents;
 
-    /** BALANCE (customer confirmed) or AUTO_PAY. */
+    /** BALANCE, AUTO_PAY, CARD (balance was empty) or SPLIT (balance, rest on card). */
     @Column(length = 12)
     private String method;
 

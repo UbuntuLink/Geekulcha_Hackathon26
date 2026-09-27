@@ -1,208 +1,206 @@
-# Implementation plan: simulated payments
+# Implementation plan: in-app balances and payment on completion
 
-**Goal:** a complete, realistic payment experience in the app — checkout, secure-until-done, payout to the
-provider, refunds, receipts — driven by a **simulated payment gateway** (no real money moves). The gateway sits
-behind an interface, so a real provider (PayFast, Yoco, Paystack, Peach) can replace it later without changing
-the rest of the app.
+**Goal:** customers pay **after** the provider says the job is done, from an **in-app balance**. The amount moves
+from the customer's balance to the provider's balance, and both can see their balance and history in the app.
+It's all numbers in our database — no real money moves — but it behaves like a real wallet.
 
 **Status:** plan only. Internal document for the team.
 
 ---
 
-## 1. Where we are today
-
-| | Today | Problem |
-|---|---|---|
-| Who pays | Nobody sees a payment step. The **provider's** app records a payment when they mark the job complete. | The customer — the person paying — never confirms anything. |
-| Amount | Sent by the browser (`?amount=`). | Anyone can send any amount. |
-| Access | `POST /api/bookings/{id}/payment/mock-charge` works for **any logged-in user, on any booking**. | Security hole. |
-| States | `MOCK_PENDING`, `MOCK_PAID`, `MOCK_FAILED`. | No hold, release, refund or fee. |
-| Receipts, earnings | None. | Nothing to show customers or providers. |
-
-Files: `backend/.../payment/MockPaymentService.java`, `controller/PaymentController.java`,
-`entity/Payment.java`, `entity/PaymentStatus.java`; called from `BookingTracking.jsx` and `ProviderBookings.jsx`.
-
----
-
-## 2. The experience we're building
-
-The standard marketplace model: **the customer pays when booking, we hold the money, and release it to the
-provider when the job is done.** It protects both sides and gives us a natural place for the platform fee.
+## 1. How it works for people
 
 ```
-Customer accepts a quote
-        │
-        ▼
-  CHECKOUT  ── card / Instant EFT / QR ──►  payment SECURED (held)      ← booking is created only now
-        │                                          │
-        │                          provider marks job completed
-        │                                          ▼
-        │                                  RELEASED to provider (minus platform fee)
-        │
-  job cancelled before the provider sets off ──►  REFUNDED to the customer
+Provider marks the work done ──►  "Waiting for your payment" (customer notified)
+                                        │
+            ┌───────────────────────────┴────────────────────────────┐
+            ▼                                                         ▼
+ Customer taps "Confirm and pay R650"                    Auto-pay is on and the balance
+ (from their balance)                                    covers it → paid automatically
+            │                                                         │
+            └──────────────────────────┬──────────────────────────────┘
+                                       ▼
+          Customer balance − R650   →   Provider balance + R585   (+ R65 platform fee)
+                                       │
+                        Job COMPLETED · receipt · customer can now rate
 ```
 
 ### Customer
-1. **Accept a quote → Checkout screen:** job, provider, amount, fee breakdown, and a choice of **Card**,
-   **Instant EFT** or **Scan to pay (QR)**.
-2. **Card form:** number, expiry, CVC, name — validated like a real form (card-number check digit, expiry in the
-   future, 3–4 digit CVC), card brand detected as you type.
-3. **"Pay R650"** → a short processing state → **"Payment secured"** → booking confirmation.
-4. **Declined card** → clear message, try again.
-5. **Receipt** with a reference number (e.g. `UL-PAY-8F3K2Q`), viewable and printable from the tracker.
-6. **Work tracker** shows the payment state: *Secured — released to the provider when the job is done*, then
-   *Paid to provider*, or *Refunded*.
+- **Balance** shown on Profile and in the header of the work tracker: e.g. **R1 350.00**.
+- **Add funds** — pick R200 / R500 / R1 000 or type an amount, "pay" with a card form → balance goes up
+  instantly.
+- When a provider marks the work done, the tracker shows **"Confirm and pay R650"**:
+  - enough balance → one tap, done;
+  - not enough → "You need R150 more" with **Add funds and pay** in one step.
+- **Auto-pay** (optional, off by default): *"Pay automatically from my balance when a provider completes a job."*
+  If the balance is short, it falls back to asking.
+- Not happy with the work? **Report an issue** instead of paying — the job stays open.
+- **History**: every top-up and payment, with date, job and reference number.
 
 ### Provider
-1. **Bookings** show each job's payment: *Secured*, *Paid out*, or *Refunded*.
-2. **Earnings card** on the dashboard: *Pending* (secured, job not done), *Paid out this month*, and the fee
-   deducted.
-3. Completing a job releases the payment automatically — no separate "charge" step.
+- **Balance** on the dashboard: **Available R4 210.00**, plus *Awaiting payment R650* (jobs marked done, not yet
+  paid).
+- Each payment appears **as soon as the customer pays** — the dashboard and Bookings update on their own
+  (they already refresh every 20 seconds).
+- **History**: each earning shows the job, the amount paid, the platform fee and what they received.
+- **Withdraw** to a bank account → balance goes down, entry "Withdrawn to bank" appears.
 
-### Test cards (shown in a small help link on the checkout)
+### Both sides see the same payment
+The tracker shows the same line to both: *"Paid R650 on 27 Sep, 14:05 · ref UL-PAY-8F3K2Q"*, and the job moves to
+**Completed** for both.
 
-| Card number | Result |
-|---|---|
-| `4242 4242 4242 4242` | Success |
-| `4000 0000 0000 0002` | Declined |
-| `4000 0000 0000 9995` | Declined — insufficient funds |
-| Any other valid number | Success |
+---
 
-Instant EFT and QR always succeed after a short "Waiting for confirmation…" screen.
+## 2. Changes to the job steps
+
+A new step between *Work in progress* and *Completed*:
+
+| Step | Who moves it | Now |
+|---|---|---|
+| Booking requested → Job accepted → On the way → Work in progress | Provider | unchanged |
+| **Work done — awaiting payment** (`AWAITING_PAYMENT`) | Provider ("Mark work as done") | **new** |
+| Completed | **Only a payment** — the customer paying, or auto-pay | was: provider |
+
+- The provider can no longer mark a job *Completed* directly; they mark it *done*, and payment completes it.
+- Cancelling isn't possible once work is marked done (a dispute goes through Report an issue).
+- Reviews stay as they are: allowed once the job is *Completed*, i.e. paid.
 
 ---
 
 ## 3. Design
 
-### 3.1 Payment states
+### 3.1 Balances are built from a ledger
 
-| State | Meaning |
-|---|---|
-| `PENDING` | Checkout started, not paid. |
-| `SECURED` | Customer paid; money held by the platform. |
-| `RELEASED` | Job completed; paid out to the provider, minus the fee. |
-| `REFUNDED` | Job cancelled; returned to the customer. |
-| `FAILED` | Declined. |
+Every change to a balance is a **ledger entry**; a balance is the sum of that user's entries. Nothing is ever
+edited or deleted, so the history always explains the balance.
 
-**Migration:** existing `MOCK_PAID` rows become `RELEASED`, `MOCK_PENDING` → `PENDING`, `MOCK_FAILED` →
-`FAILED`, via a one-off update on startup. Check first whether the `payment` table has a database constraint on
-status values (the `booking` table didn't).
+| Entry type | Customer | Provider | Platform |
+|---|---|---|---|
+| `TOP_UP` | + amount | | |
+| `JOB_PAYMENT` | − job amount | | |
+| `JOB_EARNING` | | + amount after fee | |
+| `PLATFORM_FEE` | | | + fee |
+| `WITHDRAWAL` | | − amount | |
+| `REFUND` (if a paid job is reversed later) | + amount | − amount | − fee |
 
-### 3.2 Payment record — new fields
+Each payment writes its entries **together, in one database transaction**, so money can't appear or vanish —
+the customer's debit always equals the provider's earning plus the fee.
 
-`reference` (unique, e.g. `UL-PAY-8F3K2Q`), `method` (CARD / EFT / QR), `cardBrand` and `cardLast4` (card only),
-`platformFee`, `providerPayout`, `securedAt`, `releasedAt`, `refundedAt`, `failureReason`.
+**Tables:**
+- `wallet` — one per user: `user_id` (unique), `balance` (cached total, updated in the same transaction),
+  `auto_pay` (yes/no).
+- `wallet_entry` — `wallet_id`, `type`, `amount` (+/−), `booking_id` (if any), `reference`, `created_at`.
+- `payment` (existing table, reused) — one per booking: `amount`, `platform_fee`, `provider_amount`,
+  `reference`, `paid_at`, `method` (BALANCE / AUTO_PAY).
 
-**Never stored:** full card number, expiry or CVC.
+Amounts are stored in **cents** (whole numbers) to avoid rounding errors.
 
-### 3.3 Gateway interface (the swap point)
-
-```java
-public interface PaymentGateway {
-    GatewayResult charge(String paymentToken, long amountCents, String reference);
-    GatewayResult refund(String gatewayChargeId, long amountCents);
-    GatewayResult payout(long providerProfileId, long amountCents, String reference);
-}
-```
-
-- `SimulatedPaymentGateway` implements it now (test-card rules above, ~1 s delay).
-- A real `PayFastGateway` / `YocoGateway` later implements the same interface; chosen by a setting
-  (`payments.gateway=simulated|payfast`).
-
-### 3.4 Card details never reach our server
-
-The browser turns the card into a **token** before sending, just as real gateways' card widgets do:
-`tok_sim_<brand>_<last4>_<outcome>` (the simulated gateway reads the outcome from the test-card rules). Our API
-only ever receives the token, brand and last four digits. This keeps us out of card-security (PCI) scope — the
-same design we'd use in production.
-
-### 3.5 Rules enforced on the server
+### 3.2 Rules the server enforces
 
 - **Amount always comes from the accepted quote**, never from the browser.
-- **Only the booking's customer** can pay; only the system releases or refunds (on status change).
-- **One payment per booking** (unique), and an **idempotency key** per checkout so a double tap can't charge twice.
-- **Booking is created only after payment is secured** — accept-quote and pay become one step, in one
-  transaction with the existing row lock (no double-booking).
-- **Release on COMPLETED, refund on CANCELLED** — hooked into `BookingService.updateStatus`, which already
-  controls those transitions.
-- **Platform fee:** a single setting, e.g. `payments.platform-fee-percent=10`; stored on each payment so later
-  changes don't rewrite history.
+- **Only the booking's customer** can pay it, and only when it's *awaiting payment*.
+- **Balance can't go below zero.** Paying locks both wallets (the same row-locking approach already used for
+  bookings and reviews), checks the balance, then writes the entries.
+- **Pay once:** a booking has at most one payment; a second attempt (double tap, auto-pay racing a manual
+  payment) is refused.
+- **Withdrawals** can't exceed the available balance.
+- **Top-ups** go through a card form that is turned into a token in the browser (last four digits and brand
+  only are sent); test card `4000 0000 0000 0002` is declined, any other valid card number succeeds. Card numbers
+  are never stored.
+- **Platform fee:** one setting, e.g. 10%; stored on each payment so later changes don't rewrite history.
 
-### 3.6 API
+### 3.3 Auto-pay
+
+When a provider marks work done:
+- if the customer has **auto-pay on** and **enough balance** → pay immediately, the customer gets a message
+  *"R650 paid to Thabo for your plumbing job"*;
+- otherwise → the job waits for the customer, who gets a message *"Thabo marked the job done — confirm and pay
+  R650"*.
+
+Messages go through the existing chat system (as rating notices already do), so they show in **Messages** with
+an unread badge.
+
+### 3.4 API
 
 | Method | Path | Who | What |
 |---|---|---|---|
-| `POST` | `/api/quotes/{id}/checkout` | Customer who owns the request | Body: `{ method, paymentToken, cardBrand, cardLast4, idempotencyKey, scheduledDate?, scheduledTime? }` → charges, and on success creates the booking. Returns booking + payment. |
-| `GET` | `/api/bookings/{id}/payment` | Booking's customer or provider | Payment state and receipt details. |
-| `GET` | `/api/provider-profiles/me/earnings` | Provider | Pending, paid out (this month / all time), fees. |
-| — | `POST /payment/mock-charge` | — | **Removed.** |
+| `GET` | `/api/wallet` | Signed-in user | Balance, auto-pay setting, awaiting-payment total (providers). |
+| `GET` | `/api/wallet/entries` | Signed-in user | History, newest first. |
+| `POST` | `/api/wallet/top-up` | Signed-in user | `{ amount, cardToken, cardLast4, cardBrand }` |
+| `PATCH` | `/api/wallet/auto-pay` | Customer | `{ enabled }` |
+| `POST` | `/api/wallet/withdraw` | Provider | `{ amount }` |
+| `POST` | `/api/bookings/{id}/pay` | Booking's customer | Pays from balance; moves the job to *Completed*. |
+| `PATCH` | `/api/bookings/{id}/status` | Provider | Now allows `AWAITING_PAYMENT`, no longer `COMPLETED`. |
+| — | `POST /payment/mock-charge` | — | **Removed** (today it lets anyone charge any booking any amount). |
 
-The old `POST /api/bookings/accept-quote/{quoteId}` stays working for one release (without payment) and then is
-removed.
+### 3.5 Starting balances
+
+- New customers start at **R0** and top up.
+- Demo accounts: the data seeder gives `customer@ubuntulink.demo` a **R2 000** starting top-up (a real ledger
+  entry), so the flow works immediately in a presentation.
 
 ---
 
 ## 4. Work breakdown
 
-### Phase 1 — Backend (about 1 day)
+### Phase 1 — Backend (about 1½ days)
 
-1. `PaymentStatus`: new states + startup migration of old values.
-2. `Payment`: new fields; unique `reference`, unique `booking`.
-3. `PaymentGateway` interface + `SimulatedPaymentGateway` (test-card rules, token parsing).
-4. `PaymentService`: `checkout` (charge → create booking, one transaction), `release`, `refund`, `earnings`.
-5. `BookingService.updateStatus`: call `release` on COMPLETED, `refund` on CANCELLED.
-6. `PaymentController`: the endpoints in 3.6; delete `mock-charge` and `MockPaymentService`.
-7. **Tests:** success, decline, insufficient funds, wrong customer (403), double tap (same idempotency key → one
-   charge), amount can't be overridden, release on completion, refund on cancellation, fee maths.
+1. `Wallet`, `WalletEntry` entities and repositories; `Payment` gains fee/reference fields.
+2. `BookingStatus`: add `AWAITING_PAYMENT`; update `BookingService.updateStatus` rules (provider can reach
+   *awaiting payment*, not *completed*; no cancelling after work is done); keep the request status in step.
+3. `WalletService`: `topUp`, `pay(booking)` (locks, checks, writes entries, completes the job, notifies),
+   `withdraw`, `autoPayIfEnabled(booking)`, `balance`, `history`.
+4. `WalletController` + `POST /api/bookings/{id}/pay`; delete `mock-charge` and `MockPaymentService`.
+5. Data seeder: R2 000 for the demo customer.
+6. **Tests:** pay with enough / too little balance; wrong customer (403); pay twice (refused); provider can't
+   mark completed directly; auto-pay on/off/short balance; withdrawal limits; ledger always balances
+   (customer debit = provider credit + fee); top-up decline card.
 
 ### Phase 2 — Customer screens (about 1 day)
 
-1. `pages/customer/Checkout.jsx` — summary, method tabs, card form with live validation and brand detection,
-   processing and result states, test-card help link.
-2. `lib/cardTokenizer.js` — check-digit validation, brand detection, token creation; the card number never
-   leaves this file.
-3. Quotes page "Accept" → goes to Checkout instead of booking directly.
-4. `BookingTracking.jsx` — payment status line and a **Receipt** panel (printable).
-5. Remove the `mockCharge` calls from `BookingTracking.jsx` and `ProviderBookings.jsx`.
+1. **Balance card** on Profile: balance, **Add funds**, auto-pay switch, **History**.
+2. **Add funds** screen: amount chips, card form (validation, brand detection, tokenised in the browser),
+   success/decline states.
+3. **Work tracker**: new step *Work done — awaiting payment*; **Confirm and pay R650** (or *Add funds and pay*
+   when short); after paying, the shared *Paid R650 … ref …* line; then **Rate** as today.
+4. **My requests**: *Awaiting your payment* status with a symbol.
 
 ### Phase 3 — Provider screens (half a day)
 
-1. `ProviderBookings.jsx` — payment badge per job (*Secured* / *Paid out* / *Refunded*, with symbols for
-   colour-blind users).
-2. `ProviderDashboard.jsx` — **Earnings** card.
+1. **Balance card** on the dashboard: available, awaiting payment, **Withdraw**, **History** (each earning with
+   amount, fee and net).
+2. **Tracker and Bookings**: the provider's final action becomes **Mark work as done**; the job shows
+   *Awaiting payment* until the customer pays, then *Paid*.
 
 ### Phase 4 — Polish (half a day)
 
-- Translations for all new text (`LanguageContext.jsx`), screen-reader announcements for processing/result,
-  large tap targets on the card form.
-- Update `FEATURES_AND_SECURITY.md` and the demo script.
+Translations for all new text, screen-reader announcements when a payment arrives or completes, colour-blind
+symbols on payment states, and update `FEATURES_AND_SECURITY.md` and the demo script.
 
-**Total: about 3 days** for one developer.
-
----
-
-## 5. How to test it end to end
-
-1. As the customer, request a job; as the provider, quote R650.
-2. Customer: **Accept → Checkout**, pay with `4000 0000 0000 0002` → declined, no booking created.
-3. Pay with `4242 4242 4242 4242` → *Payment secured*; booking created; tracker shows *Secured*.
-4. Provider dashboard: Earnings shows R650 pending (R585 after a 10% fee).
-5. Provider moves the job to **Completed** → payment *Released*; earnings move to *Paid out*; receipt shows the
-   breakdown.
-6. New booking, customer cancels before the provider sets off → *Refunded*.
-7. Double-click **Pay** → only one payment exists.
-8. Try paying for someone else's quote → refused.
+**Total: about 3½ days** for one developer.
 
 ---
 
-## 6. Going live later
+## 5. How to test it end to end (two browsers side by side)
 
-Swap `SimulatedPaymentGateway` for a real one (PayFast, Yoco, Paystack or Peach Payments all serve South
-Africa):
-- Replace the browser tokenizer with the provider's hosted card fields or checkout page.
-- Add the provider's **webhook** endpoint to confirm payments asynchronously.
-- Payouts to providers: the gateway's split/marketplace feature, or scheduled EFT payouts; collect providers'
-  bank details securely at that point.
-- Complete the gateway's merchant onboarding (FICA) and set up refunds and dispute handling.
+1. **Customer** (`customer@ubuntulink.demo`): Profile shows **R2 000.00**.
+2. Request a job; **provider** quotes R650; customer accepts.
+3. Provider moves the job through the steps and taps **Mark work as done**.
+4. Customer's tracker (within ~15 s) shows **Confirm and pay R650**; a message arrives in **Messages**.
+5. Customer pays → customer balance **R1 350.00**; job *Completed*; receipt line with reference.
+6. Provider dashboard (within ~20 s) shows **+R585.00** available (R650 − 10% fee) and the earning in History.
+7. Provider **Withdraws** R500 → available R85.00 (plus their earlier balance).
+8. Turn **auto-pay** on, do another job → payment happens the moment the provider marks it done.
+9. Try a job costing more than the balance → *You need R… more* → **Add funds and pay** works in one go.
+10. Decline card `4000 0000 0000 0002` on Add funds → balance unchanged.
 
-Nothing else in the app changes: screens, states, rules and tests stay the same.
+---
+
+## 6. Later: real money
+
+The screens, steps, ledger and rules stay the same. What changes:
+- **Add funds** goes through a licensed payment provider (PayFast, Yoco, Paystack, Peach) — their hosted card
+  form and a webhook to confirm the top-up before it's credited.
+- **Withdrawals** become real EFT payouts to verified bank accounts (collected securely, with FICA checks).
+- Holding customer money in a wallet is regulated — before real money, get advice on whether to use the
+  payment provider's own wallet/escrow product instead of holding funds ourselves.

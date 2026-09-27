@@ -5,6 +5,7 @@ import { useLanguage } from "../../context/LanguageContext.jsx";
 import Card from "../../components/common/Card.jsx";
 import StarRating from "../../components/common/StarRating.jsx";
 import { ACTIVE_STATUSES } from "../../lib/bookingSteps.js";
+import WalletCard from "../../components/common/WalletCard.jsx";
 import { getMyBookings, getMyProviderProfile, getMyServiceRequests, getOpenRequests } from "../../api/services.js";
 
 
@@ -47,6 +48,8 @@ export default function ProviderDashboard() {
             </Card>
           </div>
 
+          {/* Payments from customers land here as soon as they pay. */}
+          <WalletCard role="provider" className="mt-3" />
         </div>
 
         {profile && (

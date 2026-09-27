@@ -164,8 +164,6 @@ export const getBookingTimeline = (bookingId) =>
 // The signed-in customer's bookings, to link booked requests to their tracker.
 export const getCustomerBookings = () => apiClient.get("/api/bookings/as-customer").then((res) => res.data);
 
-export const mockCharge = (bookingId, amount) =>
-  apiClient.post(`/api/bookings/${bookingId}/payment/mock-charge`, null, { params: { amount } }).then((res) => res.data);
 
 // --- Messaging ---
 export const listConversations = () => apiClient.get("/api/conversations").then((res) => res.data);
@@ -181,3 +179,16 @@ export const getMessages = (conversationId, after = 0) =>
   apiClient.get(`/api/conversations/${conversationId}/messages`, { params: { after } }).then((res) => res.data);
 export const sendMessage = (conversationId, body) =>
   apiClient.post(`/api/conversations/${conversationId}/messages`, { body }).then((res) => res.data);
+
+// --- In-app balance (amounts in cents) ---
+export const getWallet = () => apiClient.get("/api/wallet").then((res) => res.data);
+export const getWalletEntries = () => apiClient.get("/api/wallet/entries").then((res) => res.data);
+// The card is sent only as brand + last four digits (see lib/card.js); the number never leaves the browser.
+export const topUpWallet = (amountCents, card) =>
+  apiClient.post("/api/wallet/top-up", { amountCents, cardBrand: card.brand, cardLast4: card.last4 }).then((res) => res.data);
+export const withdrawFromWallet = (amountCents) =>
+  apiClient.post("/api/wallet/withdraw", { amountCents }).then((res) => res.data);
+export const setAutoPay = (enabled) => apiClient.patch("/api/wallet/auto-pay", { enabled }).then((res) => res.data);
+export const payForBooking = (bookingId) => apiClient.post(`/api/bookings/${bookingId}/pay`).then((res) => res.data);
+export const getBookingPayment = (bookingId) =>
+  apiClient.get(`/api/bookings/${bookingId}/payment`).then((res) => res.data || null);

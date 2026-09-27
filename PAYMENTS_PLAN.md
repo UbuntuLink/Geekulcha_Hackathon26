@@ -4,7 +4,7 @@
 from the customer's balance to the provider's balance, and both can see their balance and history in the app.
 It's all numbers in our database — no real money moves — but it behaves like a real wallet.
 
-**Status:** plan only. Internal document for the team.
+**Status:** implemented (branch `mahlatse/wallet-payments`). Internal document for the team.
 
 ---
 

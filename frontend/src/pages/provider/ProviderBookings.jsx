@@ -9,7 +9,6 @@ import {
   getMyBookings,
   getQuoteRequestsForMe,
   getSentQuotes,
-  mockCharge,
   updateBookingStatus,
 } from "../../api/services.js";
 import { formatZAR } from "../../lib/format.js";
@@ -67,9 +66,6 @@ export default function ProviderBookings() {
     setError("");
     try {
       await updateBookingStatus(booking.id, next);
-      if (next === "COMPLETED") {
-        await mockCharge(booking.id, booking.quote.amount).catch((err) => console.error(err));
-      }
       await load();
     } catch (err) {
       setError(err?.response?.data?.message || "Couldn't update that booking. Please try again.");

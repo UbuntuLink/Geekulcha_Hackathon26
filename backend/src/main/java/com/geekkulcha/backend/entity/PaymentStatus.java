@@ -4,5 +4,7 @@ package com.geekkulcha.backend.entity;
 public enum PaymentStatus {
     MOCK_PENDING,
     MOCK_PAID,
-    MOCK_FAILED
+    MOCK_FAILED,
+    /** Paid from the customer's in-app balance (WalletService). */
+    PAID
 }

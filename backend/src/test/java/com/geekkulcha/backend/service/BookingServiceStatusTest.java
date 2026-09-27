@@ -72,9 +72,25 @@ class BookingServiceStatusTest {
     }
 
     @Test
-    void completingAlsoCompletesTheRequest() {
-        service.updateStatus(BOOKING_ID, BookingStatus.COMPLETED, null, PROVIDER_USER_ID);
+    void providerMarksWorkDoneButOnlyPaymentCompletesTheJob() {
+        service.updateStatus(BOOKING_ID, BookingStatus.AWAITING_PAYMENT, null, PROVIDER_USER_ID);
+        assertEquals(BookingStatus.AWAITING_PAYMENT, booking.getStatus());
+
+        assertThrows(IllegalStateException.class,
+                () -> service.updateStatus(BOOKING_ID, BookingStatus.COMPLETED, null, PROVIDER_USER_ID));
+
+        service.completeByPayment(booking, "Paid R650.00");
+        assertEquals(BookingStatus.COMPLETED, booking.getStatus());
         assertEquals(RequestStatus.COMPLETED, request.getStatus());
+    }
+
+    @Test
+    void finishedWorkCanNoLongerBeCancelled() {
+        booking.setStatus(BookingStatus.AWAITING_PAYMENT);
+        assertThrows(IllegalStateException.class,
+                () -> service.updateStatus(BOOKING_ID, BookingStatus.CANCELLED, null, PROVIDER_USER_ID));
+        assertThrows(IllegalStateException.class,
+                () -> service.updateStatus(BOOKING_ID, BookingStatus.CANCELLED, null, CUSTOMER_ID));
     }
 
     @Test
@@ -87,7 +103,7 @@ class BookingServiceStatusTest {
     @Test
     void customerCannotUpdateProgress() {
         assertThrows(ForbiddenException.class,
-                () -> service.updateStatus(BOOKING_ID, BookingStatus.COMPLETED, null, CUSTOMER_ID));
+                () -> service.updateStatus(BOOKING_ID, BookingStatus.AWAITING_PAYMENT, null, CUSTOMER_ID));
     }
 
     @Test

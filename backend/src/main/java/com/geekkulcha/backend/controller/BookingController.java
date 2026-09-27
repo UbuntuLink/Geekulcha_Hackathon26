@@ -5,6 +5,7 @@ import com.geekkulcha.backend.entity.Booking;
 import com.geekkulcha.backend.entity.BookingStatus;
 import com.geekkulcha.backend.service.BookingService;
 import com.geekkulcha.backend.service.UserService;
+import com.geekkulcha.backend.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -22,6 +23,7 @@ public class BookingController {
 
     private final BookingService bookingService;
     private final UserService userService;
+    private final WalletService walletService;
 
     public record AcceptQuoteRequest(LocalDate scheduledDate, LocalTime scheduledTime) {
     }
@@ -44,7 +46,13 @@ public class BookingController {
                                  @RequestParam BookingStatus status,
                                  @RequestParam(required = false) String note) {
         long userId = userService.getCurrentUser(jwt).getId();
-        return bookingService.updateStatus(id, status, note, userId);
+        Booking updated = bookingService.updateStatus(id, status, note, userId);
+        if (updated.getStatus() == BookingStatus.AWAITING_PAYMENT) {
+            // Pays straight away if the customer has auto-pay on and enough balance; otherwise tells them.
+            walletService.afterWorkDone(id);
+            return bookingService.getById(id);
+        }
+        return updated;
     }
 
     /** Every status change on the booking, oldest first, for the tracker timeline. */

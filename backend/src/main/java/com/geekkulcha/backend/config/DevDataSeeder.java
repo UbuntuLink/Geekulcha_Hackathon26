@@ -9,6 +9,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.time.temporal.ChronoUnit;
@@ -241,10 +243,8 @@ public class DevDataSeeder implements CommandLineRunner {
     private int backfillOfferingPrices() {
         int filled = 0;
 
-        for (ProviderService offering : providerServiceRepository.findAll()) {
-            if (offering.getMinPrice() > 0 || offering.getMaxPrice() > 0) {
-                continue;
-            }
+        // Only the unpriced offerings, fetched with their provider and service in one query.
+        for (ProviderService offering : providerServiceRepository.findUnpricedWithDetails()) {
 
             int[] guide = PRICE_GUIDE.get(offering.getService().getName());
             if (guide == null) {
@@ -279,13 +279,20 @@ public class DevDataSeeder implements CommandLineRunner {
      * reviews while the page underneath said there were none.
      */
     private int backfillReviews() {
+        // One query for every provider that already has reviews, instead of one per provider: on
+        // Render each query is a ~150 ms round trip to the database, and this runs on every start.
+        Set<Long> alreadyReviewed = new HashSet<>(reviewRepository.findReviewedProviderProfileIds());
+        List<ProviderProfile> unreviewed = providerProfileRepository.findAllWithUser().stream()
+                .filter(profile -> !alreadyReviewed.contains(profile.getId()))
+                .toList();
+        if (unreviewed.isEmpty()) {
+            return 0;
+        }
+
         List<User> reviewers = ensureReviewerAccounts();
         int reviewed = 0;
 
-        for (ProviderProfile profile : providerProfileRepository.findAll()) {
-            if (!reviewRepository.findByBooking_Quote_ProviderProfile_Id(profile.getId()).isEmpty()) {
-                continue;
-            }
+        for (ProviderProfile profile : unreviewed) {
 
             List<ProviderService> offerings = providerServiceRepository.findAll().stream()
                     .filter(offering -> offering.getProviderProfile().getId() == profile.getId())
@@ -462,9 +469,7 @@ public class DevDataSeeder implements CommandLineRunner {
                 continue; // a category the roster doesn't know (team-added) — not ours to fill
             }
 
-            long visible = providerServiceRepository.findByServiceId(service.getId()).stream()
-                    .filter(offering -> offering.getProviderProfile().isIdValidated())
-                    .count();
+            long visible = providerServiceRepository.countValidatedByServiceId(service.getId());
 
             for (DemoProvider demo : roster) {
                 if (visible >= MIN_PROVIDERS_PER_CATEGORY) {
@@ -499,10 +504,7 @@ public class DevDataSeeder implements CommandLineRunner {
     private void backfillIdValidation() {
         int repaired = 0;
 
-        for (ProviderProfile profile : providerProfileRepository.findAll()) {
-            if (profile.isIdValidated()) {
-                continue;
-            }
+        for (ProviderProfile profile : providerProfileRepository.findNotIdValidatedWithUser()) {
             if (providerServiceRepository.findByProviderProfileId(profile.getId()).isEmpty()) {
                 continue; // no offerings — never set up to serve; not ours to flip
             }

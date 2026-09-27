@@ -89,14 +89,15 @@ class WalletServiceTest {
     }
 
     @Test
-    void notEnoughBalanceIsRefusedAndNothingMoves() {
+    void aShortBalanceIsTopedUpByCardSoPayingNeverBlocks() {
         wallets.get(CUSTOMER_ID).setBalanceCents(50_000);
 
-        IllegalStateException error = assertThrows(IllegalStateException.class, () -> service.pay(BOOKING_ID, CUSTOMER_ID));
-        assertTrue(error.getMessage().contains("R150.00 more"), error.getMessage());
-        assertEquals(50_000, wallets.get(CUSTOMER_ID).getBalanceCents());
-        assertEquals(0, wallets.get(PROVIDER_USER_ID).getBalanceCents());
-        verify(entryRepository, never()).save(any());
+        WalletService.PaymentView paid = service.pay(BOOKING_ID, CUSTOMER_ID);
+
+        assertEquals("SPLIT", paid.method());
+        assertEquals(0, wallets.get(CUSTOMER_ID).getBalanceCents());      // R500 balance + R150 card − R650
+        assertEquals(58_500, wallets.get(PROVIDER_USER_ID).getBalanceCents());
+        verify(entryRepository, times(3)).save(any());                  // card top-up, payment, earning
     }
 
     @Test

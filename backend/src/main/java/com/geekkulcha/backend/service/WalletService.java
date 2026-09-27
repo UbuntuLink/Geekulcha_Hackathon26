@@ -200,13 +200,16 @@ public class WalletService {
             customerWallet = lock(userId);
         }
 
-        if (customerWallet.getBalanceCents() < amount) {
-            throw new IllegalStateException("Not enough balance: you need "
-                    + rands(amount - customerWallet.getBalanceCents()) + " more.");
-        }
-
         String reference = newReference();
         String job = serviceName(booking);
+
+        // Paying never waits for a top-up: whatever the balance doesn't cover is charged straight
+        // to the customer's card, recorded as its own entry so the history still adds up.
+        long shortfall = Math.max(0, amount - Math.max(0, customerWallet.getBalanceCents()));
+        if (shortfall > 0) {
+            addEntry(customerWallet, WalletEntry.Type.TOP_UP, shortfall, booking, reference,
+                    "Card payment towards " + job + " (" + rands(shortfall) + ")");
+        }
         addEntry(customerWallet, WalletEntry.Type.JOB_PAYMENT, -amount, booking, reference,
                 "Paid " + firstName(provider.getUser()) + " for " + job);
         addEntry(providerWallet, WalletEntry.Type.JOB_EARNING, providerAmount, booking, reference,
@@ -220,7 +223,7 @@ public class WalletService {
         payment.setReference(reference);
         payment.setPlatformFeeCents(fee);
         payment.setProviderAmountCents(providerAmount);
-        payment.setMethod(method);
+        payment.setMethod(shortfall > 0 ? (shortfall == amount ? "CARD" : "SPLIT") : method);
         Instant now = Instant.now();
         payment.setPaidAt(now);
         payment.setCreatedAt(now);
@@ -231,7 +234,7 @@ public class WalletService {
         messagingService.notifyProvider(customer, provider, firstName(customer) + " paid " + rands(amount)
                 + " for your " + job + " job. " + rands(providerAmount) + " has been added to your balance · ref " + reference);
 
-        return new PaymentView(reference, amount, fee, providerAmount, method, now);
+        return new PaymentView(reference, amount, fee, providerAmount, payment.getMethod(), now);
     }
 
     /**
@@ -250,6 +253,7 @@ public class WalletService {
         long amount = toCents(booking.getQuote().getAmount());
         Wallet wallet = getOrCreate(customer.getId());
 
+        // Auto-pay only draws on the balance; if it's short, the customer confirms (and the rest goes on card).
         if (wallet.isAutoPay() && wallet.getBalanceCents() >= amount) {
             PaymentView paid = pay(bookingId, customer.getId(), "AUTO_PAY");
             messagingService.notifyCustomer(customer, provider, "Auto-pay: " + rands(amount) + " paid to "

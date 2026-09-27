@@ -5,6 +5,7 @@ import com.geekkulcha.backend.entity.*;
 import com.geekkulcha.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -27,7 +28,10 @@ import java.time.temporal.ChronoUnit;
  * which the shared Supabase DB did (see PROJECT.md §2). Not wired into the Render deploy env on
  * purpose (real seed data there should come from Supabase directly).
  */
+// Off by default: the shared database is fully populated. Set SEED_DATA=true to run it again,
+// e.g. against a fresh, empty database.
 @Component
+@ConditionalOnProperty(name = "app.seed-data", havingValue = "true")
 @RequiredArgsConstructor
 public class DevDataSeeder implements CommandLineRunner {
 

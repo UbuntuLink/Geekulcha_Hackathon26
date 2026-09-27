@@ -20,6 +20,15 @@ public interface ProviderServiceRepository extends JpaRepository<ProviderService
             + "where ps.service.id = :serviceId and p.idValidated = true")
     List<ProviderService> findValidatedWithProviderByServiceId(@Param("serviceId") long serviceId);
     List<ProviderService> findByProviderProfileId(long providerProfileId);
+
+    /** Visible (ID-validated) providers offering a service, counted by the database (startup seeding). */
+    @Query("select count(ps) from ProviderService ps where ps.service.id = :serviceId and ps.providerProfile.idValidated = true")
+    long countValidatedByServiceId(@Param("serviceId") long serviceId);
+
+    /** Offerings with no price yet, with their provider and service loaded (startup seeding). */
+    @Query("select ps from ProviderService ps join fetch ps.providerProfile join fetch ps.service "
+            + "where ps.minPrice <= 0 and ps.maxPrice <= 0")
+    List<ProviderService> findUnpricedWithDetails();
     Optional<ProviderService> findByProviderProfileIdAndServiceId(long providerProfileId, long serviceId);
     void deleteByProviderProfileIdAndServiceId(long providerProfileId, long serviceId);
 }

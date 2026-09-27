@@ -125,7 +125,7 @@ public class ProviderMatchService {
                 .map(ps -> new ServicePriceResponse(ps.getService().getId(), ps.getService().getName(), ps.getMinPrice(), ps.getMaxPrice()))
                 .toList();
 
-        List<Review> reviewRows = reviewRepository.findByBooking_Quote_ProviderProfile_Id(providerProfileId);
+        List<Review> reviewRows = reviewRepository.findWithDetailsByProviderProfileId(providerProfileId);
         // One query for every review's photo ids, without the image bytes.
         Map<Long, List<Long>> photoIds = reviewRows.isEmpty() ? Map.of()
                 : reviewPhotoRepository.findRefsByReviewIds(reviewRows.stream().map(Review::getId).toList()).stream()
